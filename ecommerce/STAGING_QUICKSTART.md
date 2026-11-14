@@ -168,7 +168,7 @@ The full runbook, [DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md), has the background
    S3_IMAGE_HOSTNAME=<host part of S3_FILE_URL>
    S3_IMAGE_PATHNAME=/**
    ```
-5. **Environment → Environment Variables** (runtime):
+5. **Environment → Environment Variables** (runtime; not Build-time Arguments, which only the build sees):
    ```
    NODE_ENV=production
    PORT=8000

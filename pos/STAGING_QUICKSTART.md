@@ -158,7 +158,7 @@ S3, Resend, Telegram and PayWay are optional for POS staging: every POS check wo
 **F2. `pos-pos-app`** (the till)
 1. **Create Service → Application** → `pos-pos-app`. Provider as C2. Build Type: Docker File `pos/pos-app/Dockerfile`, Context Path `.`.
 2. Watch Paths: `pos/pos-app/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`.
-3. **Build-time Arguments:** none. **Environment Variables:**
+3. **Build-time Arguments:** none (leave the box empty). **Environment Variables** (the runtime box: the till's server reads these while it runs; values put under Build-time Arguments are empty in the running container):
    ```
    NODE_ENV=production
    PORT=3000
@@ -166,6 +166,11 @@ S3, Resend, Telegram and PayWay are optional for POS staging: every POS check wo
    COOKIE_SECRET=<F>
    SHOPPER_IP_SECRET=<E>
    ```
+   After the deploy, check in `pos-pos-app` → **Terminal** that the till reaches the backend:
+   ```bash
+   node -e "fetch(process.env.MEDUSA_BACKEND_URL+'/health').then(r=>r.text()).then(t=>console.log('OK',t)).catch(e=>console.log('ERR',e.cause?.code||e.message))"
+   ```
+   It must print `OK OK`. `ERR ERR_INVALID_URL` means `MEDUSA_BACKEND_URL` is missing: the till then answers "fetch failed" at sign-in. Put it under **Environment Variables**, **Save**, **Redeploy**.
 4. **Swarm:** Health Check two boxes, `CMD-SHELL` and `node -e "fetch('http://localhost:3000/manifest.webmanifest').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"`, Start Period `60000000000`; Update Config as the backend.
 
 Don't deploy either yet if their hostnames still belong to another project: Part G moves them first.
