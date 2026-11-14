@@ -86,7 +86,7 @@ openssl rand -hex 32      # SHOPPER_IP_SECRET (backend, storefront)
 
 | Field | Value |
 |---|---|
-| Repository | `medusa-apps` |
+| Repository | `medusa-platform` |
 | Branch | `main` |
 | **Build Path** | `/` |
 | Trigger Type | `On Push` |
