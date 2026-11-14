@@ -1,6 +1,6 @@
 # medusa-apps: Builder Instructions
 
-Six standalone Medusa v2 business projects (ecommerce, pos, booking-services, wholesale, reseller, marketplace). Each has its own backend, clients, Dockerfiles and env, deployed with Dokploy. Not a monorepo.
+Six standalone Medusa v2 business projects (ecommerce, pos, booking-services, wholesale, reseller, marketplace). Each has its own backend, clients, Dockerfiles and env, deployed with Dokploy. Since plan Revision 16 (2026-11-14) the repo is a pnpm workspace: Medusa versions come from the root catalog, and backends share one Medusa plugin, `packages/medusa-core` (plan §2, §8.2). The move happens app by app (TASKS SC-1, SC-2); an app not yet moved keeps its own setup.
 
 ## Read before every task (in this order)
 1. `BUILD_PLAN.md`: the requirements. **Frozen. Never edit it.** (`.claude/hooks/protect-build-plan.sh`, wired in `.claude/settings.json`, blocks Claude's file tools and shell writes on it, its checksum and the lock's own files; `scripts/guard.sh` checks the checksum and the lock in CI. Only the owner unlocks it for an approved revision, from their own terminal: `touch .claude/plan-unlocked`, then `rm .claude/plan-unlocked` to lock again (owner's how-to: `docs/PLAN_LOCK.md`). Never create, change or delete that switch file, and never ask a tool to.)
@@ -15,10 +15,11 @@ When designing, refactoring or reviewing backend structure, also use `docs/BACKE
 - **No hallucination.** Every Medusa API, import, option, hook, step or CLI flag must be cited from `docs/MEDUSA_SKILL.md` or found via its evidence ladder (installed `.d.ts` → docs `.md` → official starters → release notes). No source means you don't use it.
 - **Plan is frozen.** If evidence contradicts `BUILD_PLAN.md`, log it in `docs/TASKS.md` → *Plan deviations & findings log*. Scope or architecture changes wait for human approval.
 - **Official extension points only** (plan §3.1). No forks, no `pnpm patch`, no `node_modules` edits, no `dist/` imports, no columns on core tables.
-- **Exact pins.** All `@medusajs/*` packages are pinned to the same version (except `@medusajs/ui`); `pnpm install --frozen-lockfile`.
+- **Exact pins.** All `@medusajs/*` packages are pinned to the same version (except `@medusajs/ui`); after an app's SC-1 PR the pins live in the root `pnpm-workspace.yaml` catalog and the app writes `"catalog:"`. `pnpm install --frozen-lockfile`.
+- **Shared core** (plan Revision 16). Only code that several backends really share goes into `packages/medusa-core`; app-specific code stays in the app. Clients never depend on it. Moving a module into the core is one PR, and every app using it must pass its tests in that PR.
 - **Skill check before every merge** (owner, 2026-10-15). After each task or phase, check the diff against the `medusa-v2` skill (`docs/MEDUSA_SKILL.md`) and update every related document before the PR is merged and pushed (DEV_FLOW §7.1).
 - **Gates before commit.** DEV_FLOW Gates 1–5 green locally; CI green before merge. The fix cycle stops after 3 attempts without new evidence → mark the task Blocked and ask.
-- **Git.** Branch per task; conventional commits scoped by category (`feat(booking): …`); never commit on or force-push `main`; never commit `.env` files.
+- **Git.** Branch per task; conventional commits scoped by category (`feat(booking): …`); never commit on or force-push `main`; never commit `.env` files. **Never push, create, move or delete a `release/*` branch:** production moves only when the owner does it (plan §5, D14).
 
 ## Verify changes
 ```bash

@@ -30,6 +30,28 @@ ecommerce/
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `ecommerce/<app>/Dockerfile` and **Docker Context Path** `ecommerce/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `ecommerce/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
+## Shared core and release branches (plan Revision 16)
+
+**Build from the repo root.** This applies from this category's SC-1 PR on (`docs/TASKS.md` → *Shared core*); that PR says when to switch, and until then the values above stay. For each app (`backend`, `storefront`), in Dokploy:
+- **Docker File:** `ecommerce/<app>/Dockerfile` (unchanged).
+- **Docker Context Path:** `.` (the repo root) instead of `ecommerce/<app>`.
+- **Watch Paths:** `ecommerce/<app>/**` plus `pnpm-workspace.yaml` and the lockfile the SC-1 PR names; the backend and the worker also `packages/medusa-core/**`.
+
+**Staging and production branches** (from SC-3):
+- **Staging** apps keep **Branch `main`**: every merge redeploys the changed apps.
+- **Production** apps use **Branch `release/ecommerce`**, Trigger **On Push**. Only you move it; Claude never does.
+- **Release** (after checking staging), from your own terminal:
+  ```bash
+  git fetch origin && git push origin origin/main:refs/heads/release/ecommerce
+  ```
+  To release an older checked commit instead, put its hash in place of `origin/main`.
+- **Rollback:** move the branch back to the previous release, then run any `db:rollback` the release notes need (plan §8):
+  ```bash
+  git push --force origin <previous commit>:refs/heads/release/ecommerce
+  ```
+  The previous commit is in the production app's **Deployments** tab, or in `git log origin/release/ecommerce`.
+- **GitHub protection** (once, SC-3): **Settings → Rules → Rulesets → New branch ruleset**, target `release/*`, turn on **Restrict updates**, **Restrict deletions** and **Block force pushes**, and add yourself to the **bypass list**, so only you can release and roll back.
+
 ## Deploy order (first time)
 
 Full steps with every Dokploy field: [DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md) (the same steps serve production, with production values).
@@ -85,6 +107,7 @@ migrating).
 
 ## Independence rules
 
+- Shared backend code comes only from `packages/medusa-core` (plan Revision 16); this category's own code stays here, and its clients never use the core.
 - This project has its **own** Postgres and Redis. Never point two business projects at the same database.
 - A second business of the same type = a second Dokploy project built from the same folder, with its own env.
 - To add another scenario to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend. See `docs/COMPARISON.md` §4.

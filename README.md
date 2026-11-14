@@ -36,8 +36,8 @@ At the root: this README, [`BUILD_PLAN.md`](./BUILD_PLAN.md) and [`CLAUDE.md`](.
 ## Principles
 
 1. **Official Medusa only.** Medusa is used as published npm packages. Nothing upstream is forked or patched.
-2. **Update any time, safely.** Exact version pins, a lockfile per app, and a CI gate every update must pass before deploy.
-3. **Not a monorepo.** Every deployable (backend, storefront, portal, app) is independent: own `package.json`, lockfile, `Dockerfile`, `.env.example`. Nothing is shared; clients reach their backend only over HTTP.
+2. **Update any time, safely.** Exact version pins (set once in the root catalog since plan Revision 16), a CI gate every update must pass before deploy, staging first, and production only when the owner moves the category's release branch.
+3. **One workspace, independent deploys** (plan Revision 16, 2026-11-14). Every deployable (backend, storefront, portal, app) keeps its own `package.json`, `Dockerfile`, `.env.example` and Dokploy app. Medusa versions come from the root `pnpm-workspace.yaml` catalog, and backends share one Medusa plugin, `packages/medusa-core`. Clients reach their backend only over HTTP. Staging deploys from `main`; production from `release/<category>`, moved only by the owner. The move happens app by app (`docs/TASKS.md` → *Shared core*).
 4. **One business = one app.** Combine scenarios by adding modules to one app, never by syncing two apps.
 
 Versions (2026-11-12): Medusa 2.22.6 in every app (npm `latest`, a security release, as the starters), Node `>=22.23.4`, Next.js 16.4.5, pnpm 12.18.0. Details and update plan: `BUILD_PLAN.md` (Revision 12, 2026-11-12). Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.

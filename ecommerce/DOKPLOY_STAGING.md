@@ -21,6 +21,8 @@ A step-by-step setup and operations guide for the Ecommerce business project on 
 
 **Never paste secret values** in chat, git or tickets: keys, passwords, connection URLs, tokens. When you share a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 
+
+> **Shared core (plan Revision 16):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/ecommerce`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
 ---
 
 ## 0. Before you start

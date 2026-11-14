@@ -1,5 +1,7 @@
 # Build Plan — Medusa Apps
 
+> **Revision 16 (2026-11-14, owner: "I want this as share core, update everything").** The repo becomes a pnpm workspace: Medusa versions are set once in a root catalog, shared backend code moves into one Medusa plugin, `packages/medusa-core`, and Docker builds from the repo root. Each app keeps its own Dockerfile, env, compose file and Dokploy project. Staging deploys from `main`; production deploys from a `release/<category>` branch that only the owner moves. R2–R4, §2, §4 note, §5, §7, §8.2, D14 (TASKS F-089, SC-0 to SC-3). Tag `pre-shared-core` marks the last commit before it. P3-19 and the Booking staging wait for SC-1 and SC-2.
+>
 > **Revision 15 (2026-11-14, owner: "I want staff logins and open marketplace").** §6.3 adds providers to Booking services: staff logins (invited) and an open marketplace (outside providers sign up, are approved, run their own page and listings, and are paid out after a commission), through a new deployable `booking-services/provider-portal`. Built right after P3-19, so every later kind is provider-ready (TASKS F-088, D13). §2 and §5 gain the new app.
 >
 > **Revision 14 (2026-11-14, owner: "include all features, update to build plan").** §6.3 turns Booking services into a booking-only shop with eight booking kinds (A–H) and shared booking features, built as tasks P3-19 to P3-30 before the Booking staging run (TASKS F-087, D12). The other phases don't change.
@@ -51,15 +53,15 @@ Revision history
 | # | Requirement | How this plan meets it |
 |---|---|---|
 | R1 | Use official Medusa source, never modify upstream, latest Medusa and pnpm | Medusa is used **only as published npm packages** (`@medusajs/*`): no fork, no git submodule, no `pnpm patch`, no edits in `node_modules`. Custom code goes only through official extension points (§3). Boilerplate is copied from the official starters (§4). |
-| R2 | Always compatible with Medusa updates; deploy an update at any time | Exact version pins, a lockfile per deployable, a scripted update per category, a CI gate before any deploy (build, typecheck, tests, migrate, health check), and Dokploy rollback (§3, §8). |
-| R3 | Dokploy-ready, **not a monorepo**: one folder per scenario, each with the backend **and** its clients, each with its own `Dockerfile` and env, each deployed independently | Six category folders. Each has one sub-folder per deployable, with its own `Dockerfile`, `.env.example`, `package.json` and lockfile. No root `package.json`, no workspace, no shared code. Each sub-folder is its own Docker context and Dokploy app (§2, §5). |
-| R4 | Each scenario has its own dependencies | Each deployable has its own `package.json`, `pnpm-lock.yaml` and `node_modules`. Nothing is shared between sub-folders or categories. |
+| R2 | Always compatible with Medusa updates; deploy an update at any time | Exact version pins, set once in the root `pnpm-workspace.yaml` catalog (Revision 16), a scripted update, a CI gate before any deploy (build, typecheck, tests, migrate, health check), staging first, production only when the owner moves the category's release branch, and Dokploy rollback (§3, §5, §8). |
+| R3 | Dokploy-ready: one folder per scenario, each with the backend **and** its clients, each with its own `Dockerfile` and env, each deployed independently | Six category folders. Each has one sub-folder per deployable, with its own `Dockerfile`, `.env.example` and `package.json`, and its own Dokploy app. **Since Revision 16 the repo is a pnpm workspace** (owner, 2026-11-14, F-089): Docker builds from the repo root, and backends share one Medusa plugin, `packages/medusa-core` (§2, §5). |
+| R4 | Each scenario has its own dependencies | Each deployable lists its own dependencies in its own `package.json`. Medusa versions come from the root catalog, so every app is on the same release. Shared backend code lives only in `packages/medusa-core`; nothing else is shared between categories. |
 | R5 | Side-by-side comparison in the project root | `docs/COMPARISON.md` (moved from the root into `docs/` on the owner's request, 2026-11-12, F-071; linked from the root `README.md`) |
 | R6 | Pre-build plan with a recommended build order in the project root | This file, §7 |
 
 **Honest limit on R2.** The starters are templates that get copied, not packages, so their upstream changes are merged by hand (§8.1). No repo can promise that every future Medusa release is non-breaking: Medusa sometimes ships breaking changes in minor versions (listed in its release notes), and database migrations only go forward. This plan does guarantee three things:
 - an update never reaches production without passing the CI gate
-- each category, and each deployable in it, is updated and deployed on its own
+- each category, and each deployable in it, is deployed on its own; since Revision 16 a Medusa update moves every app's version at once (one catalog), and each category's production follows only when the owner moves its release branch
 - the previous working image can be deployed again
 
 ---
@@ -67,7 +69,11 @@ Revision history
 ## 2. Repository layout
 
 ```
-medusa-apps/                        <- plain git repo, NOT a workspace
+medusa-platform/                    <- pnpm workspace since Revision 16 (SC-1)
+├── package.json                    <- private root: packageManager and workspace scripts only
+├── pnpm-workspace.yaml             <- workspace packages and the `catalog` of Medusa versions
+├── packages/
+│   └── medusa-core/                <- Medusa plugin: PayWay, Resend, Telegram, wishlist, auth guards, contact rules, cleanup job (SC-2)
 ├── README.md                       <- overview and status
 ├── BUILD_PLAN.md                   <- this file (R6), frozen (§3.4); its lock names this path
 ├── CLAUDE.md                       <- builder entry point (Claude Code reads it from the root)
@@ -108,15 +114,17 @@ medusa-apps/                        <- plain git repo, NOT a workspace
 | booking-services | backend (+ worker), storefront | Ecommerce |
 | wholesale | backend (+ worker), storefront | `b2b-starter` |
 | reseller | backend (+ worker), storefront, seller-portal | Ecommerce; seller-portal is a plain Next.js app |
-| marketplace | backend (+ worker), storefront, vendor-portal | not started |
+| marketplace | backend (+ worker), storefront, vendor-portal | Ecommerce; vendor-portal is a copy of the seller-portal |
 
 Names are lowercase kebab-case, because they become Dokploy build paths, image names and database names.
 
-**Rules that keep deployments independent:**
-- No root `package.json`, no root `pnpm-workspace.yaml`, no shared `packages/` folder.
-- No sub-folder imports from another sub-folder or category. Clients talk to their backend **only over HTTP**.
-- Duplicated boilerplate is intentional: it is the price of independent deploys.
-- Any sub-folder can be copied into its own repo and still build.
+**Rules that keep deployments independent (Revision 16):**
+- **One shared package:** `packages/medusa-core`, a Medusa plugin (docs `learn/fundamentals/plugins`), used by backends only through `plugins` in `medusa-config.ts` and its exported providers. It holds code that is the same in several apps: PayWay, Resend (apps can add their own templates), Telegram and telegram-links, wishlist, auth guards, contact rules and the unverified-account cleanup job. App-specific code stays in the app. A new shared package needs an owner-approved plan revision.
+- **Medusa versions** are set once, in the `catalog` of the root `pnpm-workspace.yaml`; apps write `"catalog:"`. Other dependencies stay in each app's `package.json`.
+- **No other cross-imports:** no sub-folder imports from another sub-folder or category. Clients talk to their backend **only over HTTP**, and never depend on `packages/medusa-core`.
+- **Each app keeps** its own `Dockerfile`, `.env.example`, compose file and Dokploy project. Images build from the repo root and install only that app and the workspace packages it uses.
+- **A shared change reaches production only through each category's release branch** (§5): it deploys to every staging that uses it, and the owner promotes each category on its own.
+- App-specific boilerplate stays duplicated: only code the apps really share moves to the core.
 - The backend image is deployed twice per project (server and worker); everything else once.
 - A category copied from another is a full copy that then lives on its own (F-034, F-044, F-061). The starter's eight generic `backend/src/*/README.md` guides are not kept (F-053).
 
@@ -167,6 +175,8 @@ This file is frozen for the builder:
 ## 4. Deployable standards
 
 There are two standards: **4.1 backend** (the same in every `*/backend`) and **4.2 web client** (every `storefront`, `*-portal` and `pos-app`). Each deployable commits its `Dockerfile`, `.dockerignore` and `.env.example`; backends also commit `docker-entrypoint.sh`. A deployable with no code yet keeps these as templates.
+
+> **Revision 16:** the per-app package setup below (own lockfile, a settings-only `pnpm-workspace.yaml`, Docker steps from the app folder) holds for each app until its SC-1 PR (§8.2). The first SC-1 PR rewrites §4.1 and §4.2 for the workspace, with the lockfile layout and Docker steps it verified, as a plan revision.
 
 ### 4.1 Backend standard (`<category>/backend/`)
 
@@ -349,14 +359,15 @@ For the gates, `scripts/verify.sh` runs against a throwaway Postgres. Wait for i
 |---|---|
 | **PostgreSQL** | One per project. Never share a database between projects. |
 | **Redis** | One per project. |
-| **Build fields** (every app) | Build Type **Dockerfile**. The fields are relative to the repo root (F-011): **Build Path `/`**, **Docker File `<category>/<app>/Dockerfile`**, **Docker Context Path `<category>/<app>`**. |
+| **Build fields** (every app) | Build Type **Dockerfile**. The fields are relative to the repo root (F-011): **Build Path `/`**, **Docker File `<category>/<app>/Dockerfile`**, **Docker Context Path `<category>/<app>`** until that app's SC-1 PR, then **`.`** (the repo root, Revision 16). |
+| **Branches** (Revision 16, D14) | **Staging** apps deploy from **`main`** on every push (watch paths). **Production** apps deploy from **`release/<category>`** (e.g. `release/ecommerce`), which only the owner moves, after checking staging: `git push origin <checked commit>:refs/heads/release/<category>`. **Rollback:** move the branch back to the previous commit (plus `db:rollback`, §8). On GitHub, `release/*` is protected: only the owner may update it, and force pushes only for the owner's rollback. |
 | **backend (server)** | App `<category>/backend`. Env from `backend/.env.example` with `MEDUSA_WORKER_MODE=server`. Domain → 9000. Health check `/health`. |
 | **backend (worker)** | Same build fields and image. Env adds `MEDUSA_WORKER_MODE=worker`, `DISABLE_MEDUSA_ADMIN=true`, `RUN_MIGRATIONS=false`. No domain, no health check. |
 | **storefront** | App `<category>/storefront`. Build-time Arguments and runtime env from `storefront/.env.example`. Domain → 8000. |
 | **portal / pos-app** | App `<category>/<client>`. Env from its `.env.example`. Domain → 3000. |
 | **Health check** (Swarm Settings form) | **Test Commands** takes one array item per box: exactly two boxes, `CMD-SHELL` and `node -e "fetch('http://localhost:<port><path>').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"` (the images have no `curl`). Interval, timeout and start period are in the category runbook. A JSON array pasted into one box never runs, and it caused a staging outage (F-021). After saving, confirm `(healthy)` with `docker ps` on the server. |
 | **Update Config** (Swarm Settings form) | Order **Start First**, Failure Action **Rollback**, Parallelism 1, Delay and Monitor 10 s, Max Failure Ratio 0. The dropdowns show blank after saving but are stored (check `docker service inspect … .Spec.UpdateConfig`, F-020). |
-| **Watch paths** | Each app watches only `<category>/<app>/**`; the **worker watches `<category>/backend/**`** too. An empty box redeploys it on every push (F-019). |
+| **Watch paths** | Each app watches only `<category>/<app>/**`; the **worker watches `<category>/backend/**`** too. An empty box redeploys it on every push (F-019). After SC-1, each app also watches the root `pnpm-workspace.yaml` and the lockfile it installs from, and backends and workers watch `packages/medusa-core/**`. |
 | **Database backups** | Postgres → **Backups**: daily (`0 19 * * *` = 02:00 Cambodia), keep 14, to a **private** S3 bucket used only for backups, with its own access key and one prefix per project. Before go-live, restore the newest backup into a throwaway Postgres and check that orders and products match. RustFS older than 1.0.0 needs `--streaming-upload-cutoff=200M` (rustfs/rustfs#6135). |
 | **Server access** | Before production: SSH-key login only, no password login for root or any uid-0 account, no public Postgres port, OS updates applied. |
 | **Alerts** (E-A3) | Dokploy **Settings → Notifications** → Telegram to the staff group: **App Build Error**, **App Deploy**, **Database Backup**, **Dokploy Restart**. Dokploy has no "app down" event, so an uptime monitor **outside** the Dokploy server checks the backend `/health` and the shop every 1–5 minutes (D8). |
@@ -375,7 +386,7 @@ Small projects may run one `shared` backend instance instead of a server and a w
 9. Put the final domains into the backend CORS and redeploy the backend.
 10. Check that the storefront's key sees products (`/store/products` count > 0, F-017) and that the baked backend URL is right (F-016).
 
-**Afterwards** every app is redeployed, rebuilt or rolled back on its own. The only coupling between apps is configuration: client URLs in the backend CORS, and the backend URL and publishable key in the clients.
+**Afterwards** every app is redeployed, rebuilt or rolled back on its own. Between apps, the coupling is configuration (client URLs in the backend CORS, the backend URL and publishable key in the clients) and, since Revision 16, the shared catalog and `packages/medusa-core`. Production still moves one category at a time, through its release branch.
 
 **Same template, many businesses:** a second business of the same kind is a second Dokploy project with the same Build Paths and its own databases, domains and env.
 
@@ -695,6 +706,7 @@ Rules for the order:
 - Phase 0: done.
 - Phase 1: on staging; production waiting (P1-08, P1-09).
 - Phase 2: on staging, exit P2-14 passed (2026-11-14).
+- **Shared core (Revision 16):** SC-0 to SC-3 (§8.2) come first; P3-19 and the Booking staging wait for SC-1 and SC-2.
 - Phase 3: Revision 14 (booking kinds) being built, P3-19 to P3-30; staging and exit P3-18 after P3-19.
 - Phases 4, 5 and 6: code done; staging and exit waiting (P4-11, P5-11, P6-13).
 - The first full review's 29 findings and four later ones are fixed (2026-11-12).
@@ -727,14 +739,14 @@ For each deployable, the script:
 1. **Release notes:** read them for every version skipped (breaking changes are called out there), and run any codemod they list.
 2. **Back up the database.** The official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstalling the old versions; the backup is the fallback. The daily backups (§5) run regardless.
 3. **Removed or changed links and search indexes:** run `medusa db:sync-links --execute-all` / `medusa db:migrate:search --execute-all-search` by hand from the Dokploy terminal, after reviewing the plan they print.
-4. **Deploy:** to staging with **one** server replica, smoke test, then production.
-5. **Rollback:** redeploy the previous commit or image **plus** `db:rollback` of the migrated modules, or restore the backup.
+4. **Deploy:** merging to `main` deploys staging (**one** server replica). Smoke test it, then the owner moves `release/<category>` to that commit for production (§5, D14). Claude never pushes to `release/*`.
+5. **Rollback:** move `release/<category>` back to the previous commit, or redeploy the previous image, **plus** `db:rollback` of the migrated modules, or restore the backup.
 
 **Automation:**
 - **No Dependabot or Renovate:** Dependabot supports pnpm v7–v10 only, and this repo pins pnpm 12 (F-008).
 - **The weekly check:** `.github/workflows/medusa-update-check.yml` (Mondays 02:00 UTC, also runnable by hand) fails visibly when any deployable pins an older Medusa than npm `latest`.
 - **Updating:** a human then runs `scripts/update-medusa.sh <category>` on a branch, and CI checks the PR.
-- **Deploying:** merging redeploys only the changed deployables (Dokploy watch paths).
+- **Deploying:** merging redeploys only the changed deployables on staging (Dokploy watch paths); a change in `packages/medusa-core` or the catalog redeploys every staging app that uses it. Production waits for the owner's release branch.
 
 **Before every merge** (owner rule, DEV_FLOW §7.1): check the diff against `docs/MEDUSA_SKILL.md` and update every related document. The required CI check is `ci-ok`, and PRs squash-merge.
 
@@ -751,6 +763,19 @@ Medusa package updates for clients go through the update script.
 - **2026-11-06:** every web client took the `dtc-starter` Next.js 16 migration (`6b95717`), on Next.js 16.4.5 (V-04).
 - **2026-11-09:** both starters moved to Medusa 2.22.6.
 - **2026-11-10:** every app followed (V-06).
+
+### 8.2 Shared core migration (Revision 16)
+
+One PR per step; DEV_FLOW gates green and the skill check (DEV_FLOW §7.1) before each merge. Tag `pre-shared-core` is the way back.
+
+| Step | What | Done when |
+|---|---|---|
+| **SC-0** | This revision, `CLAUDE.md`, the root and category READMEs and the staging runbooks (build from the repo root, release branches); tag `pre-shared-core` | merged |
+| **SC-1** | Root `package.json` and `pnpm-workspace.yaml` with the Medusa `catalog`, **one app per PR, Ecommerce first**: the app writes `"catalog:"`, its Dockerfile builds from the repo root, its Dokploy context and watch paths change. `scripts/update-medusa.sh`, `verify.sh`, `guard.sh` and the CI matrix follow. The lockfile layout (one root lockfile, or one per app) is chosen in the first PR with evidence and logged | each app's staging redeploys and answers `/health` (apps not on staging yet: the local stack) |
+| **SC-2** | `packages/medusa-core` as a Medusa plugin (peer dependency on `@medusajs/framework`, docs `learn/configurations/pnpm`; providers exported as `./providers/*`, docs `learn/fundamentals/plugins/create`). Modules move **one at a time**: PayWay → Resend (with a hook for app templates) → Telegram and telegram-links → wishlist → auth guards → contact rules → cleanup job, each app switching from its own copy to the core's. Existing tables and migrations stay as they are | every app's tests pass after each move, and a migrated database shows no new or dropped tables |
+| **SC-3** | Release branches: `release/ecommerce` and `release/pos` first, then the rest; GitHub protection on `release/*`; production apps point at them. The owner creates and moves them | the owner has moved each branch once |
+
+Then P3-19 resumes, then the Booking staging on a fresh database.
 
 ## 9. Verified technical notes
 
@@ -788,6 +813,7 @@ A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested this plan before P
 | D7 | Next.js 16 | Every web client on 16.4.5 with the starters' migration (§4.2, §8.1) | 2026-11-06 |
 | D8 | "App down" alerts | **Open, needed before production:** which uptime monitor runs outside the Dokploy server (recommended: a hosted monitor alerting the staff Telegram) | — |
 | D9 | Wholesale payment for prepaid companies | **ABA PayWay** (KHQR, cards); net terms stay on `pp_system_default` (P4-12) | 2026-11-11 |
+| D14 | Shared code and production releases | **One pnpm workspace** with a Medusa version `catalog` and one shared Medusa plugin, `packages/medusa-core`; each app keeps its own Dockerfile, env and Dokploy project. **Staging** deploys from `main`; **production** from `release/<category>`, moved only by the owner (rollback = move it back; `release/*` protected) | 2026-11-14 |
 | D10 | Wholesale invoice language | **Khmer and English**, with an embedded Khmer font (P4-13) | 2026-11-11 |
 | D13 | Booking providers | **Both:** staff logins (invite-only) and an open marketplace (partners sign up, admin approves, commission and manual payouts), with `booking-services/provider-portal` | 2026-11-14 |
 | D12 | Booking trip pricing (kind C) | **All three modes:** vehicle size + hours, zones, and distance through a maps provider (the owner's account and key; optional) | 2026-11-14 |
@@ -820,6 +846,7 @@ Also decided for Ecommerce:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 16 | 2026-11-14 | Shared core: the repo becomes a pnpm workspace with a Medusa version `catalog` and one shared Medusa plugin, `packages/medusa-core` (PayWay, Resend, Telegram, wishlist, auth guards, contact rules, cleanup job); Docker builds from the repo root; staging from `main`, production from owner-moved `release/<category>` branches. R2–R4, §2, §4 note, §5, §7, §8.2, D14. TASKS F-089. Tag `pre-shared-core`. |
 | 15 | 2026-11-14 | Booking providers: staff logins and an open marketplace (actor `provider`, approval, public provider pages, per-kind self-service, commission and payouts), new deployable `booking-services/provider-portal`, §2, §6.3, §7; D13. TASKS F-088, P3-31 to P3-33. |
 | 14 | 2026-11-14 | Booking services become a booking-only shop with kinds A–H (appointment, visit at your place, trip A → B incl. moving, scheduled departure, rental by dates incl. costumes, event ticket, table reservation, event package incl. weddings) and shared features (extras, deposit, quote first, assignment, reschedule, recurring, passes, waitlist, reviews), §6.3; build order and status §7; D12 trip pricing. TASKS F-087, P3-19 to P3-30. |
 | 13 | 2026-11-13 | POS admin pages Cashiers and Registers (§6.2), so staging Step 7.B needs no `curl`. TASKS F-085. |

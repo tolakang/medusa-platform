@@ -14,6 +14,8 @@ When you're done you have one Dokploy project, `booking-staging`, with **5 servi
 | `booking-worker` | Medusa worker (same image): emails, reminders, frees expired holds | none | 4 |
 | `booking-storefront` | the booking shop | `<shop host>` → 8000 | 5 |
 
+
+> **Shared core (plan Revision 16):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/booking-services`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
 ---
 
 ## Step 0: Decide and prepare (about 5 minutes)
