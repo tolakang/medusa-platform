@@ -4,7 +4,7 @@ Customer storefront for the marketplace business project (BUILD_PLAN §6.6). Sta
 
 **Copied from `ecommerce/storefront` at `main` `eaacbfa`** (TASKS Phase 6, owner 2026-11-12: full copy of Ecommerce; F-072), tracked files only. It talks to `marketplace/backend`, which has the same store routes, so PayWay checkout, the Cambodia address and phone rules, Telegram contact and CAPTCHA work as in Ecommerce.
 - Package name `marketplace-storefront`; the Dockerfile, `.env.example` and comments name `marketplace/*`.
-- `.guard-baseline` is `159252e ecommerce/storefront`: the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
+- `.guard-baseline` is `776911e ecommerce/storefront` (this repo's first commit; in medusa-apps it was `159252e`): the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
 **P6-08:** checkout completes through the backend's `POST /store/carts/:id/complete-vendor` (`placeOrder` in `src/lib/data/cart.ts`), which also makes one order per vendor; product pages say "Sold by" with a link to the vendor's shop page `/[countryCode]/vendors/[handle]` (`src/lib/data/vendors.ts`). The ecommerce notes below apply unchanged.
 

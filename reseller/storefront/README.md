@@ -5,7 +5,7 @@ Customer storefront for the reseller business project (BUILD_PLAN §6.5). Standa
 **Copied from `ecommerce/storefront` at `main` `847465d`** (TASKS Phase 5, owner 2026-11-10: full copy of Ecommerce; F-061), tracked files only. It talks to `reseller/backend`, which has the same store routes, so PayWay checkout, the Cambodia address and phone rules, Telegram contact and CAPTCHA work as in Ecommerce.
 - Package name `reseller-storefront`; the Dockerfile, `.env.example` and comments name `reseller/*`.
 - `.env.example` gains `SELLER_RESOLVE_MODE` and `DEFAULT_SELLER_HANDLE` (plan §6.5, read from P5-07 on).
-- `.guard-baseline` is `159252e ecommerce/storefront`: the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
+- `.guard-baseline` is `776911e ecommerce/storefront` (this repo's first commit; in medusa-apps it was `159252e`): the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
 **P5-07, multi-tenant:** one deployment serves every seller's domain. `src/lib/data/seller.ts` maps the request's `Host` (or the `path` cookie from `/api/seller/<handle>`) to the seller's publishable key through the backend's `GET /store/sellers/resolve` (cached 300 s); `src/lib/config.ts` sends it with every request (server side from the host, browser side from the `<meta>` the root layout writes). No seller → your own channel (`NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`). Browser search on a seller's domain needs that origin in the backend's `STORE_CORS`. The ecommerce notes below apply unchanged.
 
