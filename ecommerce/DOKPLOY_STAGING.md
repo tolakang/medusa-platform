@@ -22,6 +22,8 @@ A step-by-step setup and operations guide for the Ecommerce category on Dokploy.
 **Never paste secret values** in chat, git or tickets: keys, passwords, connection URLs, tokens. When you share a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 
 
+> **Quick start:** to set up a new Ecommerce staging from zero on `medusa-platform`, follow [STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md) (Parts A–H); this runbook is the full reference behind it.
+>
 > **Shared core (plan §4–§5):** Ecommerce is in the root pnpm workspace (SC-1): every app builds with Docker Context Path `.` (the repo root) and watches the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` too. The steps below show these values. Production deploys from `release/ecommerce`, which only you move. Details: `README.md` → *Shared core and release branches*.
 ---
 
