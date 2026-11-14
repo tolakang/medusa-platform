@@ -33,6 +33,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 ### Shared core and release branches (plan §4–§5)
 
 **Build from the repo root.** Ecommerce moved in its SC-1 PR (`docs/TASKS.md` → *Shared core*). For each app (`backend`, `storefront`) and the worker, in Dokploy:
+- **Repository:** `medusa-platform` (General → Provider: GitHub; Branch `main`). Projects created for the old `medusa-apps` repo get no changes from this repo until this is switched; if the repo isn't in the dropdown, give the Dokploy GitHub App access to it first (GitHub → Settings → Applications → Installed GitHub Apps → Configure → Repository access).
 - **Docker File:** `ecommerce/<app>/Dockerfile` (unchanged).
 - **Docker Context Path:** `.` (the repo root) instead of `ecommerce/<app>`.
 - **Watch Paths:** `ecommerce/<app>/**` (the worker: `ecommerce/backend/**`) plus `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (the root files of the workspace). From SC-2 the backend and the worker also watch `packages/medusa-core/**`.

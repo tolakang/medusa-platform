@@ -84,7 +84,7 @@ Save each result in your password manager under these names:
 ### A. Create the app and connect the code
 1. In `pos-staging`: **Create Service** → **Application** → name `pos-backend` → **Create**.
 2. **General** tab → **Provider: GitHub**:
-   - Repository: `medusa-apps`
+   - Repository: `medusa-platform`
    - Branch: `main`
    - **Build Path:** `/` (just a slash)
    - Trigger Type: **On Push**
@@ -247,7 +247,7 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed.js
 ### A. Create the app
 1. **Create Service** → **Application** → name `pos-worker` → **Create**.
 2. **General:**
-   - Provider **GitHub**, Repository `medusa-apps`, Branch `main`;
+   - Provider **GitHub**, Repository `medusa-platform`, Branch `main`;
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `pos/backend/Dockerfile`
@@ -284,7 +284,7 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed.js
 ### A. Create the app
 1. **Create Service** → **Application** → name `pos-storefront` → **Create**.
 2. **General:**
-   - Provider **GitHub**, `medusa-apps`, `main`;
+   - Provider **GitHub**, `medusa-platform`, `main`;
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `pos/storefront/Dockerfile`
@@ -341,7 +341,7 @@ CLIENT_IP_HEADER=
 ### A. Create the app
 1. **Create Service** → **Application** → name `pos-pos-app` → **Create**.
 2. **General:**
-   - Provider **GitHub**, `medusa-apps`, `main`;
+   - Provider **GitHub**, `medusa-platform`, `main`;
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `pos/pos-app/Dockerfile`

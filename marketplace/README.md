@@ -38,6 +38,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 ### Shared core and release branches (plan §4–§5)
 
 **Build from the repo root.** This applies from this category's SC-1 PR on (`docs/TASKS.md` → *Shared core*); that PR says when to switch, and until then the values above stay. For each app (`backend`, `storefront`, `vendor-portal`), in Dokploy:
+- **Repository:** `medusa-platform` (General → Provider: GitHub; Branch `main`). Projects created for the old `medusa-apps` repo get no changes from this repo until this is switched; if the repo isn't in the dropdown, give the Dokploy GitHub App access to it first (GitHub → Settings → Applications → Installed GitHub Apps → Configure → Repository access).
 - **Docker File:** `marketplace/<app>/Dockerfile` (unchanged).
 - **Docker Context Path:** `.` (the repo root) instead of `marketplace/<app>`.
 - **Watch Paths:** `marketplace/<app>/**` plus `pnpm-workspace.yaml` and the lockfile the SC-1 PR names; the backend and the worker also `packages/medusa-core/**`.

@@ -82,7 +82,7 @@ Save each result in your password manager under these names:
 ### A. Create the app and connect the code
 1. In `booking-staging`: **Create Service** → **Application** → name `booking-backend` → **Create**.
 2. **General** tab → **Provider: GitHub**:
-   - Repository: `medusa-apps`
+   - Repository: `medusa-platform`
    - Branch: `main`
    - **Build Path:** `/` (just a slash)
    - Trigger Type: **On Push**
@@ -252,7 +252,7 @@ Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers*
 ### A. Create the app
 1. **Create Service** → **Application** → name `booking-worker` → **Create**.
 2. **General:**
-   - Provider **GitHub**, Repository `medusa-apps`, Branch `main`;
+   - Provider **GitHub**, Repository `medusa-platform`, Branch `main`;
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `booking-services/backend/Dockerfile`
@@ -289,7 +289,7 @@ Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers*
 ### A. Create the app
 1. **Create Service** → **Application** → name `booking-storefront` → **Create**.
 2. **General:**
-   - Provider **GitHub**, `medusa-apps`, `main`;
+   - Provider **GitHub**, `medusa-platform`, `main`;
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `booking-services/storefront/Dockerfile`
