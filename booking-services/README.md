@@ -38,7 +38,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 - **Repository:** `medusa-platform` (General → Provider: GitHub; Branch `main`). Projects created for the old `medusa-apps` repo get no changes from this repo until this is switched; if the repo isn't in the dropdown, give the Dokploy GitHub App access to it first (GitHub → Settings → Applications → Installed GitHub Apps → Configure → Repository access).
 - **Docker File:** `booking-services/<app>/Dockerfile` (unchanged).
 - **Docker Context Path:** `.` (the repo root) instead of `booking-services/<app>`.
-- **Watch Paths:** `booking-services/<app>/**` (the worker: `booking-services/backend/**`) plus `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (the root files of the workspace). From SC-2 the backend and the worker also watch `packages/medusa-core/**`.
+- **Watch Paths:** `booking-services/<app>/**` (the worker: `booking-services/backend/**`) plus `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (the root files of the workspace). Since SC-2 (PayWay moved into the core) the backend and the worker also watch `packages/medusa-core/**`.
 - **When to switch:** once that app's SC-1 PR is green, change these fields and save **without** redeploying; then the PR merges and staging builds with the new fields. If a build fails, set the fields back and redeploy: the old image keeps running until then.
 
 **Staging and production branches** (SC-3, before this category's first production deploy):

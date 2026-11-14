@@ -92,7 +92,7 @@ Save each result in your password manager under these names:
    - **Docker Context Path:** `.` (the repo root)
    - Docker Build Stage: leave empty
    - **Save**
-4. **Watch Paths:** `booking-services/backend/**` (with `/**` at the end), `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, one per line → **Save**.
+4. **Watch Paths:** `booking-services/backend/**` (with `/**` at the end), `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, one per line → **Save**.
 
 ### B. Environment variables
 1. **Environment** tab → **Environment Variables** box. Paste this, then replace every `<…>`:
@@ -257,7 +257,7 @@ Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers*
 3. **Build Type: Dockerfile:**
    - Docker File `booking-services/backend/Dockerfile`
    - Docker Context Path `.` (the repo root)
-4. **Watch Paths:** `booking-services/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
+4. **Watch Paths:** `booking-services/backend/**`, `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
 
 ### B. Environment
 1. Copy **all** of `booking-backend`'s Environment Variables, including the three `BOOKING_*` lines and any optional extras. The worker sends the emails, Telegram alerts and booking reminders, and frees times whose hold ran out.

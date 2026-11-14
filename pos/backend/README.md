@@ -27,7 +27,7 @@ pnpm medusa user -e admin@example.com -p <password>
 # Customer updates on Telegram (TASKS P1-17): a separate customer bot; the order page links to it,
 # the customer taps Start, the bot confirms the order and reports shipped / delivered / canceled.
 # Env TELEGRAM_CUSTOMER_*, webhook POST /telegram/webhook, setup: src/scripts/telegram-set-webhook.ts.
-# Payments (TASKS P1-03): ABA PayWay provider pp_payway_payway (src/modules/payway) when PAYWAY_MERCHANT_ID
+# Payments (TASKS P1-03): ABA PayWay provider pp_payway_payway (from the shared core: packages/medusa-core, providers/payway) when PAYWAY_MERCHANT_ID
 # and PAYWAY_API_KEY are set; callback /hooks/payment/payway_payway; add it to the region in the admin.
 # Refunds (and cancelling a paid order) go through PayWay's Refund API with PAYWAY_RSA_PUBLIC_KEY.
 pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)

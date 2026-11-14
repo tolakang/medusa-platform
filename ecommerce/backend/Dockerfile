@@ -3,8 +3,8 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = ecommerce/backend/Dockerfile, Docker Context Path = . (repo root),
-#   Watch Paths = ecommerce/backend/**, pnpm-workspace.yaml, package.json,
-#                 pnpm-lock.yaml          (BUILD_PLAN.md §5.3, §8.1; F-011)
+#   Watch Paths = ecommerce/backend/**, packages/medusa-core/**, pnpm-workspace.yaml,
+#                 package.json, pnpm-lock.yaml   (BUILD_PLAN.md §5.3, §8.1; F-011)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
@@ -31,12 +31,16 @@ ENV UPLOAD_MAX_FILE_SIZE_CEILING_MB=${UPLOAD_MAX_FILE_SIZE_CEILING_MB}
 # Workspace manifests first, for the install cache. Exact pnpm version from
 # the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/medusa-core/package.json packages/medusa-core/pnpm-lock.yaml packages/medusa-core/
 COPY ecommerce/backend/package.json ecommerce/backend/pnpm-lock.yaml ecommerce/backend/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile --filter ecommerce-backend
+ && pnpm install --frozen-lockfile --filter ecommerce-backend...
 
+# The shared core first: the backend imports its built output (packages/medusa-core).
+COPY packages/medusa-core packages/medusa-core
 COPY ecommerce/backend ecommerce/backend
-RUN pnpm --filter ecommerce-backend build
+RUN pnpm --filter @medusa-platform/medusa-core build \
+ && pnpm --filter ecommerce-backend build
 
 # Production install: `medusa build` copies package.json as is, so its
 # "catalog:" versions can't be installed inside .medusa/server. pnpm deploy

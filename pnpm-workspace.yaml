@@ -2,6 +2,7 @@
 # from this file, so the settings of every app in `packages` live here.
 # Apps not listed yet keep their own settings-only pnpm-workspace.yaml (SC-1).
 packages:
+  - packages/*
   - ecommerce/backend
   - ecommerce/storefront
   - pos/backend

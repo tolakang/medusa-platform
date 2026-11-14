@@ -65,6 +65,7 @@ The full runbook, [DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md), has the background
 4. **Watch Paths**, one per line → **Save**:
    ```
    ecommerce/backend/**
+   packages/medusa-core/**
    pnpm-workspace.yaml
    package.json
    pnpm-lock.yaml
@@ -130,7 +131,7 @@ The full runbook, [DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md), has the background
 
 1. **Create Service → Application** → `ecommerce-worker`.
 2. **Provider** and **Build Type** as C2 and C3 (Docker File `ecommerce/backend/Dockerfile`, Context Path `.`).
-3. **Watch Paths:** the same four as the backend.
+3. **Watch Paths:** the same as the backend's (including `packages/medusa-core/**`).
 4. **Environment:** the backend's whole block, with three lines changed:
    ```
    MEDUSA_WORKER_MODE=worker

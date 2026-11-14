@@ -211,6 +211,9 @@ importers:
 
   .:
     dependencies:
+      '@medusa-platform/medusa-core':
+        specifier: workspace:*
+        version: link:../../packages/medusa-core
       '@medusajs/admin-sdk':
         specifier: 'catalog:'
         version: 2.22.6
