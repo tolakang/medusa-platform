@@ -43,8 +43,9 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 - **Docker File:** `pos/<app>/Dockerfile` (unchanged).
 - **Docker Context Path:** `.` (the repo root) instead of `pos/<app>`.
 - **Watch Paths:** `pos/<app>/**` plus `pnpm-workspace.yaml` and the lockfile the SC-1 PR names; the backend and the worker also `packages/medusa-core/**`.
+- **When to switch:** once that app's SC-1 PR is green, change these fields and save **without** redeploying; then the PR merges and staging builds with the new fields. If a build fails, set the fields back and redeploy: the old image keeps running until then.
 
-**Staging and production branches** (from SC-3):
+**Staging and production branches** (SC-3, before this category's first production deploy):
 - **Staging** apps keep **Branch `main`**: every merge redeploys the changed apps.
 - **Production** apps use **Branch `release/pos`**, Trigger **On Push**. Only you move it; Claude never does.
 - **Release** (after checking staging), from your own terminal:
