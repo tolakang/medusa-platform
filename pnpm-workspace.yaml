@@ -14,6 +14,9 @@ packages:
   - reseller/backend
   - reseller/storefront
   - reseller/seller-portal
+  - marketplace/backend
+  - marketplace/storefront
+  - marketplace/vendor-portal
 
 # One lockfile per app (SC-1 proof, point 5): each app keeps its own
 # pnpm-lock.yaml, CI cache path and Dokploy watch paths.

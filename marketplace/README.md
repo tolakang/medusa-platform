@@ -33,15 +33,15 @@ marketplace/
 | `marketplace-storefront` | Application (Dockerfile) | `/marketplace/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
 | `marketplace-vendor-portal` | Application (Dockerfile) | `/marketplace/vendor-portal` | 3000 → `vendors.example.com` | `vendor-portal/.env.example` (build args + runtime) |
 
-Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `marketplace/<app>/Dockerfile` and **Docker Context Path** `marketplace/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `marketplace/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `marketplace/<app>/Dockerfile` and **Docker Context Path** `.` (the repo root, since SC-1: the apps are in the root pnpm workspace; paths relative to the repo root, F-011), and **watch paths** `marketplace/<app>/**` plus the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, so a change to one app never redeploys another; a Medusa catalog change redeploys all of them. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ### Shared core and release branches (plan §4–§5)
 
-**Build from the repo root.** This applies from this category's SC-1 PR on (`docs/TASKS.md` → *Shared core*); that PR says when to switch, and until then the values above stay. For each app (`backend`, `storefront`, `vendor-portal`), in Dokploy:
+**Build from the repo root.** Marketplace moved in its SC-1 PR (`docs/TASKS.md` → *Shared core*). For each app (`backend`, `storefront`, `vendor-portal`) and the worker, in Dokploy:
 - **Repository:** `medusa-platform` (General → Provider: GitHub; Branch `main`). Projects created for the old `medusa-apps` repo get no changes from this repo until this is switched; if the repo isn't in the dropdown, give the Dokploy GitHub App access to it first (GitHub → Settings → Applications → Installed GitHub Apps → Configure → Repository access).
 - **Docker File:** `marketplace/<app>/Dockerfile` (unchanged).
 - **Docker Context Path:** `.` (the repo root) instead of `marketplace/<app>`.
-- **Watch Paths:** `marketplace/<app>/**` plus `pnpm-workspace.yaml` and the lockfile the SC-1 PR names; the backend and the worker also `packages/medusa-core/**`.
+- **Watch Paths:** `marketplace/<app>/**` (the worker: `marketplace/backend/**`) plus `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (the root files of the workspace). From SC-2 the backend and the worker also watch `packages/medusa-core/**`.
 - **When to switch:** once that app's SC-1 PR is green, change these fields and save **without** redeploying; then the PR merges and staging builds with the new fields. If a build fails, set the fields back and redeploy: the old image keeps running until then.
 
 **Staging and production branches** (SC-3, before this category's first production deploy):
