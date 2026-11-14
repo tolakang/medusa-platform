@@ -33,7 +33,9 @@ services:
     ports: ["56379:6379"]
 
   backend:
-    build: ./backend
+    build:
+      context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)
+      dockerfile: pos/backend/Dockerfile
     container_name: pos-local-backend
     depends_on:
       postgres: { condition: service_healthy }
@@ -68,7 +70,9 @@ services:
       RUN_MIGRATIONS: "true"
 
   worker:
-    build: ./backend
+    build:
+      context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)
+      dockerfile: pos/backend/Dockerfile
     container_name: pos-local-worker
     # Worker starts only after the server has migrated and is healthy
     # (same order as the Dokploy first deploy, BUILD_PLAN.md §8.1).
@@ -81,7 +85,9 @@ services:
       RUN_MIGRATIONS: "false"
 
   pos-app:
-    build: ./pos-app
+    build:
+      context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)
+      dockerfile: pos/pos-app/Dockerfile
     container_name: pos-local-pos-app
     depends_on:
       backend: { condition: service_healthy }
@@ -94,7 +100,8 @@ services:
   # Online shop on the same stock (TASKS P2-09). Same setup as ecommerce's.
   storefront:
     build:
-      context: ./storefront
+      context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)
+      dockerfile: pos/storefront/Dockerfile
       args:
         NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
         NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
