@@ -1,0 +1,11 @@
+# Root build context (SC-1 proof): every app's image builds from the repo root
+# and COPYs only the folders it needs; this keeps local build output and
+# secrets out of the context.
+**/node_modules
+**/.medusa
+**/.next
+.git
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log

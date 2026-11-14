@@ -1,8 +1,26 @@
-# pnpm SETTINGS for this app only. No `packages:` key, so this is a single
-# package, not a workspace (BUILD_PLAN.md §7.1, docs/MEDUSA_SKILL.md §12).
+# Root workspace (BUILD_PLAN.md §4.3). SC-1 PROOF ONLY: throwaway branch.
+packages:
+  - packages/*
+  - ecommerce/backend
 
-# Required by the Medusa Admin build. The docs put these in .npmrc
-# (learn/configurations/pnpm); pnpm >= 11 reads them from here instead.
+# One lockfile per app (proof point 5, tried first).
+sharedWorkspaceLockfile: false
+
+catalog:
+  "@medusajs/admin-sdk": 2.22.6
+  "@medusajs/admin-shared": 2.22.6
+  "@medusajs/caching": 2.22.6
+  "@medusajs/caching-redis": 2.22.6
+  "@medusajs/cli": 2.22.6
+  "@medusajs/dashboard": 2.22.6
+  "@medusajs/draft-order": 2.22.6
+  "@medusajs/eslint-plugin": 2.22.6
+  "@medusajs/framework": 2.22.6
+  "@medusajs/js-sdk": 2.22.6
+  "@medusajs/medusa": 2.22.6
+  "@medusajs/test-utils": 2.22.6
+  "@medusajs/ui": 4.2.13
+
 publicHoistPattern:
   - "*@medusajs/*"
   - "@tanstack/react-query"

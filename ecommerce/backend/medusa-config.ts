@@ -169,6 +169,12 @@ const notificationModule = {
             },
           }
         : localProvider("local-telegram-customer", "telegram_customer"),
+      // SC-1 proof: a provider from the core, registered here (library mode).
+      {
+        resolve: "@medusa-platform/medusa-core/providers/proof-notification",
+        id: "core-proof",
+        options: { channels: ["core_proof"] },
+      },
     ],
   },
 }
@@ -252,6 +258,8 @@ module.exports = defineConfig({
     { resolve: "./src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
     { resolve: "./src/modules/wishlist" },
+    // SC-1 proof: a module from the core, registered here (library mode).
+    { resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/core-proof" },
     // Auth Module with the default email + password provider and two-factor
     // sign-in for admins (TASKS P1-22; docs "Auth Module Options" and
     // "Multi-Factor Authentication", v2.15.5+; the admin's Settings → Profile
