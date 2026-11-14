@@ -2,8 +2,9 @@
 # wholesale / backend — Medusa server + worker (same image, two Dokploy apps)
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
-#   Docker File = wholesale/backend/Dockerfile, Docker Context Path = wholesale/backend,
-#   Watch Paths = wholesale/backend/**   (BUILD_PLAN.md §8.1; F-011)
+#   Docker File = wholesale/backend/Dockerfile, Docker Context Path = . (repo root),
+#   Watch Paths = wholesale/backend/**, pnpm-workspace.yaml, package.json, pnpm-lock.yaml
+#   (BUILD_PLAN.md §5.3, §8.1; F-011)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
@@ -14,25 +15,30 @@ ARG NODE_VERSION=22
 
 # ---------- build ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /repo
 
 # Optional: absolute backend URL baked into the admin dashboard.
 # Leave empty when the admin is served by this same app (recommended).
 ARG MEDUSA_BACKEND_URL=""
 ENV MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
 
-# Exact pnpm version from package.json "packageManager"
+# Workspace manifests first, for the install cache. Exact pnpm version from
+# the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY wholesale/backend/package.json wholesale/backend/pnpm-lock.yaml wholesale/backend/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile
+ && pnpm install --frozen-lockfile --filter wholesale-backend
 
-COPY . .
-RUN pnpm build
+COPY wholesale/backend wholesale/backend
+RUN pnpm --filter wholesale-backend build
 
-# `medusa build` does not copy the lockfile into .medusa/server
-WORKDIR /app/.medusa/server
-RUN cp /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./ \
- && pnpm install --prod --frozen-lockfile
+# Production install: `medusa build` copies package.json as is, so its
+# "catalog:" versions can't be installed inside .medusa/server. pnpm deploy
+# (pnpm >= 12.2) resolves them into a portable node_modules (SC-1 proof).
+RUN pnpm --filter wholesale-backend --prod deploy /prod \
+ && mkdir /out \
+ && cp -R /prod/node_modules /out/node_modules \
+ && cp -R wholesale/backend/.medusa/server/. /out/
 
 # ---------- runtime ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS runtime
@@ -40,8 +46,8 @@ ENV NODE_ENV=production \
     PORT=9000
 WORKDIR /app
 
-COPY --from=build --chown=node:node /app/.medusa/server ./
-COPY --chown=node:node docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --from=build --chown=node:node /out ./
+COPY --chown=node:node wholesale/backend/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER node

@@ -29,7 +29,9 @@ services:
     ports: ["56379:6379"]
 
   backend:
-    build: ./backend
+    build:
+      context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)
+      dockerfile: wholesale/backend/Dockerfile
     container_name: wholesale-local-backend
     depends_on:
       postgres: { condition: service_healthy }
@@ -64,7 +66,9 @@ services:
       RUN_MIGRATIONS: "true"
 
   worker:
-    build: ./backend
+    build:
+      context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)
+      dockerfile: wholesale/backend/Dockerfile
     container_name: wholesale-local-worker
     # Worker starts only after the server has migrated and is healthy
     # (same order as the Dokploy first deploy, BUILD_PLAN.md §8.1).
@@ -85,7 +89,8 @@ services:
   #   STOREFRONT_PUBLISHABLE_KEY=pk_... podman compose -f wholesale/docker-compose.local.yml up -d --build storefront
   storefront:
     build:
-      context: ./storefront
+      context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)
+      dockerfile: wholesale/storefront/Dockerfile
       args:
         NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
         NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
