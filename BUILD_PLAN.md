@@ -1,5 +1,7 @@
 # Build Plan — Medusa Platform
 
+> **Revision 2 (2026-11-14, owner: "add the release order to the plan").** §8.2 adds the release order for a change that reaches several categories: Ecommerce, then POS, then the other four, one at a time after a clean day in production (D15, TASKS F-092).
+>
 > **Revision 1 (2026-11-14, owner: "make a fresh plan structure", "focus only the share core mode").** The first plan of `medusa-platform`. It is built around the **shared core** (§4, §5): six categories of Medusa apps in one pnpm workspace, sharing one package, `packages/medusa-core`. Everything already built is kept, in §9. The plan this repo started from (medusa-apps, up to its Revision 16) is at tag `pre-shared-core`: `git show pre-shared-core:BUILD_PLAN.md`. TASKS F-089, F-090, F-091.
 
 **Status (2026-11-14).** All six categories have their code. Ecommerce and POS run on staging; no category is in production yet. **Next is the shared core** (§5): the SC-1 proof, then SC-1 and SC-2. The product backlog (§10) follows. Progress and evidence: `docs/TASKS.md`.
@@ -510,8 +512,22 @@ For each app, the script (rewritten for the catalog in SC-1):
 1. **Release notes:** read them for every version skipped (breaking changes are called out there), and run any codemod they list.
 2. **Back up the database.** The official revert is `medusa db:rollback <module…>` for each module that migrated, then reinstalling the old versions; the backup is the fallback. The daily backups (§8.1) run regardless.
 3. **Removed or changed links and search indexes:** run `medusa db:sync-links --execute-all` / `medusa db:migrate:search --execute-all-search` by hand from the Dokploy terminal, after reviewing the plan they print.
-4. **Deploy:** merging to `main` deploys staging (**one** server replica). Smoke test it, then the owner moves `release/<category>` to that commit for production (§8.1, D14). Claude never pushes to `release/*`.
+4. **Deploy:** merging to `main` deploys staging (**one** server replica). Smoke test it, then the owner moves `release/<category>` to that commit for production (§8.1, D14), in the **release order** below. Claude never pushes to `release/*`.
 5. **Rollback:** move `release/<category>` back to the previous commit, or redeploy the previous image, **plus** `db:rollback` of the migrated modules, or restore the backup.
+
+**Release order** (D15). When one change reaches several categories (a Medusa, pnpm or Node update, or a change in the core), production moves one category at a time:
+
+| Order | Category | Why here |
+|---|---|---|
+| 1 | **Ecommerce** | The first in production and the reference app: live PayWay payments, and the update script and CI gate were proven on it first |
+| 2 | **POS** | The other category already on staging; money at the counter |
+| 3 | **Booking services, Wholesale, Reseller, Marketplace** | In any order, one at a time |
+
+- **Next only after a clean run:** move the next category only when the previous one has run in production for **at least 24 hours** with a paid order (or a staging test order on the same commit), no new errors in its logs and no Dokploy alert.
+- **Skip what isn't live:** a category not in production yet is skipped; its staging still follows `main`.
+- **Stop on a problem:** if a category shows a problem, stop the rollout. Roll back only that category (step 5); the ones not yet moved stay on their working commit, and the fix goes through `main` and staging again.
+- **Security releases:** the owner may shorten the 24 hours, but the order and one-category-at-a-time stay.
+- **A change for one category only** (its own app code) needs no order: it reaches only that category's release branch.
 
 **Automation:**
 - **No Dependabot or Renovate:** Dependabot supports pnpm v7–v10 only, and this repo pins pnpm 12 (F-008).
@@ -888,6 +904,7 @@ A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested the original plan 
 | D12 | Booking trip pricing (kind C) | **All three modes:** vehicle size + hours, zones, and distance through a maps provider (the owner's account and key; optional) | 2026-11-14 |
 | D13 | Booking providers | **Both:** staff logins (invite-only) and an open marketplace (partners sign up, admin approves, commission and manual payouts), with `booking-services/provider-portal` | 2026-11-14 |
 | D14 | Shared code and production releases | **One pnpm workspace** with a Medusa `catalog` and one shared package, `packages/medusa-core`, used in library mode (each app switches on only the features it uses); each app keeps its own Dockerfile, env and Dokploy app. **Staging** deploys from `main`; **production** from `release/<category>`, moved only by the owner (rollback = move it back; `release/*` protected) | 2026-11-14 |
+| D15 | Release order for a change that reaches several categories | **Ecommerce → POS → the other four**, one category at a time, the next only after 24 hours of a clean run in production; stop and roll back only the affected category on a problem (§8.2) | 2026-11-14 |
 
 Also decided for Ecommerce:
 - **Delivery:** Phnom Penh delivery at launch; more shipping options can be added later in the admin.
@@ -927,4 +944,5 @@ This file is frozen for the builder:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 2 | 2026-11-14 | Release order (§8.2, D15): Ecommerce → POS → the other four, one category at a time, 24 hours of a clean production run between them, stop and roll back only the affected category. TASKS F-092. |
 | 1 | 2026-11-14 | First plan of `medusa-platform`, structured around the shared core: glossary (§2), shared core in library mode (§4), migration with the SC-1 proof, data invariants, stop rule and fallbacks (§5); everything already built kept in §9; the backlog after the core (§10); D14, R-j, R-l. Replaces the medusa-apps plan (Revisions 1 to 16, at tag `pre-shared-core`). TASKS F-089, F-090, F-091. |
