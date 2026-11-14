@@ -49,6 +49,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
   git fetch origin && git push origin origin/main:refs/heads/release/wholesale
   ```
   To release an older checked commit instead, put its hash in place of `origin/main`.
+- **Release order** (plan §8.2, D15): a change that reaches several categories (Medusa, pnpm, Node, the core) goes to production Ecommerce → POS → the other four, one at a time, the next after 24 hours of a clean run.
 - **Optional record:** tag each release too, e.g. `git tag wholesale-<yyyy-mm-dd> origin/release/wholesale && git push origin wholesale-<yyyy-mm-dd>`. Dokploy still follows the branch; the tag is only a readable history.
 - **Rollback:** move the branch back to the previous release, then run any `db:rollback` the release notes need (plan §8.2):
   ```bash
