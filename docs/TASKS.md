@@ -59,6 +59,7 @@ Owner, 2026-11-14: "I want this as share core, update everything", then "review,
 - [ ] **P1-09** Phase exit checklist. Everything is proven except P1-08 (evidence at tag `pre-shared-core`, P1-09).
 - [ ] **P1-20** Sign in with Google (`@medusajs/medusa/auth-google`, docs "Google Auth Module Provider", storefront "Third-Party or Social Login"); needs the owner's Google OAuth client.
 - [ ] Owner: check the PayWay portal for the order #13 refunds.
+- [ ] **Ecommerce staging on `medusa-platform`** (owner, 2026-11-14: "act like this is new"): a new staging project built from `medusa-platform` with the shared-core method, following `ecommerce/STAGING_QUICKSTART.md` Parts A–H. The old staging project was connected to `medusa-apps` and never received the SC-1 merges (see *Check external wiring* in the handoff). Done when Part G's checks and Part H's paid test order, alert, email and automatic deployment are recorded here; then the old project can be deleted and SC-1 (ecommerce) ticked. POS follows the same way.
 
 ### Booking services · plan §9.3
 - [~] **P3-18** Phase exit checklist. **Paused 2026-11-14 after runbook Step 3** (owner: shape the app as purely booking first, F-087). Resumes after P3-19 on a **fresh database** (redo Steps 1–3 with the new seed; the staging backend stays). Runbook: `booking-services/DOKPLOY_STAGING.md`. Each step ends with a **Check** and a **Reply with**.
@@ -97,7 +98,7 @@ Owner, 2026-11-14: "I want this as share core, update everything", then "review,
 
 **2026-11-14 (fresh plan, medusa-platform):** The repo has one plan, built around the shared core (`BUILD_PLAN.md` Revision 1, F-091), merged in PR #2 (`4bdce2a`, SC-0 done) with this file, the READMEs, runbooks and MEDUSA_SKILL. Carried-over handovers, reports, finished task history and generic docs were dropped (they are at tag `pre-shared-core`). The SC-1 proof passed the same day (branch `spike/sc1-proof`, see SC-1 proof). **SC-1 for Ecommerce** is in its PR (plan Revision 3); the owner switches Ecommerce's staging Dokploy fields before it merges. **Next:** SC-1 for POS, then the other categories, then SC-2 by feature (PayWay first). P3-19 waits for SC-1 and SC-2.
 
-**Operator notes:** never paste secrets into chat; when sharing logs, filter them (`grep -v -i "secret\|access-key\|api_key"`). The Dokploy terminal opens in `/`. Copying files to the server over SSH does not work with the current SSH setup; use Dokploy's own buttons (e.g. Restore Backup) instead. Other Claude sessions may share this checkout: check the branch before committing.
+**Operator notes:** never paste secrets into chat; when sharing logs, filter them (`grep -v -i "secret\|access-key\|api_key"`). The Dokploy terminal opens in `/`. Copying files to the server over SSH does not work with the current SSH setup; use Dokploy's own buttons (e.g. Restore Backup) instead. Other Claude sessions may share this checkout: check the branch before committing. **Check external wiring:** the Dokploy staging projects made before 2026-11-14 build from the old `medusa-apps` repo, so `medusa-platform` merges never reach them; new staging follows `<category>/STAGING_QUICKSTART.md` (Ecommerce first). Before writing deploy steps, check which repo, branch and domains Dokploy actually uses.
 
 ---
 
