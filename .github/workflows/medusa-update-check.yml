@@ -28,6 +28,10 @@ jobs:
           for f in */backend/package.json */storefront/package.json */*-portal/package.json */pos-app/package.json; do
             [ -f "$f" ] || continue
             PINNED=$(node -e 'const p=require("./"+process.argv[1]);const d={...p.dependencies,...p.devDependencies};console.log(d["@medusajs/medusa"]||d["@medusajs/js-sdk"]||"")' "$f")
+            # "catalog:" = the version in the root pnpm-workspace.yaml catalog.
+            if [ "$PINNED" = "catalog:" ]; then
+              PINNED=$(awk '/^catalog:/{on=1;next} on&&/^[^ ]/{on=0} on&&/"@medusajs\/(medusa|js-sdk)":/{print $2; exit}' pnpm-workspace.yaml)
+            fi
             [ -n "$PINNED" ] || continue
             if [ "$PINNED" != "$LATEST" ]; then
               echo "::warning file=$f::pins $PINNED, latest is $LATEST"

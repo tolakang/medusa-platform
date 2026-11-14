@@ -3,7 +3,10 @@
 #
 #   scripts/update-medusa.sh <category | category/app | all> [version] [--pnpm-latest]
 #
-# Per app (that has a package.json):
+# Root workspace (BUILD_PLAN.md §4.3): the Medusa catalog in the root
+# pnpm-workspace.yaml is set once, for every app in it, and the workspace is
+# installed once at the root. Apps there write "catalog:" and are left as is.
+# Per app not moved yet (own pnpm-workspace.yaml):
 #   1. target version = [version] or `npm view @medusajs/medusa version`
 #   2. every @medusajs/* dependency on the release line -> exact target version;
 #      @medusajs/ui (own version line, MEDUSA_SKILL §1) -> the version
@@ -60,6 +63,31 @@ PNPM_VERSION=""
 [ "$PNPM_LATEST" = 1 ] && PNPM_VERSION=$(npm view pnpm version) && echo "pnpm -> $PNPM_VERSION"
 
 CHANGED=""
+WORKSPACE=0
+if grep -q '^catalog:' pnpm-workspace.yaml 2>/dev/null; then
+  WORKSPACE=1
+  echo; echo "---- root catalog (pnpm-workspace.yaml): every app in the workspace moves"
+  VERSION="$VERSION" UI_VERSION="$UI_VERSION" node -e '
+    const fs = require("fs"); const p = "pnpm-workspace.yaml";
+    const { VERSION, UI_VERSION } = process.env;
+    let inCat = false;
+    const out = fs.readFileSync(p, "utf8").split("\n").map((line) => {
+      if (/^catalog:/.test(line)) { inCat = true; return line; }
+      if (inCat && /^\S/.test(line)) inCat = false;
+      const m = inCat && line.match(/^  "(@medusajs\/[^"]+)": (\S+)$/);
+      if (!m) return line;
+      const next = m[1] === "@medusajs/ui" ? (UI_VERSION || m[2]) : VERSION;
+      if (next !== m[2]) console.log(`  ${m[1]}: ${m[2]} -> ${next}`);
+      return `  "${m[1]}": ${next}`;
+    });
+    fs.writeFileSync(p, out.join("\n"));
+  '
+  if [ -n "$PNPM_VERSION" ]; then
+    node -e 'const fs=require("fs");const p="package.json";const j=JSON.parse(fs.readFileSync(p,"utf8"));j.packageManager=`pnpm@${process.argv[1]}`;fs.writeFileSync(p,JSON.stringify(j,null,2)+"\n")' "$PNPM_VERSION"
+  fi
+  CHANGED="$CHANGED pnpm-workspace.yaml package.json pnpm-lock.yaml"
+fi
+
 for dir in */backend */storefront */*-portal */pos-app; do
   [ -f "$dir/package.json" ] || continue
   case "$TARGET" in
@@ -75,7 +103,7 @@ for dir in */backend */storefront */*-portal */pos-app; do
     for (const field of ["dependencies", "devDependencies", "peerDependencies"]) {
       const deps = pkg[field] || {};
       for (const name of Object.keys(deps)) {
-        if (!name.startsWith("@medusajs/")) continue;
+        if (!name.startsWith("@medusajs/") || deps[name] === "catalog:") continue;
         const next = name === "@medusajs/ui" ? (UI_VERSION || deps[name]) : VERSION;
         if (deps[name] !== next) { console.log(`  ${name}: ${deps[name]} -> ${next}`); deps[name] = next; }
       }
@@ -83,9 +111,15 @@ for dir in */backend */storefront */*-portal */pos-app; do
     if (PNPM_VERSION) pkg.packageManager = `pnpm@${PNPM_VERSION}`;
     fs.writeFileSync(p, JSON.stringify(pkg, null, 2) + "\n");
   ' "$dir/package.json"
-  (cd "$dir" && pnpm install --no-frozen-lockfile)
+  # Apps in the root workspace are installed once, below.
+  [ -f "$dir/pnpm-workspace.yaml" ] && (cd "$dir" && pnpm install --no-frozen-lockfile)
   CHANGED="$CHANGED $dir/package.json $dir/pnpm-lock.yaml"
 done
+
+if [ "$WORKSPACE" = 1 ]; then
+  echo; echo "---- root workspace install"
+  pnpm install --no-frozen-lockfile
+fi
 
 [ -n "$CHANGED" ] || { echo "no apps matched '$TARGET'"; exit 1; }
 

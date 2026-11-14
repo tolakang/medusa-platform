@@ -1,0 +1,18 @@
+# Root build context (BUILD_PLAN.md §5.1 point 6). Apps moved to the root
+# workspace build from the repo root and COPY only the folders they need; this
+# file keeps build output, local state and secrets out of that context.
+# Apps not moved yet still build from their own folder with their own
+# .dockerignore.
+**/node_modules
+**/.medusa
+**/.next
+**/.cache
+.git
+**/.env
+**/.env.*
+!**/.env.example
+**/coverage
+*/backend/uploads
+*/backend/static
+**/*.log
+**/docker-compose*.yml

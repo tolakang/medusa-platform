@@ -75,12 +75,16 @@ for D in $DEPLOYABLES; do
 
   if [ "$IMAGE" = 1 ]; then
     step "$D" "image build ($CONTAINER_CLI)"
+    # Apps in the root workspace (no pnpm-workspace.yaml of their own) build
+    # from the repo root, like Dokploy's Docker Context Path "." (BUILD_PLAN
+    # §5.3); apps not moved yet build from their own folder.
+    if [ -f "$D/pnpm-workspace.yaml" ]; then CTX=("$D"); else CTX=(-f "$D/Dockerfile" .); fi
     case "$D" in
-      */backend) $CONTAINER_CLI build -t "$NAME:verify" "$D" ;;
+      */backend) $CONTAINER_CLI build -t "$NAME:verify" "${CTX[@]}" ;;
       # Clients: the key is a build-time ARG (BUILD_PLAN §7.2); the starter's
       # check-env-variables.js aborts the build without it.
       *) $CONTAINER_CLI build -t "$NAME:verify" \
-           --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY="$NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$D" ;;
+           --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY="$NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "${CTX[@]}" ;;
     esac
 
     case "$D" in

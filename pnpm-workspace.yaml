@@ -1,7 +1,36 @@
-# pnpm SETTINGS for this app only. No `packages:` key, so this is a single
-# package, not a workspace (BUILD_PLAN.md §7.1, docs/MEDUSA_SKILL.md §12).
+# Root pnpm workspace (BUILD_PLAN.md §4.3, §7). pnpm reads its settings only
+# from this file, so the settings of every app in `packages` live here.
+# Apps not listed yet keep their own settings-only pnpm-workspace.yaml (SC-1).
+packages:
+  - ecommerce/backend
+  - ecommerce/storefront
 
-# Required by the Medusa Admin build. The docs put these in .npmrc
+# One lockfile per app (SC-1 proof, point 5): each app keeps its own
+# pnpm-lock.yaml, CI cache path and Dokploy watch paths.
+sharedWorkspaceLockfile: false
+
+# Medusa versions, set once (§4.3). Apps write "catalog:". @medusajs/ui is
+# the version @medusajs/dashboard depends on (§6.2).
+catalog:
+  "@medusajs/admin-sdk": 2.22.6
+  "@medusajs/admin-shared": 2.22.6
+  "@medusajs/caching": 2.22.6
+  "@medusajs/caching-redis": 2.22.6
+  "@medusajs/cli": 2.22.6
+  "@medusajs/dashboard": 2.22.6
+  "@medusajs/draft-order": 2.22.6
+  "@medusajs/eslint-plugin": 2.22.6
+  "@medusajs/framework": 2.22.6
+  "@medusajs/icons": 2.22.6
+  "@medusajs/instantsearch-adapter": 2.22.6
+  "@medusajs/js-sdk": 2.22.6
+  "@medusajs/medusa": 2.22.6
+  "@medusajs/test-utils": 2.22.6
+  "@medusajs/types": 2.22.6
+  "@medusajs/ui": 4.2.13
+  "@medusajs/ui-preset": 2.22.6
+
+# Required by the Medusa Admin build (backends). The docs put these in .npmrc
 # (learn/configurations/pnpm); pnpm >= 11 reads them from here instead.
 publicHoistPattern:
   - "*@medusajs/*"
@@ -9,18 +38,25 @@ publicHoistPattern:
   - "react-i18next"
   - "react-router-dom"
 
-# pnpm blocks dependency install scripts unless they are allowed.
+# pnpm blocks dependency install scripts unless they are allowed. Union of
+# the apps' lists; false = not run (telemetry opt-out; unrs-resolver is only
+# the storefront's lint resolver).
 allowBuilds:
   "@medusajs/telemetry": false
   "@swc/core": true
   esbuild: true
   msgpackr-extract: true
   protobufjs: true
+  unrs-resolver: false
 
-# Carried over from the dtc-starter root package.json (pnpm.overrides).
+# From the starters' root package.json (pnpm.overrides). The starter's
+# @types/react / @types/react-dom overrides are not kept: they would also move
+# the backends (React 18 admin) to React 19 types, and the storefront pins
+# both directly, so its resolved packages don't change (TASKS SC-1, ecommerce).
 overrides:
   tsconfig-paths: ^4.2.0
 
+# Release-day exceptions to pnpm's minimum release age (§6.2, F-057).
 minimumReleaseAgeExclude:
   - "@medusajs/admin-bundler@2.22.6"
   - "@medusajs/admin-sdk@2.22.6"
@@ -58,6 +94,7 @@ minimumReleaseAgeExclude:
   - "@medusajs/fulfillment@2.22.6"
   - "@medusajs/icons@2.22.6"
   - "@medusajs/index@2.22.6"
+  - "@medusajs/instantsearch-adapter@2.22.6"
   - "@medusajs/inventory@2.22.6"
   - "@medusajs/js-sdk@2.22.6"
   - "@medusajs/link-modules@2.22.6"
@@ -91,6 +128,7 @@ minimumReleaseAgeExclude:
   - "@medusajs/test-utils@2.22.6"
   - "@medusajs/translation@2.22.6"
   - "@medusajs/types@2.22.6"
+  - "@medusajs/ui-preset@2.22.6"
   - "@medusajs/ui@4.2.13"
   - "@medusajs/user@2.22.6"
   - "@medusajs/utils@2.22.6"
