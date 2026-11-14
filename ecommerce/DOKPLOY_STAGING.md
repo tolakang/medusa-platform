@@ -22,7 +22,7 @@ A step-by-step setup and operations guide for the Ecommerce category on Dokploy.
 **Never paste secret values** in chat, git or tickets: keys, passwords, connection URLs, tokens. When you share a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 
 
-> **Shared core (plan §4–§5):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/ecommerce`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
+> **Shared core (plan §4–§5):** Ecommerce is in the root pnpm workspace (SC-1): every app builds with Docker Context Path `.` (the repo root) and watches the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` too. The steps below show these values. Production deploys from `release/ecommerce`, which only you move. Details: `README.md` → *Shared core and release branches*.
 ---
 
 ## 0. Before you start
@@ -97,13 +97,13 @@ openssl rand -hex 32      # SHOPPER_IP_SECRET (backend, storefront)
 | Field | Value |
 |---|---|
 | **Docker File** | `ecommerce/backend/Dockerfile` |
-| **Docker Context Path** | `ecommerce/backend` |
+| **Docker Context Path** | `.` (the repo root) |
 | Docker Build Stage | empty |
 
 Both paths are relative to the repo root (verified on staging 2026-09-25, F-011).
 
 ### 2.4 Watch Paths
-`ecommerce/backend/**`. Write the `/**` glob: a bare `ecommerce/backend/` may not match changed files.
+`ecommerce/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (one per line). Write the `/**` glob: a bare `ecommerce/backend/` may not match changed files. The three root files are the workspace's: a Medusa catalog change redeploys the backend.
 
 ### 2.5 Environment variables
 1. **Environment** → **Environment Variables** (runtime). Paste this and replace every `<…>`:
@@ -294,8 +294,8 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
    | Build Path | `/` |
    | Build Type | Dockerfile |
    | Docker File | `ecommerce/backend/Dockerfile` |
-   | Docker Context Path | `ecommerce/backend` |
-   | **Watch Paths** | `ecommerce/backend/**` |
+   | Docker Context Path | `.` (the repo root) |
+   | **Watch Paths** | `ecommerce/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` |
 
    Don't leave Watch Paths empty: an empty box redeploys the worker on every push to `main` (F-019).
 
@@ -339,8 +339,8 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
 | **Build Path** | `/` |
 | Build Type | Dockerfile |
 | **Docker File** | `ecommerce/storefront/Dockerfile` |
-| **Docker Context Path** | `ecommerce/storefront` |
-| **Watch Paths** | `ecommerce/storefront/**` |
+| **Docker Context Path** | `.` (the repo root) |
+| **Watch Paths** | `ecommerce/storefront/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` |
 
 ### 4.2 Build Time Arguments
 These are built into the bundle; changing one = redeploy.

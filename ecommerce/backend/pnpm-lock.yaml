@@ -162,6 +162,48 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    '@medusajs/admin-sdk':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/admin-shared':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/caching':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/caching-redis':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/cli':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/dashboard':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/draft-order':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/eslint-plugin':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/framework':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/js-sdk':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/medusa':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/test-utils':
+      specifier: 2.22.6
+      version: 2.22.6
+    '@medusajs/ui':
+      specifier: 4.2.13
+      version: 4.2.13
+
 overrides:
   tsconfig-paths: ^4.2.0
 
@@ -170,37 +212,37 @@ importers:
   .:
     dependencies:
       '@medusajs/admin-sdk':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6
       '@medusajs/admin-shared':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6
       '@medusajs/caching':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(@medusajs/framework@2.22.6(@medusajs/cli@2.22.6(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1))(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(ioredis@5.11.1(supports-color@8.1.1))(supports-color@8.1.1)(vite@7.3.7(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.1))(zod@4.2.0))(awilix@13.0.5)
       '@medusajs/caching-redis':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(@medusajs/framework@2.22.6(@medusajs/cli@2.22.6(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1))(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(ioredis@5.11.1(supports-color@8.1.1))(supports-color@8.1.1)(vite@7.3.7(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.1))(zod@4.2.0))(supports-color@8.1.1)
       '@medusajs/cli':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       '@medusajs/dashboard':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(@sinclair/typebox@0.34.52)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(ajv@8.13.0)(typescript@5.9.3)
       '@medusajs/draft-order':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(ae9803f8c6b7a40f6704a12ce6bf37ef)
       '@medusajs/framework':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(@medusajs/cli@2.22.6(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1))(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(ioredis@5.11.1(supports-color@8.1.1))(supports-color@8.1.1)(vite@7.3.7(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.1))(zod@4.2.0)
       '@medusajs/js-sdk':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6
       '@medusajs/medusa':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(cee368a8c58f02ce649cc15b082e0b42)
       '@medusajs/ui':
-        specifier: 4.2.13
+        specifier: 'catalog:'
         version: 4.2.13(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
       '@tanstack/react-query':
         specifier: 5.64.2
@@ -216,10 +258,10 @@ importers:
         version: 4.2.0
     devDependencies:
       '@medusajs/eslint-plugin':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(eslint@9.39.5(jiti@2.7.0)(supports-color@8.1.1))(supports-color@8.1.1)(typescript@5.9.3)
       '@medusajs/test-utils':
-        specifier: 2.22.6
+        specifier: 'catalog:'
         version: 2.22.6(@medusajs/core-flows@2.22.6(@medusajs/framework@2.22.6(@medusajs/cli@2.22.6(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1))(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(ioredis@5.11.1(supports-color@8.1.1))(supports-color@8.1.1)(vite@7.3.7(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.1))(zod@4.2.0)))(@medusajs/framework@2.22.6(@medusajs/cli@2.22.6(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1))(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(ioredis@5.11.1(supports-color@8.1.1))(supports-color@8.1.1)(vite@7.3.7(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.1))(zod@4.2.0))(@medusajs/medusa@2.22.6)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1)
       '@swc/core':
         specifier: ^1.7.28
@@ -3729,6 +3771,7 @@ packages:
 
   axios-retry@4.5.0:
     resolution: {integrity: sha512-aR99oXhpEDGo0UuAlYcn2iGRds30k366Zfa05XWScR9QaQD4JYiP3/1Qt1u7YlefUOK+cn0CcwoL1oefavQUlQ==}
+    deprecated: axios-retry is no longer maintained. See https://github.com/softonic/axios-retry for alternatives.
     peerDependencies:
       axios: 0.x || 1.x
 

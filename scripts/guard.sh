@@ -79,6 +79,22 @@ else
 $(printf '%s\n' "$LOCK_OUT" | grep -E '^FAIL')"
 fi
 
+# 3b. The root workspace's Medusa catalog (BUILD_PLAN.md §4.3, §6.2): exact
+#     versions, one version except @medusajs/ui, and no pnpm patches.
+catalog_entries() {
+  [ -f pnpm-workspace.yaml ] || return 0
+  awk '/^catalog:/{on=1; next} on && /^[^ ]/{on=0} on && /"@medusajs\//{print}' pnpm-workspace.yaml
+}
+if [ -f pnpm-workspace.yaml ]; then
+  CAT=$(catalog_entries)
+  BAD=$(printf '%s\n' "$CAT" | grep . | grep -vE '^  "@medusajs/[^"]+": [0-9]+\.[0-9]+\.[0-9]+$' || true)
+  [ -z "$BAD" ] && pass "exact @medusajs versions in the root catalog" || fail "non-exact catalog versions: $BAD"
+  VERSIONS=$(printf '%s\n' "$CAT" | grep -v '"@medusajs/ui"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' | sort -u)
+  [ "$(printf '%s\n' "$VERSIONS" | grep -c .)" -le 1 ] && pass "one @medusajs version in the catalog${VERSIONS:+ ($VERSIONS)}" \
+    || fail "catalog has several @medusajs versions: $(echo $VERSIONS)"
+  grep -q "patchedDependencies" pnpm-workspace.yaml && fail "pnpm patches in the root pnpm-workspace.yaml" || pass "no pnpm patches at the root"
+fi
+
 DEPLOYABLES=$(list_deployables)
 [ -n "$DEPLOYABLES" ] || { echo "no apps with package.json for '$TARGET'"; exit $FAILED; }
 
@@ -88,11 +104,18 @@ for D in $DEPLOYABLES; do
 
   # 4. Exact @medusajs pins, all on one version except @medusajs/ui
   #    (CLAUDE.md; REVIEW_FIXES T4: ">=2.22.6" or "2.x" used to pass).
+  #    "catalog:" counts when the root catalog has an exact entry (3b, SC-1).
   BAD=$(grep -nE '"@medusajs/[^"]+": *"' "$D/package.json" \
-        | grep -vE '"@medusajs/[^"]+": *"[0-9]+\.[0-9]+\.[0-9]+"' || true)
+        | grep -vE '"@medusajs/[^"]+": *"([0-9]+\.[0-9]+\.[0-9]+|catalog:)"' || true)
+  for PKG in $(grep -oE '"@medusajs/[^"]+": *"catalog:"' "$D/package.json" | cut -d'"' -f2); do
+    catalog_entries | grep -qE "^  \"$PKG\": [0-9]+\.[0-9]+\.[0-9]+$" || BAD="$BAD $PKG (not in the root catalog)"
+  done
   [ -z "$BAD" ] && pass "exact @medusajs pins" || fail "non-exact @medusajs versions: $BAD"
-  VERSIONS=$(grep -oE '"@medusajs/[^"]+": *"[0-9]+\.[0-9]+\.[0-9]+"' "$D/package.json" \
-             | grep -v '"@medusajs/ui"' | sed -E 's/.*"([0-9.]+)"$/\1/' | sort -u)
+  VERSIONS=$( { grep -oE '"@medusajs/[^"]+": *"[0-9]+\.[0-9]+\.[0-9]+"' "$D/package.json" \
+                | sed -E 's/^"([^"]+)": *"([0-9.]+)"$/\1 \2/';
+                for PKG in $(grep -oE '"@medusajs/[^"]+": *"catalog:"' "$D/package.json" | cut -d'"' -f2); do
+                  catalog_entries | grep -E "^  \"$PKG\": " | sed -E 's/^  "([^"]+)": ([0-9.]+)$/\1 \2/'
+                done; } | grep -v '^@medusajs/ui ' | awk '{print $2}' | sort -u)
   [ "$(printf '%s\n' "$VERSIONS" | grep -c .)" -le 1 ] && pass "one @medusajs version${VERSIONS:+ ($VERSIONS)}" \
     || fail "@medusajs packages on different versions: $(echo $VERSIONS)"
 

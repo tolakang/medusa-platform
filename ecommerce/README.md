@@ -28,14 +28,14 @@ ecommerce/
 | `ecommerce-worker` | Application (Dockerfile) | `/ecommerce/backend` | none | same env + worker overrides |
 | `ecommerce-storefront` | Application (Dockerfile) | `/ecommerce/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
 
-Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `ecommerce/<app>/Dockerfile` and **Docker Context Path** `ecommerce/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `ecommerce/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `ecommerce/<app>/Dockerfile` and **Docker Context Path** `.` (the repo root, since SC-1: both apps are in the root pnpm workspace; paths relative to the repo root, F-011), and **watch paths** `ecommerce/<app>/**` plus the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, so a change to one app never redeploys the other; a Medusa catalog change redeploys both. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ### Shared core and release branches (plan §4–§5)
 
-**Build from the repo root.** This applies from this category's SC-1 PR on (`docs/TASKS.md` → *Shared core*); that PR says when to switch, and until then the values above stay. For each app (`backend`, `storefront`), in Dokploy:
+**Build from the repo root.** Ecommerce moved in its SC-1 PR (`docs/TASKS.md` → *Shared core*). For each app (`backend`, `storefront`) and the worker, in Dokploy:
 - **Docker File:** `ecommerce/<app>/Dockerfile` (unchanged).
 - **Docker Context Path:** `.` (the repo root) instead of `ecommerce/<app>`.
-- **Watch Paths:** `ecommerce/<app>/**` plus `pnpm-workspace.yaml` and the lockfile the SC-1 PR names; the backend and the worker also `packages/medusa-core/**`.
+- **Watch Paths:** `ecommerce/<app>/**` (the worker: `ecommerce/backend/**`) plus `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (the root files of the workspace). From SC-2 the backend and the worker also watch `packages/medusa-core/**`.
 - **When to switch:** once that app's SC-1 PR is green, change these fields and save **without** redeploying; then the PR merges and staging builds with the new fields. If a build fails, set the fields back and redeploy: the old image keeps running until then.
 
 **Staging and production branches** (SC-3, before this category's first production deploy):

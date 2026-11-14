@@ -1,5 +1,7 @@
 # Build Plan — Medusa Platform
 
+> **Revision 3 (2026-11-14, SC-1 for Ecommerce, owner: "Start SC-1 for Ecommerce").** §7.1 and §7.2 describe the root-workspace setup proven by the SC-1 proof: Medusa packages as `"catalog:"`, pnpm settings in the root `pnpm-workspace.yaml`, one lockfile per app, images built from the repo root (backend production install via `pnpm deploy`), one root `.dockerignore`; apps not moved yet keep the per-app setup. §4.3 records the lockfile and Docker context choice, §11 two notes. The starter's `@types/react` overrides are not carried to the root (TASKS F-093).
+>
 > **Revision 2 (2026-11-14, owner: "add the release order to the plan").** §8.2 adds the release order for a change that reaches several categories: Ecommerce, then POS, then the other four, one at a time after a clean day in production (D15, TASKS F-092).
 >
 > **Revision 1 (2026-11-14, owner: "make a fresh plan structure", "focus only the share core mode").** The first plan of `medusa-platform`. It is built around the **shared core** (§4, §5): six categories of Medusa apps in one pnpm workspace, sharing one package, `packages/medusa-core`. Everything already built is kept, in §9. The plan this repo started from (medusa-apps, up to its Revision 16) is at tag `pre-shared-core`: `git show pre-shared-core:BUILD_PLAN.md`. TASKS F-089, F-090, F-091.
@@ -167,7 +169,8 @@ Where one app differs, the core offers a hook or that app keeps its own version.
 
 - **Medusa versions** are set once, in the `catalog` of the root `pnpm-workspace.yaml`; apps write `"catalog:"`. Other dependencies stay in each app's `package.json`.
 - **pnpm settings** (`publicHoistPattern`, `allowBuilds`, `overrides`, `minimumReleaseAgeExclude`) are read only from the root `pnpm-workspace.yaml`, so each app's settings are merged there when it joins. A setting one app doesn't share (Wholesale has no `tsconfig-paths` override) is checked against that app's lockfile first.
-- **Lockfile:** one per app (`sharedWorkspaceLockfile: false`) or one at the root, decided by the SC-1 proof (§5.1).
+- **Lockfile:** one per app (`sharedWorkspaceLockfile: false`), chosen by the SC-1 proof (§5.1 point 5): each app keeps its own `pnpm-lock.yaml`, CI cache path and watch paths, and `pnpm deploy` works with it. The root gets a small `pnpm-lock.yaml` that only pins pnpm itself.
+- **Docker context:** the repo root, with one root `.dockerignore` (§5.1 point 6).
 - **The core** declares `@medusajs/framework` as a peer dependency (docs `learn/configurations/pnpm`), and its Medusa packages as dev and peer dependencies (docs `learn/fundamentals/plugins/create`).
 
 ### 4.4 Data stays the same
@@ -264,22 +267,21 @@ Tests that depend on background work (scheduled jobs, search indexing) control i
 
 ## 7. App standards
 
-There are two standards: **7.1 backend** (the same in every `*/backend`) and **7.2 client** (every `storefront`, `*-portal` and `pos-app`). Each app commits its `Dockerfile`, `.dockerignore` and `.env.example`; backends also commit `docker-entrypoint.sh`. An app with no code yet keeps these as templates.
+There are two standards: **7.1 backend** (the same in every `*/backend`) and **7.2 client** (every `storefront`, `*-portal` and `pos-app`). Each app commits its `Dockerfile` and `.env.example`; backends also commit `docker-entrypoint.sh`. An app with no code yet keeps these as templates.
 
-> The per-app package setup below (own lockfile, a settings-only `pnpm-workspace.yaml`, Docker steps from the app folder) holds for each app until its SC-1 PR (§5). The first SC-1 PR rewrites §7.1 and §7.2 for the workspace, from the SC-1 proof.
+**Two setups during SC-1** (§5.2). An app whose category has moved is in the **root workspace**: it is listed in the root `pnpm-workspace.yaml`, writes `"catalog:"` for Medusa packages, has no `pnpm-workspace.yaml` or `.dockerignore` of its own, and builds from the repo root. An app whose category hasn't moved yet keeps the **per-app setup**: its own settings-only `pnpm-workspace.yaml` and `.dockerignore`, exact pins, and Docker from its own folder. Below, the workspace setup comes first and the per-app differences are marked *(not moved yet)*. Moved so far: `ecommerce/`.
 
 ### 7.1 Backend standard (`<category>/backend/`)
 
 ```
 <category>/backend/
-├── package.json              # own deps, exact @medusajs pins, packageManager
-├── pnpm-lock.yaml            # own lockfile
-├── pnpm-workspace.yaml       # pnpm settings for this app only (no `packages:` key), until SC-1
+├── package.json              # own deps; @medusajs/* as "catalog:" (not moved yet: exact pins); packageManager
+├── pnpm-lock.yaml            # own lockfile (sharedWorkspaceLockfile: false)
 ├── medusa-config.ts          # env-driven; custom modules listed at the top
 ├── tsconfig.json, jest.config.js, instrumentation.ts   # from the starter
-├── Dockerfile                # multi-stage
+├── Dockerfile                # multi-stage, built from the repo root
 ├── docker-entrypoint.sh      # migrations + start, server/worker aware
-├── .dockerignore, .gitignore
+├── .gitignore                # (not moved yet: also pnpm-workspace.yaml and .dockerignore)
 ├── .env.example              # every variable documented
 ├── README.md                 # what it is, starter commit, how to run and deploy
 ├── integration-tests/
@@ -296,13 +298,21 @@ There are two standards: **7.1 backend** (the same in every `*/backend`) and **7
     └── scripts/              # seed scripts (`medusa exec`, e.g. `pnpm seed`)
 ```
 
-**Where the boilerplate comes from:** `apps/backend` of the official `medusajs/dtc-starter` (Wholesale: `medusajs/b2b-starter`). The starters are pnpm and Turborepo monorepos, so only `apps/backend` is copied, and the workspace-level settings move into this app's own `pnpm-workspace.yaml`. Record the starter commit in the backend README. Add a `predeploy` script (`medusa db:migrate`) and a `typecheck` script; the starter ships neither.
+**Where the boilerplate comes from:** `apps/backend` of the official `medusajs/dtc-starter` (Wholesale: `medusajs/b2b-starter`). The starters are pnpm and Turborepo monorepos, so only `apps/backend` is copied, and the workspace-level settings move into the root `pnpm-workspace.yaml` (not moved yet: into the app's own). Record the starter commit in the backend README. Add a `predeploy` script (`medusa db:migrate`) and a `typecheck` script; the starter ships neither.
 
-#### `pnpm-workspace.yaml` (per app, until SC-1)
+#### pnpm settings: the root `pnpm-workspace.yaml`
 
-The official [pnpm guide](https://docs.medusajs.com/learn/configurations/pnpm) puts four `public-hoist-pattern` entries in `.npmrc`. pnpm 11 and later don't read them there, so the same entries go into `pnpm-workspace.yaml` as `publicHoistPattern`. Without a `packages:` key the file only holds settings, so the app stays a single package. From SC-1 these settings live in the root `pnpm-workspace.yaml` (§4.3).
+pnpm reads its settings only from the workspace root, so the settings of every moved app live in the root `pnpm-workspace.yaml`, next to `packages:` and the Medusa `catalog` (§4.3). The official [pnpm guide](https://docs.medusajs.com/learn/configurations/pnpm) puts four `public-hoist-pattern` entries in `.npmrc`; pnpm 11 and later don't read them there, so they are `publicHoistPattern`. Settings are the union of the apps' own; a setting that would change another app's resolved packages is not merged (the starter's `@types/react` override, TASKS SC-1). *(Not moved yet:* the same settings sit in the app's own `pnpm-workspace.yaml`, without a `packages:` key, so the app stays a single package.)
 
 ```yaml
+packages:                    # the moved apps (and packages/* from SC-2)
+  - ecommerce/backend
+  - ecommerce/storefront
+sharedWorkspaceLockfile: false   # one lockfile per app (SC-1 proof, point 5)
+catalog:                     # Medusa versions, set once
+  "@medusajs/medusa": 2.22.6
+  "@medusajs/ui": 4.2.13     # the dashboard's version (§6.2)
+  # … every @medusajs/* package the moved apps use
 publicHoistPattern:          # required by the Medusa Admin build
   - "*@medusajs/*"
   - "@tanstack/react-query"
@@ -335,19 +345,24 @@ allowBuilds:                 # pnpm blocks install scripts unless allowed
 
 The variable names match the official deployment guide. Migrations run only on the server, like the guide's `predeploy` step; the worker never migrates.
 
-#### Backend Dockerfile (until SC-1)
+#### Backend Dockerfile
 
+Built from the **repo root** (Dokploy Docker Context Path `.`, §5.3), with the root `.dockerignore`:
 1. **Build stage:** `docker.io/library/node:22-bookworm-slim`. The fully-qualified name lets Podman/Buildah build it too, and the image is multi-arch (arm64 and amd64).
-2. Copy `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`. Install the pnpm version read from `packageManager`, then run `pnpm install --frozen-lockfile`.
-3. Copy the source and run `pnpm build` (`medusa build` → `.medusa/server`, including the compiled admin).
-4. In `.medusa/server`, copy in `pnpm-lock.yaml` and `pnpm-workspace.yaml` (the build doesn't copy the lockfile), then run `pnpm install --prod --frozen-lockfile`. From SC-1 this step becomes the proven `pnpm deploy` recipe (§5.1).
-5. **Runtime stage:** same base image. Copy only `.medusa/server`, run as the `node` user, expose `9000`. `medusa start` runs inside `.medusa/server` (F-009), and the entrypoint runs `cd /app` first, because the Dokploy terminal opens in `/` (F-013).
-6. **Entrypoint:**
+2. Copy the root `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, then the app's `package.json` and `pnpm-lock.yaml` (and, from SC-2, the core's). Install the pnpm version read from the root `packageManager`, then `pnpm install --frozen-lockfile --filter <app>`.
+3. Copy the app's folder (and the core's) and run `pnpm --filter <app> build` (`medusa build` → `.medusa/server`, including the compiled admin).
+4. **Production install:** `medusa build` copies `package.json` as is, so its `"catalog:"` (and `"workspace:*"`) versions can't be installed inside `.medusa/server`. `pnpm --filter <app> --prod deploy /prod` resolves them into a portable `node_modules` (pnpm ≥ 12.2, SC-1 proof); `/prod/node_modules` goes next to the contents of `.medusa/server`.
+5. **Runtime stage:** same base image. Copy only that folder (`.medusa/server` + `node_modules`), run as the `node` user, expose `9000`.
+
+*(Not moved yet:* build from the app's folder: copy its `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, install, build, then copy the lockfile and `pnpm-workspace.yaml` into `.medusa/server` and run `pnpm install --prod --frozen-lockfile` there.)
+
+6. **Runtime details:**    `medusa start` runs inside the built server folder (F-009), and the entrypoint runs `cd /app` first, because the Dokploy terminal opens in `/` (F-013).
+7. **Entrypoint:**
    - **`start`:** runs `medusa db:migrate --execute-safe-links --execute-safe-search` (only when `MEDUSA_WORKER_MODE` ≠ `worker` and `RUN_MIGRATIONS` ≠ `false`), then `medusa start`.
    - **The two flags:** without them `db:migrate` prompts when a link or search index was removed or changed, and a container has no terminal to answer. Safe mode never drops link tables or indexes; dropping them is a manual release step (§8.2).
    - **One replica while migrating:** `db:migrate` takes only a per-module advisory lock (F-004), so still run one server replica.
    - **Other commands** are passed through (e.g. `medusa user -e … -p …` to create an admin).
-7. **Build args:** `MEDUSA_BACKEND_URL` (optional, baked into the admin bundle), plus the category's build args in §9 (e.g. Ecommerce's upload ceiling).
+8. **Build args:** `MEDUSA_BACKEND_URL` (optional, baked into the admin bundle), plus the category's build args in §9 (e.g. Ecommerce's upload ceiling).
 
 There is no `HEALTHCHECK` instruction (Podman ignores it in OCI format). Health checks are set in Dokploy against `GET /health` (§8.1).
 
@@ -386,11 +401,10 @@ STOREFRONT_URL=
 
 ```
 <category>/<client>/
-├── package.json          # own deps; @medusajs/js-sdk, icons, types, ui-preset on the backend's version
-├── pnpm-lock.yaml
-├── pnpm-workspace.yaml   # settings only (allowBuilds for sharp, etc.), until SC-1
+├── package.json          # own deps; @medusajs/* as "catalog:" (not moved yet: exact, the backend's version)
+├── pnpm-lock.yaml        # own lockfile
 ├── next.config.js        # MUST set output: "standalone"
-├── Dockerfile, .dockerignore, .env.example
+├── Dockerfile, .env.example   # (not moved yet: also pnpm-workspace.yaml, .dockerignore)
 ├── README.md             # starter commit, env, how to deploy
 └── src/
 ```
@@ -400,7 +414,7 @@ STOREFRONT_URL=
   - **Portals and the pos-app** are plain Next.js apps using `@medusajs/js-sdk`.
   - **Next.js 16 migration:** the storefronts follow the starter's (`6b95717`): ESLint flat config, `default.tsx` for parallel-route slots, async `params`, `revalidateTag(tag, { expire: 0 })`.
 - **Starter changes required** (each storefront README lists the ones applied):
-  1. **Own package setup:** its own `packageManager`, `pnpm-lock.yaml` and settings-only `pnpm-workspace.yaml`. Carry over the starter root's `pnpm.overrides` (`@types/react`, `@types/react-dom`). Keep `@medusajs/js-sdk`, `icons`, `types`, `ui-preset` and `instantsearch-adapter` on the exact backend version.
+  1. **Package setup:** its own `packageManager` and `pnpm-lock.yaml`; `@medusajs/js-sdk`, `icons`, `types`, `ui-preset` and `instantsearch-adapter` as `"catalog:"`, so they are on the backend's version; its pnpm settings in the root `pnpm-workspace.yaml` (§7.1). The starter root's `pnpm.overrides` for `@types/react` and `@types/react-dom` are **not** carried over: at the root they would also move the backends (React 18 admin) to React 19 types, and the storefront pins both directly, so its resolved packages don't change without them (TASKS SC-1, ecommerce). *(Not moved yet:* a settings-only `pnpm-workspace.yaml` of its own with those overrides, and exact pins.)
   2. **Package name:** rename it (`@dtc/storefront` → `<category>-storefront`).
   3. **`output: "standalone"`** in `next.config.js`.
   4. **Image domains:** read `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` instead of `MEDUSA_CLOUD_S3_*`, so any bucket works.
@@ -419,7 +433,7 @@ STOREFRONT_URL=
       - `medusa-error.ts` logs status and path only, never the backend's response body or headers (E-A2, E-A4)
 - **Portals and the pos-app call the backend from their own server.** The browser calls the app's own routes, and the app calls the backend with the user's token, which is kept in a sealed httpOnly cookie (`COOKIE_SECRET`). The backend URL and the token never reach the browser (F-040; also the seller-portal, P5-08).
 - **Dockerfile:** the same fully-qualified multi-arch base image as the backend.
-  - **Build:** `pnpm install --frozen-lockfile`, then `pnpm build`.
+  - **Build:** from the **repo root** (Docker Context Path `.`): copy the root `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the app's `package.json` and `pnpm-lock.yaml`, `pnpm install --frozen-lockfile --filter <app>`, copy the app's folder, then `pnpm build` in it. `outputFileTracingRoot: __dirname` keeps `server.js` at the standalone root (F-010). *(Not moved yet:* from the app's folder, `pnpm install --frozen-lockfile`, then `pnpm build`.)
   - **Runtime:** copies only `.next/standalone`, `.next/static` and `public` (every client has a `public/` folder), and runs `node server.js` as `node`.
   - **Ports:** storefront 8000; portals and the pos-app 3000.
 - **Env split:**
@@ -870,7 +884,8 @@ A throwaway prototype on Medusa 2.21.1 and pnpm 12.6.0 tested the original plan 
 |---|---|
 | pnpm 12 and `.npmrc` | The starter's `public-hoist-pattern` lines in `.npmrc` are **ignored**. Put `publicHoistPattern` in `pnpm-workspace.yaml`. |
 | pnpm 12 install scripts | Install fails with `ERR_PNPM_IGNORED_BUILDS` until `allowBuilds` is set (`@swc/core`, `esbuild`, `msgpackr-extract`, `protobufjs`; telemetry can be `false`). |
-| `medusa build` output | `.medusa/server` has `package.json`, copied as is, but **no lockfile**; copy `pnpm-lock.yaml` and `pnpm-workspace.yaml` in before `pnpm install --prod --frozen-lockfile` (until SC-1, §5.1). |
+| `medusa build` output | `.medusa/server` has `package.json`, copied as is (`"catalog:"` included), but **no lockfile**. Moved apps: production install with `pnpm --filter <app> --prod deploy` (§7.1). Not moved yet: copy `pnpm-lock.yaml` and `pnpm-workspace.yaml` in before `pnpm install --prod --frozen-lockfile`. |
+| Root-wide pnpm settings | `overrides` in the root `pnpm-workspace.yaml` apply to every project; a starter's `@types/react` override would move the backends to React 19 types (TASKS SC-1, ecommerce). |
 | Typecheck | `tsc --noEmit` needs `.medusa/types`, which the build generates, so run the build before typecheck. New link aliases are typed only after `pnpm build`. |
 | Migrations | `medusa db:generate <module>` needs a reachable database. Commit the migration and the `.snapshot-*.json`. For starter modules with no usable snapshot, first generate with the *unchanged* model, delete that migration but keep the snapshot, then change the model and generate again. |
 | Linkable names | `Module.linkable.<camelCase of the model name>`: `booking_resource` → `linkable.bookingResource`. A link without `isList` is one-to-one. |
@@ -944,5 +959,6 @@ This file is frozen for the builder:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 3 | 2026-11-14 | App standards for the root workspace (§7.1, §7.2; SC-1 for Ecommerce): `"catalog:"`, root pnpm settings, one lockfile per app, repo-root images with `pnpm deploy` for backends, a root `.dockerignore`; the per-app setup marked *not moved yet*. §4.3 lockfile and Docker context, §11 notes. TASKS F-093. |
 | 2 | 2026-11-14 | Release order (§8.2, D15): Ecommerce → POS → the other four, one category at a time, 24 hours of a clean production run between them, stop and roll back only the affected category. TASKS F-092. |
 | 1 | 2026-11-14 | First plan of `medusa-platform`, structured around the shared core: glossary (§2), shared core in library mode (§4), migration with the SC-1 proof, data invariants, stop rule and fallbacks (§5); everything already built kept in §9; the backlog after the core (§10); D14, R-j, R-l. Replaces the medusa-apps plan (Revisions 1 to 16, at tag `pre-shared-core`). TASKS F-089, F-090, F-091. |

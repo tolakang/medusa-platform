@@ -3,8 +3,9 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = ecommerce/storefront/Dockerfile,
-#   Docker Context Path = ecommerce/storefront,
-#   Watch Paths = ecommerce/storefront/**
+#   Docker Context Path = . (repo root),
+#   Watch Paths = ecommerce/storefront/**, pnpm-workspace.yaml, package.json,
+#                 pnpm-lock.yaml  (BUILD_PLAN.md §5.3)
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000
@@ -18,7 +19,7 @@ ARG NODE_VERSION=22
 
 # ---------- build ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /repo
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ---- build-time arguments (set in Dokploy "Build-time Arguments") ----
@@ -50,11 +51,15 @@ ENV S3_IMAGE_HOSTNAME=${S3_IMAGE_HOSTNAME}
 ARG S3_IMAGE_PATHNAME="/**"
 ENV S3_IMAGE_PATHNAME=${S3_IMAGE_PATHNAME}
 
+# Workspace manifests first (root pnpm workspace, Medusa catalog; BUILD_PLAN.md
+# §4.3). Exact pnpm version from the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY ecommerce/storefront/package.json ecommerce/storefront/pnpm-lock.yaml ecommerce/storefront/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile
+ && pnpm install --frozen-lockfile --filter ecommerce-storefront
 
-COPY . .
+COPY ecommerce/storefront ecommerce/storefront
+WORKDIR /repo/ecommerce/storefront
 RUN pnpm build
 
 # ---------- runtime ----------
@@ -65,9 +70,9 @@ ENV NODE_ENV=production \
     PORT=8000
 WORKDIR /app
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /repo/ecommerce/storefront/.next/standalone ./
+COPY --from=build --chown=node:node /repo/ecommerce/storefront/.next/static ./.next/static
+COPY --from=build --chown=node:node /repo/ecommerce/storefront/public ./public
 
 USER node
 EXPOSE 8000
