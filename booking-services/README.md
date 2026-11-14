@@ -32,7 +32,7 @@ booking-services/
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `booking-services/<app>/Dockerfile` and **Docker Context Path** `booking-services/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `booking-services/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
-## Shared core and release branches (plan Revision 16)
+### Shared core and release branches (plan Revision 16)
 
 **Build from the repo root.** This applies from this category's SC-1 PR on (`docs/TASKS.md` → *Shared core*); that PR says when to switch, and until then the values above stay. For each app (`backend`, `storefront`), in Dokploy:
 - **Docker File:** `booking-services/<app>/Dockerfile` (unchanged).
@@ -47,6 +47,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
   git fetch origin && git push origin origin/main:refs/heads/release/booking-services
   ```
   To release an older checked commit instead, put its hash in place of `origin/main`.
+- **Optional record:** tag each release too, e.g. `git tag booking-services-<yyyy-mm-dd> origin/release/booking-services && git push origin booking-services-<yyyy-mm-dd>`. Dokploy still follows the branch; the tag is only a readable history.
 - **Rollback:** move the branch back to the previous release, then run any `db:rollback` the release notes need (plan §8):
   ```bash
   git push --force origin <previous commit>:refs/heads/release/booking-services

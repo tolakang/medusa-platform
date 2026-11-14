@@ -747,6 +747,7 @@ For each deployable, the script:
 - **The weekly check:** `.github/workflows/medusa-update-check.yml` (Mondays 02:00 UTC, also runnable by hand) fails visibly when any deployable pins an older Medusa than npm `latest`.
 - **Updating:** a human then runs `scripts/update-medusa.sh <category>` on a branch, and CI checks the PR.
 - **Deploying:** merging redeploys only the changed deployables on staging (Dokploy watch paths); a change in `packages/medusa-core` or the catalog redeploys every staging app that uses it. Production waits for the owner's release branch.
+- **CI for shared changes** (Revision 16): a PR that touches `packages/medusa-core`, the root `package.json`, `pnpm-workspace.yaml` or the root lockfile runs the CI gate of **every** deployable that uses them, and `ci-ok` passes only when all of them pass. A bad core change stops in CI or on staging, never in production.
 
 **Before every merge** (owner rule, DEV_FLOW §7.1): check the diff against `docs/MEDUSA_SKILL.md` and update every related document. The required CI check is `ci-ok`, and PRs squash-merge.
 
@@ -766,13 +767,13 @@ Medusa package updates for clients go through the update script.
 
 ### 8.2 Shared core migration (Revision 16)
 
-One PR per step; DEV_FLOW gates green and the skill check (DEV_FLOW §7.1) before each merge. Tag `pre-shared-core` is the way back.
+One PR per step; DEV_FLOW gates green and the skill check (DEV_FLOW §7.1), then pre-merge checks and squash auto-merge. Tag `pre-shared-core` is the way back.
 
 | Step | What | Done when |
 |---|---|---|
 | **SC-0** | This revision, `CLAUDE.md`, the root and category READMEs and the staging runbooks (build from the repo root, release branches); tag `pre-shared-core` | merged |
-| **SC-1** | Root `package.json` and `pnpm-workspace.yaml` with the Medusa `catalog`, **one app per PR, Ecommerce first**: the app writes `"catalog:"`, its Dockerfile builds from the repo root, its Dokploy context and watch paths change. `scripts/update-medusa.sh`, `verify.sh`, `guard.sh` and the CI matrix follow. The lockfile layout (one root lockfile, or one per app) is chosen in the first PR with evidence and logged | each app's staging redeploys and answers `/health` (apps not on staging yet: the local stack) |
-| **SC-2** | `packages/medusa-core` as a Medusa plugin (peer dependency on `@medusajs/framework`, docs `learn/configurations/pnpm`; providers exported as `./providers/*`, docs `learn/fundamentals/plugins/create`). Modules move **one at a time**: PayWay → Resend (with a hook for app templates) → Telegram and telegram-links → wishlist → auth guards → contact rules → cleanup job, each app switching from its own copy to the core's. Existing tables and migrations stay as they are | every app's tests pass after each move, and a migrated database shows no new or dropped tables |
+| **SC-1** | Root `package.json` and `pnpm-workspace.yaml` with the Medusa `catalog`, **one app per PR, Ecommerce first**: the app writes `"catalog:"`, its Dockerfile builds from the repo root, its Dokploy context and watch paths change. `scripts/update-medusa.sh`, `verify.sh`, `guard.sh` and the CI matrix follow (a change to the root files runs every app, §8 *CI for shared changes*). The lockfile layout (one root lockfile, or one per app) is chosen in the first PR with evidence and logged | each app's staging redeploys and answers `/health` (apps not on staging yet: the local stack) |
+| **SC-2** | `packages/medusa-core` as a Medusa plugin (peer dependency on `@medusajs/framework`, docs `learn/configurations/pnpm`; providers exported as `./providers/*`, docs `learn/fundamentals/plugins/create`). Modules move **one at a time**: PayWay → Resend (with a hook for app templates) → Telegram and telegram-links → wishlist → auth guards → contact rules → cleanup job, each app switching from its own copy to the core's. Existing tables and migrations stay as they are (a plugin's module migrations run with the app's own `db:migrate`, docs `learn/fundamentals/plugins/create`), and CI runs every app on each move | every app's tests pass after each move, and a migrated database shows no new or dropped tables |
 | **SC-3** | Release branches: `release/ecommerce` and `release/pos` first, then the rest; GitHub protection on `release/*`; production apps point at them. The owner creates and moves them | the owner has moved each branch once |
 
 Then P3-19 resumes, then the Booking staging on a fresh database.
