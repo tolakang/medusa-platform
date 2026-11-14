@@ -1,6 +1,6 @@
 import { model } from "@medusajs/framework/utils";
 
-// P4-06 (plan §6.4, invoice tutorial pattern): one invoice per order. It
+// P4-06 (plan §9.4, invoice tutorial pattern): one invoice per order. It
 // keeps what was true when the order was placed (the buyer's company, tax
 // ID and payment terms), so a later change to the company doesn't rewrite
 // an issued invoice. The PDF is rendered from it and the order on request.

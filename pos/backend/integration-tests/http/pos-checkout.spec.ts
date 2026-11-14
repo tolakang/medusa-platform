@@ -12,7 +12,7 @@ import { posCheckoutWorkflow } from "../../src/workflows/pos-checkout"
 import { closePosShiftWorkflow, openPosShiftWorkflow } from "../../src/workflows/pos-shift"
 import { stockAt } from "../helpers/pos-stock"
 
-// TASKS P2-05 (pos-checkout through draft orders, BUILD_PLAN §6.2). Data as
+// TASKS P2-05 (pos-checkout through draft orders, BUILD_PLAN §9.2). Data as
 // on staging: the starter's demo products (seed-initial-data) plus the
 // Cambodia shop (seed: default region, USD).
 jest.setTimeout(240 * 1000)

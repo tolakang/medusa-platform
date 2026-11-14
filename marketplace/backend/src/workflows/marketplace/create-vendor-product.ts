@@ -79,7 +79,7 @@ const vendorOfAdminStep = createStep(
   }
 )
 
-// create-vendor-product (BUILD_PLAN §6.6, TASKS P6-04), as in the official
+// create-vendor-product (BUILD_PLAN §9.6, TASKS P6-04), as in the official
 // Vendors example: the product goes into the store's default sales channel,
 // is created with createProductsWorkflow and linked to the vendor
 // (vendor-product link, P6-02). Its status was already decided by the route

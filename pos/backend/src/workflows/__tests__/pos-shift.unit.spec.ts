@@ -1,7 +1,7 @@
 import { computeExpectedCash } from "../pos-shift"
 
 // TASKS P2-04: expected cash = opening cash + cash captured - cash refunded,
-// in the shift's currency (BUILD_PLAN §6.2 close-shift).
+// in the shift's currency (BUILD_PLAN §9.2 close-shift).
 const cash = (captures: number[], refunds: number[] = [], extra: Record<string, unknown> = {}) => ({
   currency_code: "usd",
   payment_session: { metadata: { pos_payment_method: "cash" } },

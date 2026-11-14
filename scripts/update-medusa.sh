@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Medusa update: BUILD_PLAN.md §8. Plain bash (macOS bash 3.2 compatible).
+# Medusa update: BUILD_PLAN.md §8.2. Plain bash (macOS bash 3.2 compatible).
 #
 #   scripts/update-medusa.sh <category | category/app | all> [version] [--pnpm-latest]
 #
-# Per deployable (that has a package.json):
+# Per app (that has a package.json):
 #   1. target version = [version] or `npm view @medusajs/medusa version`
 #   2. every @medusajs/* dependency on the release line -> exact target version;
 #      @medusajs/ui (own version line, MEDUSA_SKILL §1) -> the version
 #      @medusajs/dashboard@<target> depends on (decision on F-006), falling
-#      back to the medusajs/dtc-starter backend pin (plan §3.2)
+#      back to the medusajs/dtc-starter backend pin (plan §6.2)
 #   3. pnpm install -> new pnpm-lock.yaml
 # Then runs scripts/verify.sh for the target and prints the files to commit.
 # It never commits and never touches BUILD_PLAN.md.
@@ -30,7 +30,7 @@ npm view "@medusajs/medusa@$VERSION" version >/dev/null || { echo "version $VERS
 
 # @medusajs/ui for this release: the version @medusajs/dashboard@$VERSION
 # depends on, so the lockfile holds one copy (F-006, decided 2026-09-25).
-# Fallback: the dtc-starter backend pin (plan §3.2).
+# Fallback: the dtc-starter backend pin (plan §6.2).
 DASH_UI=$(npm view "@medusajs/dashboard@$VERSION" dependencies --json 2>/dev/null \
   | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s)["@medusajs/ui"]||"")}catch{console.log("")}})')
 STARTER_PKG=$(curl -fsSL https://raw.githubusercontent.com/medusajs/dtc-starter/HEAD/apps/backend/package.json || true)
@@ -87,7 +87,7 @@ for dir in */backend */storefront */*-portal */pos-app; do
   CHANGED="$CHANGED $dir/package.json $dir/pnpm-lock.yaml"
 done
 
-[ -n "$CHANGED" ] || { echo "no deployables matched '$TARGET'"; exit 1; }
+[ -n "$CHANGED" ] || { echo "no apps matched '$TARGET'"; exit 1; }
 
 echo; echo "==== verify"
 scripts/verify.sh "$TARGET"

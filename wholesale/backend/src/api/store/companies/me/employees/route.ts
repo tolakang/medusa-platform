@@ -8,7 +8,7 @@ import { companyJoinCode } from "../../../../../utils/company-invite";
 import { storeEmployeeFields } from "../../query-config";
 import { StoreCreateEmployeeType } from "../../validators";
 
-// P4-07 (plan §6.4): the employees of the buyer's own company.
+// P4-07 (plan §9.4): the employees of the buyer's own company.
 export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse

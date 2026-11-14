@@ -9,7 +9,7 @@ import seedBookingDemo from "../../src/scripts/seed-booking-demo"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 
-// TASKS P3-12 (BUILD_PLAN §6.3): a service is a product with no shipping
+// TASKS P3-12 (BUILD_PLAN §9.3): a service is a product with no shipping
 // profile and variants without inventory, so a cart with only services is
 // checked out without an address or a shipping method. Data from the
 // Cambodia seed plus the booking demo seed (Haircut 30 / 60 min, Sophea).

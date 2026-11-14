@@ -9,7 +9,7 @@ import MarketplaceModuleService from "../service"
 jest.setTimeout(60 * 1000)
 
 // TASKS P6-01: module `marketplace` with vendor, vendor_admin and
-// vendor_payout (BUILD_PLAN §6.6); P6-06 adds vendor_commission (F-078).
+// vendor_payout (BUILD_PLAN §9.6); P6-06 adds vendor_commission (F-078).
 moduleIntegrationTestRunner<MarketplaceModuleService>({
   moduleName: MARKETPLACE_MODULE,
   moduleModels: [Vendor, VendorAdmin, VendorPayout, VendorCommission],

@@ -11,7 +11,7 @@ import {
 
 jest.setTimeout(60 * 1000);
 
-// P4-02 (plan §6.4): payment_terms, credit_limit, tax_id and status on the
+// P4-02 (plan §9.4): payment_terms, credit_limit, tax_id and status on the
 // company. Admins set all four; buyers may only give their tax ID.
 medusaIntegrationTestRunner({
   env: {

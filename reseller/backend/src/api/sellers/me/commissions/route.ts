@@ -7,7 +7,7 @@ import { SELLER_MODULE } from "../../../../modules/seller"
 import SellerModuleService from "../../../../modules/seller/service"
 import { GetSellerCommissions } from "../../validators"
 
-// GET /sellers/me/commissions (plan §6.5, TASKS P5-06): the seller's own
+// GET /sellers/me/commissions (plan §9.5, TASKS P5-06): the seller's own
 // commissions, newest first, with totals per status and currency.
 export const GET = async (
   req: AuthenticatedMedusaRequest,

@@ -18,7 +18,7 @@ import { RESERVED_METADATA_MESSAGE } from "../../src/api/marketplace-guards"
 
 jest.setTimeout(240 * 1000)
 
-// TASKS P6-05 (plan §6.6): POST /store/carts/:id/complete-vendor completes
+// TASKS P6-05 (plan §9.6): POST /store/carts/:id/complete-vendor completes
 // the cart into the parent order (payment) and makes one child order per
 // vendor, linked to it; a retried call makes none (P6-12). Real checkouts
 // through the Cambodia shop's setup and Medusa's system payment provider,

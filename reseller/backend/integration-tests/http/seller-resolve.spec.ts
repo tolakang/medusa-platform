@@ -7,7 +7,7 @@ import { createSellerWorkflow } from "../../src/workflows/seller/create-seller"
 
 jest.setTimeout(120 * 1000)
 
-// TASKS P5-07 (plan §6.5): the storefront resolves a request's seller, by
+// TASKS P5-07 (plan §9.5): the storefront resolves a request's seller, by
 // domain (or handle), to their publishable key; only active sellers.
 medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {

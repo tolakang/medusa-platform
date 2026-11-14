@@ -6,7 +6,7 @@ import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/util
 import { z } from "@medusajs/framework/zod"
 import { sellerChannelId } from "../../seller-catalog"
 
-// GET /sellers/me/orders (plan §6.5 portal "sales", TASKS P5-08): orders
+// GET /sellers/me/orders (plan §9.5 portal "sales", TASKS P5-08): orders
 // placed in the seller's channel, newest first, with each one's commission.
 // No customer details: the shop fulfils the order and keeps the customer.
 const Query = z

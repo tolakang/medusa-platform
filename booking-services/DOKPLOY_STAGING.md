@@ -1,6 +1,6 @@
 # Runbook: `booking-staging` on Dokploy (TASKS P3-18)
 
-A click-by-click setup of the Booking services business project on a Dokploy **staging** project, written like the POS runbook (`../pos/DOKPLOY_STAGING.md`), which passed on 2026-11-14. You don't need any other runbook. Do the steps **in order**. Each step ends with **Check** (what you should see) and **Reply with** (what to send so I can verify from here). Field names are Dokploy's own, verified on the Ecommerce and POS staging (findings F-011, F-012, F-016, F-017, F-019, F-020, F-021, F-086).
+A click-by-click setup of the Booking services category on a Dokploy **staging** project, written like the POS runbook (`../pos/DOKPLOY_STAGING.md`), which passed on 2026-11-14. You don't need any other runbook. Do the steps **in order**. Each step ends with **Check** (what you should see) and **Reply with** (what to send so I can verify from here). Field names are Dokploy's own, verified on the Ecommerce and POS staging (findings F-011, F-012, F-016, F-017, F-019, F-020, F-021, F-086).
 
 **Never paste secret values** in chat: keys, passwords, connection URLs, tokens.
 
@@ -14,6 +14,8 @@ When you're done you have one Dokploy project, `booking-staging`, with **5 servi
 | `booking-worker` | Medusa worker (same image): emails, reminders, frees expired holds | none | 4 |
 | `booking-storefront` | the booking shop | `<shop host>` → 8000 | 5 |
 
+
+> **Shared core (plan §4–§5):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/booking-services`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
 ---
 
 ## Step 0: Decide and prepare (about 5 minutes)

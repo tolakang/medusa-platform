@@ -1,18 +1,18 @@
 # pos / storefront
 
-Online shop for the POS business project: customers buy online from the **same stock** the tills sell (BUILD_PLAN §6.2, TASKS P2-09). Standard: `BUILD_PLAN.md` §4.2.
+Online shop for the POS category: customers buy online from the **same stock** the tills sell (BUILD_PLAN §9.2, TASKS P2-09). Standard: `BUILD_PLAN.md` §7.2.
 
 **Copied from `ecommerce/storefront` at `main` `5efa245`** (TASKS P2-09; same approach as `pos/backend`, owner 2026-10-15: POS reuses all of Ecommerce). It talks to `pos/backend`, which has the same store routes, so PayWay checkout, the Cambodia address and phone rules, Telegram contact, CAPTCHA, wishlist, account emails and revalidation work the same here. Changes from the copy:
 - Package name `pos-storefront`. The Dockerfile and `.env.example` name `pos/storefront`, and the default region is `kh`.
 - Comments that pointed at `ecommerce/backend` now point at `pos/backend`.
 - `.guard-baseline` is `159252e ecommerce/storefront`: the starter's three type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
-The ecommerce notes below apply unchanged, including the Next.js 16 sync of 2026-11-06 (TASKS V-04). **Starter:** `medusajs/dtc-starter` `apps/storefront` at commit **`f677db4`** (2026-10-09, Medusa 2.21.2; synced from `15ef93d`: the starter removed `generateStaticParams` from the product, collection and category pages, PR medusajs/dtc-starter#73; before that, from `e3a237c9b877`: only the 2.21.2 package bump). `engines.node` is `>=22.22.0`, as the starter root and Medusa 2.22 require. Next.js is **15.5.27**, ahead of the starter's 15.5.24, for the 2026-09-30 security fixes (TASKS F-030). Starter changes applied (plan §4.2):
+The ecommerce notes below apply unchanged, including the Next.js 16 sync of 2026-11-06 (TASKS V-04). **Starter:** `medusajs/dtc-starter` `apps/storefront` at commit **`f677db4`** (2026-10-09, Medusa 2.21.2; synced from `15ef93d`: the starter removed `generateStaticParams` from the product, collection and category pages, PR medusajs/dtc-starter#73; before that, from `e3a237c9b877`: only the 2.21.2 package bump). `engines.node` is `>=22.22.0`, as the starter root and Medusa 2.22 require. Next.js is **15.5.27**, ahead of the starter's 15.5.24, for the 2026-09-30 security fixes (TASKS F-030). Starter changes applied (plan §7.2):
 1. Standalone pnpm package: `packageManager: pnpm@12.6.0`, own lockfile, settings-only `pnpm-workspace.yaml` (starter root `pnpm.overrides`; `unrs-resolver` build declined, as in the starter).
 2. Package renamed `@dtc/storefront` → `pos-storefront`. A `typecheck` script was added, because the starter sets `typescript.ignoreBuildErrors`.
 3. `output: "standalone"` + `outputFileTracingRoot: __dirname` in `next.config.js`.
 4. Image host from `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` (was `MEDUSA_CLOUD_S3_*`).
-5. ~~`generateStaticParams` guarded~~: no longer needed. Since `f677db4` the starter has no `generateStaticParams`, so `next build` never calls the backend and pages render on request (BUILD_PLAN §4.2 change 5, Revision 7).
+5. ~~`generateStaticParams` guarded~~: no longer needed. Since `f677db4` the starter has no `generateStaticParams`, so `next build` never calls the backend and pages render on request (BUILD_PLAN §7.2 change 5, Revision 7).
 6. `src/lib/config.ts`: server-side calls prefer the runtime `MEDUSA_BACKEND_URL` (private URL). `src/middleware.ts` still uses the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL`.
 7. `products/[handle]/page.tsx`: `export const dynamic = "force-dynamic"` (starter cookie helpers swallow Next's `DynamicServerError`; TASKS F-015).
 

@@ -15,7 +15,7 @@ import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 // Rendered per request: wholesale prices depend on the signed-in buyer's
-// price tier, and the build must not need the backend (BUILD_PLAN.md §4.2,
+// price tier, and the build must not need the backend (BUILD_PLAN.md §7.2,
 // starter changes 5 and 7). The starter pre-rendered this page with guest
 // prices (`force-static`, `generateStaticParams`).
 export const dynamic = "force-dynamic"

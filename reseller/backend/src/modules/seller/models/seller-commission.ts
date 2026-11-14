@@ -1,7 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 import { Seller } from "./seller"
 
-// What a seller earns on one order (BUILD_PLAN §6.5, TASKS P5-01). One per
+// What a seller earns on one order (BUILD_PLAN §9.5, TASKS P5-01). One per
 // order (`order_id` unique), so recording it twice for the same order can't
 // create a second one (P5-04, P5-09). The order is in the Order module: its
 // id is plain text, no foreign key into core tables.

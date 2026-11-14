@@ -20,7 +20,7 @@ export const Company = model.define("company", {
   spending_limit_reset_frequency: model
     .enum(["never", "daily", "weekly", "monthly", "yearly"])
     .default("monthly"),
-  // P4-02 (plan §6.4). Set by admins only; the store API can't write them
+  // P4-02 (plan §9.4). Set by admins only; the store API can't write them
   // except tax_id. Enforced at checkout by P4-04.
   payment_terms: model
     .enum(["prepaid", "net_15", "net_30", "net_60"])

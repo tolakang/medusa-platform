@@ -1,5 +1,5 @@
 /**
- * POS counter app (TASKS P2-10). Web client standard (plan §4.2): standalone
+ * POS counter app (TASKS P2-10). Client standard (plan §7.2): standalone
  * output for the Docker runtime stage, traced from this folder only (F-010).
  *
  * @type {import('next').NextConfig}

@@ -16,7 +16,7 @@ import {
   linkSalesChannelsToStockLocationWorkflow,
 } from "@medusajs/medusa/core-flows";
 
-// P4-03 (plan §6.4): the B2B catalog scope and the price tiers.
+// P4-03 (plan §9.4): the B2B catalog scope and the price tiers.
 //
 //   pnpm seed:b2b                    channel + key (safe to run in production)
 //   pnpm seed:b2b demo-pricing       also Gold / Silver groups and price lists

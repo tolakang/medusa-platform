@@ -3,7 +3,7 @@ import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@med
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
-// TASKS P3-09 / P3-15 (BUILD_PLAN §6.3): an abandoned checkout frees its slot.
+// TASKS P3-09 / P3-15 (BUILD_PLAN §9.3): an abandoned checkout frees its slot.
 // The slot is free for new holds as soon as hold_expires_at passes (P3-03);
 // this marks those holds `expired` so they show as released everywhere.
 // Run every minute by src/jobs/release-expired-holds.ts. Idempotent: a hold

@@ -1,5 +1,5 @@
-# CI gate (BUILD_PLAN.md §3.3, §8; docs/DEV_FLOW.md §10). One verify job per
-# deployable; add a matrix entry when a new deployable gets app code.
+# CI gate (BUILD_PLAN.md §6.3, §8.2; docs/DEV_FLOW.md §10). One verify job per
+# app; add a matrix entry when a new app gets app code.
 # Branch protection requires only `ci-ok` (bottom), which needs every job.
 name: ci
 
@@ -87,7 +87,7 @@ jobs:
 
   # The one check the `protect main` ruleset requires (owner, 2026-11-04).
   # It passes only when guard and every verify matrix job passed, so a new
-  # deployable added to the matrix is covered without editing the ruleset,
+  # app added to the matrix is covered without editing the ruleset,
   # and PR auto-merge waits for the whole CI. `if: always()` makes it run
   # (and fail) when a needed job failed or was skipped, instead of being
   # skipped itself, which a required check would treat as passing.

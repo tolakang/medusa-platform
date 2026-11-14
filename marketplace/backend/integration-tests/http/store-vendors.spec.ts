@@ -3,7 +3,7 @@ import { IP_SECRET, marketplaceTestKit } from "../helpers/marketplace"
 
 jest.setTimeout(240 * 1000)
 
-// TASKS P6-08 (plan §6.6): the storefront's vendor reads: a shop page per
+// TASKS P6-08 (plan §9.6): the storefront's vendor reads: a shop page per
 // active vendor and "Sold by" per product.
 medusaIntegrationTestRunner({
   env: { SHOPPER_IP_SECRET: IP_SECRET },

@@ -10,7 +10,7 @@ import seed from "../../src/scripts/seed"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 
-// TASKS P3-11 (BUILD_PLAN §6.3): admin setup of resources (hours, services),
+// TASKS P3-11 (BUILD_PLAN §9.3): admin setup of resources (hours, services),
 // the calendar data, walk-in booking and cancel, through the admin API.
 jest.setTimeout(240 * 1000)
 

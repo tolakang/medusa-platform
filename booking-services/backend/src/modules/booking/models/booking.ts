@@ -1,7 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 import { BookingResource } from "./booking-resource"
 
-// One booked time slot of one resource (BUILD_PLAN §6.3, TASKS P3-01).
+// One booked time slot of one resource (BUILD_PLAN §9.3, TASKS P3-01).
 // Times are UTC. A booking starts as a `pending` hold while the customer
 // checks out (hold_expires_at, P3-03/P3-06), becomes `confirmed` when the
 // order is placed (P3-07, which also links it to the order, P3-02), or

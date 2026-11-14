@@ -12,7 +12,7 @@ import { BOOKING_REMINDER_TEMPLATE, type BookingReminderData } from "../lib/book
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
-// TASKS P3-09 (BUILD_PLAN §6.3): remind customers 24 hours before their
+// TASKS P3-09 (BUILD_PLAN §9.3): remind customers 24 hours before their
 // booking. Run every 15 minutes by src/jobs/send-booking-reminders.ts.
 // A confirmed booking that starts within the next `window_hours` and has no
 // reminder_sent_at gets one email (channel "email", Resend). Bookings are

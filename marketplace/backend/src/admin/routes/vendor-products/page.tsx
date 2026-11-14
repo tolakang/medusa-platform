@@ -5,7 +5,7 @@ import { useState } from "react"
 import { adminLink, errorText, STATUS_COLOR } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
-// Product moderation (TASKS P6-07, BUILD_PLAN §6.6): vendors' products, the
+// Product moderation (TASKS P6-07, BUILD_PLAN §9.6): vendors' products, the
 // ones waiting for review first; publish or reject. Reads
 // GET /admin/vendor-products; writes POST /admin/vendor-products/:id/review.
 

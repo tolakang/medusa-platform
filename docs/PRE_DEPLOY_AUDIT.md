@@ -1,6 +1,6 @@
 # Pre-deployment audit: security, performance, reliability
 
-Run this audit **before a category is promoted to staging or production** (BUILD_PLAN §8, P*-exit checklists). It has 10 checks. Each one says what to look at in *this* repo, the commands that give evidence, and what passing looks like.
+Run this audit **before a category is promoted to staging or production** (BUILD_PLAN §8.2, P*-exit checklists). It has 10 checks. Each one says what to look at in *this* repo, the commands that give evidence, and what passing looks like.
 
 **How to use it.** Give this file to the builder (Claude Code) with one target:
 
@@ -9,9 +9,9 @@ Run this audit **before a category is promoted to staging or production** (BUILD
 ## Rules for the audit
 
 1. **Report first, fix later.** The audit reads code and runs commands; it does not refactor. Each finding becomes a `docs/TASKS.md` task (or a *Plan deviations & findings log* entry) and is fixed through DEV_FLOW: branch per task, Gates 1–5, PR, CI green. Scope or architecture changes wait for owner approval (CLAUDE.md).
-2. **Medusa first, no guessing.** Much of this list is already done by Medusa itself: the ORM, reset tokens, CORS options, the error handler. Cite the behaviour from `docs/MEDUSA_SKILL.md` or its evidence ladder (§0) and verify it; don't rebuild it. A fix must use official extension points only (BUILD_PLAN §3.1): middlewares, workflows, hooks, modules, config. No core patches, no `node_modules` edits.
+2. **Medusa first, no guessing.** Much of this list is already done by Medusa itself: the ORM, reset tokens, CORS options, the error handler. Cite the behaviour from `docs/MEDUSA_SKILL.md` or its evidence ladder (§0) and verify it; don't rebuild it. A fix must use official extension points only (BUILD_PLAN §6.1): middlewares, workflows, hooks, modules, config. No core patches, no `node_modules` edits.
 3. **Evidence or it didn't happen.** Every status needs a file:line, a command with its output, or an HTTP response. "Looks fine" is not a status.
-4. **Scope.** Audit every deployable of the target category: `backend`, `storefront`, and any `*-portal` / `pos-app`. A deployable without code yet (on 2026-11-12: all of `marketplace/`) is reported as "n/a".
+4. **Scope.** Audit every app of the target category: `backend`, `storefront`, and any `*-portal` / `pos-app`. A app without code yet (on 2026-11-12: all of `marketplace/`) is reported as "n/a".
 5. **No secrets in the report.** Quote variable *names*, never values.
 
 ## Status values
@@ -21,7 +21,7 @@ Run this audit **before a category is promoted to staging or production** (BUILD
 | **PASS** | Verified with evidence |
 | **FIX** | A gap that must be fixed before deploy → new task |
 | **RISK** | Accepted or deferred, with the reason and an owner decision |
-| **N/A** | Doesn't apply to this deployable (say why) |
+| **N/A** | Doesn't apply to this app (say why) |
 
 ---
 
@@ -75,7 +75,7 @@ Check:
 
 ## 5. Rate limiting
 
-**Repo baseline (TASKS P1-21):** `src/api/auth-guards.ts` → `limitPerIp(name, limit, windowSeconds)` returns 429 with `Retry-After`. It is applied to customer `login`, `signup`, `password_reset`, `password_change` and `verification` (and `cashier_*` in pos). It counts **in memory**, which is correct only while the server runs **one replica** (BUILD_PLAN §5). The client IP comes from `x-shopper-ip` plus its shared secret, `CLIENT_IP_HEADER`, or `req.ip`.
+**Repo baseline (TASKS P1-21):** `src/api/auth-guards.ts` → `limitPerIp(name, limit, windowSeconds)` returns 429 with `Retry-After`. It is applied to customer `login`, `signup`, `password_reset`, `password_change` and `verification` (and `cashier_*` in pos). It counts **in memory**, which is correct only while the server runs **one replica** (BUILD_PLAN §8.1). The client IP comes from `x-shopper-ip` plus its shared secret, `CLIENT_IP_HEADER`, or `req.ip`.
 
 Check:
 - List the matchers: `git grep -n "limitPerIp(" -- '<category>/backend/src/api/middlewares.ts'`. Compare that list against every auth route the category exposes, including **admin login `/auth/user/emailpass*`** and its reset password route, and any custom actor's login. A missing one is a FIX, or a RISK with a reason: for example, admin is only reachable behind an IP allowlist.
@@ -129,7 +129,7 @@ Check:
 
 ## 10. Rollback and deployment safety
 
-**Repo baseline:** Dokploy Swarm **Update Config** uses Failure Action **Rollback**, Order **Start First** (backend and storefront) or **Stop First** (worker), and health checks. Each app has watch paths and is redeployed or rolled back on its own (BUILD_PLAN §5 and §8, `<category>/DOKPLOY_STAGING.md`). Migrations run only on the server instance: `medusa db:migrate --execute-safe-links --execute-safe-search` (guard check 10).
+**Repo baseline:** Dokploy Swarm **Update Config** uses Failure Action **Rollback**, Order **Start First** (backend and storefront) or **Stop First** (worker), and health checks. Each app has watch paths and is redeployed or rolled back on its own (BUILD_PLAN §8.1 and §8.2, `<category>/DOKPLOY_STAGING.md`). Migrations run only on the server instance: `medusa db:migrate --execute-safe-links --execute-safe-search` (guard check 10).
 
 Check:
 - Dokploy settings for every app match the runbook: health check, Update Config, watch paths, and server replicas = 1.
@@ -137,8 +137,8 @@ Check:
 - `medusa db:rollback <module>` is the documented way back for a custom module migration (MEDUSA_SKILL §11). Test it on staging for every new migration, or mark it as forward-only with a reason.
 - A database backup ran successfully before the production deploy, and one restore has been tested (README "Database backups", runbook §7).
 - Versioning: the deploy is a known git commit on `main` (CI `ci-ok` green). Production promotes **the same commit** that passed staging. Record the previous good commit so a redeploy of it is one click.
-- `@medusajs/*` pins are exact and identical across the deployable; `pnpm install --frozen-lockfile` works (guard check 4, Gate 1).
-- Dependency vulnerabilities: run `pnpm audit --prod` in each deployable. Any high or critical item → FIX or a recorded RISK, in this order (plan §3.2): (1) a direct dependency of ours → bump its exact pin; (2) a transitive one → refresh the lockfile within the ranges Medusa and the starter already allow (`pnpm update <pkg…> --depth 99`, `@medusajs/*` pins unchanged; done for E-A6 on 2026-11-06); (3) still open → a Medusa update (`scripts/update-medusa.sh`) or an owner-accepted RISK in plan §10 (R-i). A `pnpm.overrides` entry is a deviation that needs owner approval.
+- `@medusajs/*` pins are exact and identical across the app; `pnpm install --frozen-lockfile` works (guard check 4, Gate 1).
+- Dependency vulnerabilities: run `pnpm audit --prod` in each app. Any high or critical item → FIX or a recorded RISK, in this order (plan §6.2): (1) a direct dependency of ours → bump its exact pin; (2) a transitive one → refresh the lockfile within the ranges Medusa and the starter already allow (`pnpm update <pkg…> --depth 99`, `@medusajs/*` pins unchanged; done for E-A6 on 2026-11-06); (3) still open → a Medusa update (`scripts/update-medusa.sh`) or an owner-accepted RISK in plan §12 (R-i). A `pnpm.overrides` entry is a deviation that needs owner approval.
 
 ---
 

@@ -13,7 +13,7 @@ import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-car
 import { confirmOrderBookingsWorkflow } from "../../src/workflows/confirm-order-bookings"
 import { releaseExpiredHoldsWorkflow } from "../../src/workflows/release-expired-holds"
 
-// TASKS P3-07 (BUILD_PLAN §6.3): the order.placed subscriber confirms the
+// TASKS P3-07 (BUILD_PLAN §9.3): the order.placed subscriber confirms the
 // order's bookings and links them to the order; running it again changes
 // nothing.
 jest.setTimeout(240 * 1000)

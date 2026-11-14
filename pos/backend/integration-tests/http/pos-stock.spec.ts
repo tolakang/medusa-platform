@@ -15,7 +15,7 @@ import { createPosRegisterWorkflow } from "../../src/workflows/pos-register"
 import { openPosShiftWorkflow } from "../../src/workflows/pos-shift"
 import { levelAt, stockAt } from "../helpers/pos-stock"
 
-// TASKS P2-11 acceptance (BUILD_PLAN §6.2): "a sale at a register reduces
+// TASKS P2-11 acceptance (BUILD_PLAN §9.2): "a sale at a register reduces
 // stock at that shop's location only". Data as on staging: the demo seed's
 // European Warehouse holds 1,000,000 of every item in the default sales
 // channel; the Cambodia seed adds the Phnom Penh location to the same

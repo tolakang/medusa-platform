@@ -8,7 +8,7 @@ import BookingModuleService from "../service"
 jest.setTimeout(60 * 1000)
 
 // TASKS P3-03: isSlotAvailable / checkSlot (overlap + capacity; pending holds
-// count only until they expire) and createHold (BUILD_PLAN §6.3), plus the
+// count only until they expire) and createHold (BUILD_PLAN §9.3), plus the
 // P3-14 race: two customers can't hold the same last place.
 const at = (iso: string) => new Date(iso)
 const NOW = at("2026-11-01T00:00:00Z")

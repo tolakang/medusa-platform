@@ -7,7 +7,7 @@ import sellerPayoutBatch from "../../src/jobs/seller-payout-batch"
 
 jest.setTimeout(120 * 1000)
 
-// TASKS P5-05 (plan §6.5): the monthly payout batch approves what is due;
+// TASKS P5-05 (plan §9.5): the monthly payout batch approves what is due;
 // the shop pays outside Medusa and records it per seller.
 medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {

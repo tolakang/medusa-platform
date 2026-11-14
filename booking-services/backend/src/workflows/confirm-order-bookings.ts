@@ -12,7 +12,7 @@ import { bookingIdOf } from "../lib/booking-cart-rules"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
-// TASKS P3-07 (BUILD_PLAN §6.3): when an order is placed, confirm its
+// TASKS P3-07 (BUILD_PLAN §9.3): when an order is placed, confirm its
 // bookings and link them to the order (link booking → order, P3-02). Run by
 // the order.placed subscriber; idempotent, so a repeated event changes
 // nothing: confirmed bookings are skipped and existing links aren't made

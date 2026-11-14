@@ -1,5 +1,5 @@
 # pnpm SETTINGS for this app only. No `packages:` key, so this is a single
-# package, not a workspace (BUILD_PLAN.md §4.2).
+# package, not a workspace (BUILD_PLAN.md §7.2).
 
 # Carried over from the b2b-starter root package.json (pnpm.overrides).
 overrides:

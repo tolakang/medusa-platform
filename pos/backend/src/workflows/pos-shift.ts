@@ -10,7 +10,7 @@ import { acquireLockStep, releaseLockStep, useQueryGraphStep } from "@medusajs/m
 import { POS_MODULE } from "../modules/pos"
 import type PosModuleService from "../modules/pos/service"
 
-// Shift workflows (BUILD_PLAN §6.2, TASKS P2-04): open-shift (one open shift
+// Shift workflows (BUILD_PLAN §9.2, TASKS P2-04): open-shift (one open shift
 // per register) and close-shift (expected cash from cash payments, variance).
 
 // Contract with pos-checkout (P2-05): a POS cash payment's payment session is

@@ -18,7 +18,7 @@ const ownCompany = async (req: AuthenticatedMedusaRequest, id: string) => {
   return company;
 };
 
-// P4-07 (plan §6.4): the buyer's own company, from their employee record.
+// P4-07 (plan §9.4): the buyer's own company, from their employee record.
 export const GET = async (
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse

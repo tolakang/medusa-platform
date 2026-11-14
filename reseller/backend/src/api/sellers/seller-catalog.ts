@@ -1,7 +1,7 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 
-// TASKS P5-06: what a seller may offer. "Your products" (plan §6.5) are the
+// TASKS P5-06: what a seller may offer. "Your products" (plan §9.5) are the
 // published products of your own channel, the store's default sales
 // channel; the seller picks which of them show in their channel (P5-02).
 

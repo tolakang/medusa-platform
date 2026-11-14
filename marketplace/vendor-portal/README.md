@@ -1,6 +1,6 @@
 # marketplace / vendor-portal
 
-Vendor portal for the marketplace business project (BUILD_PLAN §6.6, TASKS P6-09): vendors open a shop, add products, fulfil their orders and follow their payouts. A plain Next.js app (plan §4.2), copied from Reseller's seller portal (`reseller/seller-portal`) and changed for vendors.
+Vendor portal for the marketplace category (BUILD_PLAN §9.6, TASKS P6-09): vendors open a shop, add products, fulfil their orders and follow their payouts. A plain Next.js app (plan §7.2), copied from Reseller's seller portal (`reseller/seller-portal`) and changed for vendors.
 
 - **Sign-in and sign-up** (`/login`): a new vendor opens a shop here (register at `/auth/vendor/emailpass/register`, then `POST /vendors`, P6-03). The shop waits for the marketplace's approval; until then the pages show a notice and no data.
 - **Overview** (`/`): orders to fulfil and what's earned but not paid out yet.

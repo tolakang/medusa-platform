@@ -12,7 +12,7 @@ import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 import { isValidTimeZone } from "../modules/booking/utils/slot"
 
-// TASKS P3-11 (BUILD_PLAN §6.3): admins set up what can be booked: a
+// TASKS P3-11 (BUILD_PLAN §9.3): admins set up what can be booked: a
 // resource, its weekly hours and the services (product variants) it offers
 // (link P3-02). Used by /admin/booking/resources.
 

@@ -3,7 +3,7 @@ import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
 import { recordSellerCommissionStep } from "./steps/record-commission"
 
 /**
- * record-seller-commission (plan §6.5, TASKS P5-04): order → sales channel →
+ * record-seller-commission (plan §9.5, TASKS P5-04): order → sales channel →
  * seller → commission. Idempotent: run by the order.placed subscriber, and
  * an event delivered twice (or two at once) still makes one commission.
  */

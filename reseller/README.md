@@ -1,10 +1,10 @@
 # Reseller — `reseller/`
 
-> **Sellers sell your products; you ship.** Phase 5 code done (2026-11-11, P5-01 to P5-10); the exit checklist (P5-11, with a staging run of all three apps) waits for the owner. Scope: [BUILD_PLAN.md §6.5](../BUILD_PLAN.md).
+> **Sellers sell your products; you ship.** Phase 5 code done (2026-11-11, P5-01 to P5-10); the exit checklist (P5-11, with a staging run of all three apps) waits for the owner. Scope: [BUILD_PLAN.md §9.5](../BUILD_PLAN.md).
 >
 > `backend/` and `storefront/` are a **full copy of Ecommerce** (PayWay, Resend, Telegram, Cambodia rules; TASKS F-061), on Medusa 2.22.6; see [backend/README.md](backend/README.md) and [storefront/README.md](storefront/README.md). Seller features: P5-01 to P5-07 (backend README). `seller-portal/` is the seller portal (P5-08; [seller-portal/README.md](seller-portal/README.md)): sign-in for invited sellers, product choice, sales and commissions. Local stack: `docker-compose.local.yml`.
 
-This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
+This folder is **one complete category**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
 ```
 reseller/
@@ -34,6 +34,30 @@ reseller/
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `reseller/<app>/Dockerfile` and **Docker Context Path** `reseller/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `reseller/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
+### Shared core and release branches (plan §4–§5)
+
+**Build from the repo root.** This applies from this category's SC-1 PR on (`docs/TASKS.md` → *Shared core*); that PR says when to switch, and until then the values above stay. For each app (`backend`, `storefront`, `seller-portal`), in Dokploy:
+- **Docker File:** `reseller/<app>/Dockerfile` (unchanged).
+- **Docker Context Path:** `.` (the repo root) instead of `reseller/<app>`.
+- **Watch Paths:** `reseller/<app>/**` plus `pnpm-workspace.yaml` and the lockfile the SC-1 PR names; the backend and the worker also `packages/medusa-core/**`.
+- **When to switch:** once that app's SC-1 PR is green, change these fields and save **without** redeploying; then the PR merges and staging builds with the new fields. If a build fails, set the fields back and redeploy: the old image keeps running until then.
+
+**Staging and production branches** (SC-3, before this category's first production deploy):
+- **Staging** apps keep **Branch `main`**: every merge redeploys the changed apps.
+- **Production** apps use **Branch `release/reseller`**, Trigger **On Push**. Only you move it; Claude never does.
+- **Release** (after checking staging), from your own terminal:
+  ```bash
+  git fetch origin && git push origin origin/main:refs/heads/release/reseller
+  ```
+  To release an older checked commit instead, put its hash in place of `origin/main`.
+- **Optional record:** tag each release too, e.g. `git tag reseller-<yyyy-mm-dd> origin/release/reseller && git push origin reseller-<yyyy-mm-dd>`. Dokploy still follows the branch; the tag is only a readable history.
+- **Rollback:** move the branch back to the previous release, then run any `db:rollback` the release notes need (plan §8.2):
+  ```bash
+  git push --force origin <previous commit>:refs/heads/release/reseller
+  ```
+  The previous commit is in the production app's **Deployments** tab, or in `git log origin/release/reseller`.
+- **GitHub protection** (once, SC-3): **Settings → Rules → Rulesets → New branch ruleset**, target `release/*`, turn on **Restrict updates**, **Restrict deletions** and **Block force pushes**, and add yourself to the **bypass list**, so only you can release and roll back.
+
 ## Deploy order (first time)
 
 1. Create `reseller-postgres` and `reseller-redis`.
@@ -56,11 +80,12 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
   - `ADMIN_CORS` = backend/admin domain
   - `AUTH_CORS` = every domain where someone logs in
   - `SELLER_CORS` = seller portal domain (custom `/sellers/*` routes)
-- The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §4.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
+- The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §7.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
 
 ## Independence rules
 
-- This project has its **own** Postgres and Redis. Never point two business projects at the same database.
+- Shared backend code comes only from `packages/medusa-core` (plan §4–§5); this category's own code stays here, and its clients never use the core.
+- This project has its **own** Postgres and Redis. Never point two businesses at the same database.
 - A second business of the same type = a second Dokploy project built from the same folder, with its own env.
-- To add another scenario to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend. See `docs/COMPARISON.md` §4.
+- To add another category's features to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend.

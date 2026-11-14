@@ -6,7 +6,7 @@ import type PosModuleService from "../../src/modules/pos/service"
 import { closePosShiftWorkflow, openPosShiftWorkflow } from "../../src/workflows/pos-shift"
 
 // TASKS P2-04 (open-shift, close-shift) and P2-12 (acceptance: a shift close
-// computes the correct cash variance), BUILD_PLAN §6.2. The workflows run on
+// computes the correct cash variance), BUILD_PLAN §9.2. The workflows run on
 // the real modules; payments go through Medusa's system provider, marked cash
 // or card on the payment session (the pos-checkout contract, P2-05).
 jest.setTimeout(180 * 1000)

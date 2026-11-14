@@ -1,6 +1,6 @@
 import { model } from "@medusajs/framework/utils"
 
-// A cashier: the custom actor type `cashier` (BUILD_PLAN §6.2, TASKS P2-03;
+// A cashier: the custom actor type `cashier` (BUILD_PLAN §9.2, TASKS P2-03;
 // docs "How to Create an Actor Type": a module data model per actor type).
 // Cashiers are never admin users. An admin invites one by email; the cashier
 // then registers that email (POST /auth/cashier/emailpass/register) and

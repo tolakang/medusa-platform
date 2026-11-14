@@ -12,7 +12,7 @@ jest.setTimeout(120 * 1000)
 
 const PORTAL = "https://portal.seller.test"
 
-// TASKS P5-03 (plan §6.5): the `seller` actor type, invite-only like POS
+// TASKS P5-03 (plan §9.5): the `seller` actor type, invite-only like POS
 // cashiers (MEDUSA_SKILL §7): the shop creates the seller, the seller
 // registers with that email and accepts, then signs in; every /sellers
 // route needs a signed-in seller who isn't suspended, behind SELLER_CORS.

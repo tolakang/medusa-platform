@@ -10,7 +10,7 @@ import { addToCartWorkflow } from "@medusajs/medusa/core-flows"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
-// TASKS P3-04 (BUILD_PLAN §6.3): put a booked time slot in a cart. The hold
+// TASKS P3-04 (BUILD_PLAN §9.3): put a booked time slot in a cart. The hold
 // and the line item are created together: if adding the line item fails, the
 // hold is deleted again, and if a later step fails, the nested
 // addToCartWorkflow removes the line item (docs "Execute Another Workflow").

@@ -28,7 +28,7 @@ async function listAll<T>(fetchPage: (offset: number) => Promise<Page<T>>) {
 }
 
 // Built on request, never at build time: the build must not call the backend
-// (BUILD_PLAN.md §4.2, change 5). While sign-in is required the middleware
+// (BUILD_PLAN.md §7.2, change 5). While sign-in is required the middleware
 // answers 404 here, and a guest can't read products anyway (TASKS F-068).
 export const dynamic = "force-dynamic"
 

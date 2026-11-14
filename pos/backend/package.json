@@ -2,7 +2,7 @@
   "name": "pos-backend",
   "version": "0.0.1",
   "private": true,
-  "description": "POS business project: Medusa backend (server + worker).",
+  "description": "POS category: Medusa backend (server + worker).",
   "license": "MIT",
   "packageManager": "pnpm@12.18.0",
   "engines": {

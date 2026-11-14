@@ -16,7 +16,7 @@ import { SELLER_MODULE } from "../../modules/seller"
 import { createSellerStep, CreateSellerInput } from "./steps/create-seller"
 
 /**
- * TASKS P5-02 (plan §6.5): a seller with their own sales channel and its
+ * TASKS P5-02 (plan §9.5): a seller with their own sales channel and its
  * publishable key, linked one-to-one. The channel is linked to every stock
  * location, because you ship every seller's orders from your own stock.
  * Each step undoes itself if a later one fails.

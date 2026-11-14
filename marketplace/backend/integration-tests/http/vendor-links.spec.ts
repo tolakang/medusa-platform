@@ -9,7 +9,7 @@ import type MarketplaceModuleService from "../../src/modules/marketplace/service
 
 jest.setTimeout(120 * 1000)
 
-// TASKS P6-02 (plan §6.6): vendor → products, vendor → (child) orders,
+// TASKS P6-02 (plan §9.6): vendor → products, vendor → (child) orders,
 // vendor → stock locations. A vendor has many of each; each product, order
 // and location has at most one vendor.
 medusaIntegrationTestRunner({

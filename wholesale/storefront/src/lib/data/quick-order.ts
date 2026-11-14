@@ -15,7 +15,7 @@ export type QuickOrderResult = {
   error?: string
 }
 
-// Quick order (BUILD_PLAN.md §6.4): finds the variants by SKU in the shop's
+// Quick order (BUILD_PLAN.md §9.4): finds the variants by SKU in the shop's
 // own catalog (`variants.sku` filter of GET /store/products) and adds them to
 // the cart in one request. The backend's cart rules still decide.
 export async function addBySku(

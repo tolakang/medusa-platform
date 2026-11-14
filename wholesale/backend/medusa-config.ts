@@ -2,7 +2,7 @@ import { loadEnv, defineConfig } from "@medusajs/framework/utils"
 
 loadEnv(process.env.NODE_ENV || "development", process.cwd())
 
-// Env-driven config (BUILD_PLAN.md §4.1, §6.4). Option shapes: docs/MEDUSA_SKILL.md §2.
+// Env-driven config (BUILD_PLAN.md §7.1, §9.4). Option shapes: docs/MEDUSA_SKILL.md §2.
 // Same infrastructure block as ecommerce/backend; the B2B modules come from
 // medusajs/b2b-starter apps/backend (README: starter commit).
 // REDIS_URL unset = in-memory infrastructure (development only).
@@ -172,7 +172,7 @@ module.exports = defineConfig({
   modules: [
     ...redisModules,
     ...fileModules,
-    // B2B modules from the starter (plan §6.4: extend them, don't rebuild).
+    // B2B modules from the starter (plan §9.4: extend them, don't rebuild).
     { resolve: "./src/modules/company" },
     { resolve: "./src/modules/quote" },
     { resolve: "./src/modules/approval" },

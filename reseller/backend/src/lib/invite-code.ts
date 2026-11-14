@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto"
 import { safeEqual } from "./safe-equal"
 
-// Invite codes (docs/REVIEW_FIXES.md B11). An invited seller or cashier used
+// Invite codes (the medusa-apps review fix list B11). An invited seller or cashier used
 // to be claimed by whoever registered the invited email first, because these
 // actors never prove they own the email. Now the admin gets a code with the
 // invitation and gives it to the person; accepting needs the email AND the

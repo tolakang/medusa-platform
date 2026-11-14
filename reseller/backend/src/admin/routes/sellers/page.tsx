@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
 
-// Sellers (TASKS F-081, BUILD_PLAN §6.5): invite a seller, give them their
+// Sellers (TASKS F-081, BUILD_PLAN §9.5): invite a seller, give them their
 // invite code, activate or suspend them, and set their domain and commission
 // rate. Reads GET /admin/sellers; writes POST /admin/sellers (P5-03) and
 // POST /admin/sellers/:id (F-081).

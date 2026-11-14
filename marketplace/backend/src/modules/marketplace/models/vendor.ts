@@ -3,7 +3,7 @@ import { VendorAdmin } from "./vendor-admin"
 import { VendorCommission } from "./vendor-commission"
 import { VendorPayout } from "./vendor-payout"
 
-// A vendor: sells their own products on the marketplace (BUILD_PLAN §6.6,
+// A vendor: sells their own products on the marketplace (BUILD_PLAN §9.6,
 // TASKS P6-01). Their products, child orders and stock locations are module
 // links (P6-02); the people who sign in for them are vendor admins (actor
 // type `vendor`, P6-03).

@@ -98,7 +98,7 @@ async function undoPayouts(marketplace: MarketplaceModuleService, created: Creat
   }
 }
 
-// create-payouts (BUILD_PLAN §6.6, TASKS P6-06): run by the daily job on
+// create-payouts (BUILD_PLAN §9.6, TASKS P6-06): run by the daily job on
 // MARKETPLACE_PAYOUT_DAY for the month before. One run at a time.
 export const createVendorPayoutsWorkflow = createWorkflow(
   "create-payouts",

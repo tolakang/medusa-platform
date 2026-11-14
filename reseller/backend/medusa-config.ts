@@ -2,7 +2,7 @@ import { loadEnv, defineConfig } from "@medusajs/framework/utils"
 
 loadEnv(process.env.NODE_ENV || "development", process.cwd())
 
-// Env-driven config (BUILD_PLAN.md §4.1). Option shapes: docs/MEDUSA_SKILL.md §2.
+// Env-driven config (BUILD_PLAN.md §7.1). Option shapes: docs/MEDUSA_SKILL.md §2.
 // REDIS_URL unset = in-memory infrastructure (development only).
 // S3_BUCKET unset = local file storage (development only).
 // RESEND_API_KEY / TELEGRAM_BOT_TOKEN / TELEGRAM_CUSTOMER_BOT_TOKEN unset = that
@@ -252,7 +252,7 @@ module.exports = defineConfig({
     { resolve: "./src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
     { resolve: "./src/modules/wishlist" },
-    // Sellers and their commissions (BUILD_PLAN §6.5, TASKS P5-01).
+    // Sellers and their commissions (BUILD_PLAN §9.5, TASKS P5-01).
     { resolve: "./src/modules/seller" },
     // Auth Module with the default email + password provider and two-factor
     // sign-in for admins (TASKS P1-22; docs "Auth Module Options" and

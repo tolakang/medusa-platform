@@ -13,7 +13,7 @@ import { ensurePosInStoreOptionWorkflow } from "./pos-in-store"
 import { POS_MODULE } from "../modules/pos"
 import type PosModuleService from "../modules/pos/service"
 
-// Register setup for admins (BUILD_PLAN §6.2, TASKS P2-06). A register sells
+// Register setup for admins (BUILD_PLAN §9.2, TASKS P2-06). A register sells
 // from one stock location in one sales channel (links of P2-02); the link
 // tables allow more, so these workflows replace the link instead of adding one.
 

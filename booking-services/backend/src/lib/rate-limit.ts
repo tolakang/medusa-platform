@@ -2,7 +2,7 @@
 // backend rather than in Traefik: Dokploy regenerates each app's Traefik file
 // when its domains change, so a hand-added Traefik limit could silently
 // disappear; this one is versioned and tested with the code.
-// In memory: the plan runs ONE server replica (BUILD_PLAN §5), and a restart
+// In memory: the plan runs ONE server replica (BUILD_PLAN §8.1), and a restart
 // only resets the counters.
 
 type Window = { count: number; resetAt: number }

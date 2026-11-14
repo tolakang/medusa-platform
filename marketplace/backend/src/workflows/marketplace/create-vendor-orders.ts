@@ -258,7 +258,7 @@ const undoChildOrders = async (container: MedusaContainer, created: CreatedChild
 // has reserved it and refuses an order that takes a variant's last units
 // (F-077). The parent's stock reservations move to the child items, so the
 // vendor's fulfilment uses them. Compensation deletes the children and their
-// reservations (plan §6.6); the parent is undone by completeCartWorkflow.
+// reservations (plan §9.6); the parent is undone by completeCartWorkflow.
 const createVendorOrdersStep = createStep(
   "create-vendor-orders",
   async (
@@ -439,7 +439,7 @@ export const splitVendorOrderWorkflow = createWorkflow(
   }
 )
 
-// create-vendor-orders (BUILD_PLAN §6.6, TASKS P6-05), as in the official
+// create-vendor-orders (BUILD_PLAN §9.6, TASKS P6-05), as in the official
 // Vendors example: under a lock on the cart, completeCartWorkflow makes the
 // parent order (the one the customer pays); then split-vendor-order makes
 // one child order per vendor (a copy of its items, holding their stock

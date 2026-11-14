@@ -10,7 +10,7 @@ import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
 
-// TASKS P3-05 (BUILD_PLAN §6.3): the cart hooks through the real store API.
+// TASKS P3-05 (BUILD_PLAN §9.3): the cart hooks through the real store API.
 // addToCart.validate: a service needs a held time, and the item must match
 // its hold. updateLineItemInCart.validate: one place, time can't change.
 // completeCart.validate (read-only): the slot is still there; the cart's own

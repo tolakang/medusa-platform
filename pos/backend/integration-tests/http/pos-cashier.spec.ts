@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken"
 import { POS_MODULE } from "../../src/modules/pos"
 import type PosModuleService from "../../src/modules/pos/service"
 
-// TASKS P2-03: the `cashier` actor type, invite-only (BUILD_PLAN §6.2). Real
+// TASKS P2-03: the `cashier` actor type, invite-only (BUILD_PLAN §9.2). Real
 // routes: an admin invites, the cashier registers with Medusa's emailpass
 // routes, accepts the invitation and signs in. Tokens for admins and customers
 // are signed with the test secret (Medusa's default "supersecret"), as in

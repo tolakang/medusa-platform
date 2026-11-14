@@ -1,7 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 import { PosRegister } from "./pos-register"
 
-// A cashier's session at one register (BUILD_PLAN §6.2, TASKS P2-01).
+// A cashier's session at one register (BUILD_PLAN §9.2, TASKS P2-01).
 // Cash amounts are in currency_code. expected_cash and counted_cash are set
 // when the shift closes (close-shift workflow, P2-04); the variance is
 // counted_cash - expected_cash. Orders are linked to the shift (P2-02).
@@ -23,7 +23,7 @@ export const PosShift = model
       mappedBy: "shifts",
     }),
   })
-  // One open shift per register, enforced by the database too (plan §6.2
+  // One open shift per register, enforced by the database too (plan §9.2
   // open-shift rule): a partial unique index on open shifts only.
   .indexes([
     {

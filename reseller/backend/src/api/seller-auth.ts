@@ -10,7 +10,7 @@ import cors from "cors"
 import { SELLER_MODULE } from "../modules/seller"
 import type SellerModuleService from "../modules/seller/service"
 
-// Access to /sellers/* (BUILD_PLAN §6.5, TASKS P5-03), like POS's /pos/*
+// Access to /sellers/* (BUILD_PLAN §9.5, TASKS P5-03), like POS's /pos/*
 // (pos/backend/src/api/pos-auth.ts). Medusa's own CORS covers only /store,
 // /admin and /auth (MEDUSA_SKILL §7), so /sellers gets the docs' cors +
 // parseCorsOrigins middleware with SELLER_CORS. The portal's origins also go

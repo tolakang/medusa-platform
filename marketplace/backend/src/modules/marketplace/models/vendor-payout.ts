@@ -2,7 +2,7 @@ import { model } from "@medusajs/framework/utils"
 import { Vendor } from "./vendor"
 
 // What the marketplace owes a vendor for one period and currency
-// (BUILD_PLAN §6.6, TASKS P6-01). Created by the scheduled `create-payouts`
+// (BUILD_PLAN §9.6, TASKS P6-01). Created by the scheduled `create-payouts`
 // job (P6-06); paid outside Medusa and marked paid with its reference, as in
 // Reseller (manual payouts).
 export const VendorPayout = model

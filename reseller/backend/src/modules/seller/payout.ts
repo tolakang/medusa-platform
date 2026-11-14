@@ -1,6 +1,6 @@
 import { MathBN } from "@medusajs/framework/utils"
 
-// TASKS P5-05 (plan §6.5: monthly payout batch, RESELLER_PAYOUT_DAY). Pure.
+// TASKS P5-05 (plan §9.5: monthly payout batch, RESELLER_PAYOUT_DAY). Pure.
 
 /** Day of the month the batch runs: RESELLER_PAYOUT_DAY, 1 to 28 (every month has it), else 1. */
 export function payoutDay(env: Record<string, string | undefined> = process.env) {
