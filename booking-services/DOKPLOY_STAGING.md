@@ -15,7 +15,7 @@ When you're done you have one Dokploy project, `booking-staging`, with **5 servi
 | `booking-storefront` | the booking shop | `<shop host>` → 8000 | 5 |
 
 
-> **Shared core (plan §4–§5):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/booking-services`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
+> **Shared core (plan §4–§5):** Booking services is in the root pnpm workspace (SC-1): every app builds with Docker Context Path `.` (the repo root) and also watches the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. The steps below show these values. Production deploys from `release/booking-services`, which only you move. Details: `README.md` → *Shared core and release branches*.
 ---
 
 ## Step 0: Decide and prepare (about 5 minutes)
@@ -89,10 +89,10 @@ Save each result in your password manager under these names:
    - **Save**
 3. **Build Type: Dockerfile**:
    - **Docker File:** `booking-services/backend/Dockerfile`
-   - **Docker Context Path:** `booking-services/backend`
+   - **Docker Context Path:** `.` (the repo root)
    - Docker Build Stage: leave empty
    - **Save**
-4. **Watch Paths:** `booking-services/backend/**` (with `/**` at the end) → **Save**.
+4. **Watch Paths:** `booking-services/backend/**` (with `/**` at the end), `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, one per line → **Save**.
 
 ### B. Environment variables
 1. **Environment** tab → **Environment Variables** box. Paste this, then replace every `<…>`:
@@ -256,8 +256,8 @@ Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers*
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `booking-services/backend/Dockerfile`
-   - Docker Context Path `booking-services/backend`
-4. **Watch Paths:** `booking-services/backend/**`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
+   - Docker Context Path `.` (the repo root)
+4. **Watch Paths:** `booking-services/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
 
 ### B. Environment
 1. Copy **all** of `booking-backend`'s Environment Variables, including the three `BOOKING_*` lines and any optional extras. The worker sends the emails, Telegram alerts and booking reminders, and frees times whose hold ran out.
@@ -293,8 +293,8 @@ Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers*
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `booking-services/storefront/Dockerfile`
-   - Docker Context Path `booking-services/storefront`
-4. **Watch Paths:** `booking-services/storefront/**`.
+   - Docker Context Path `.` (the repo root)
+4. **Watch Paths:** `booking-services/storefront/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`.
 
 ### B. Build Time Arguments
 These are built into the shop's code. Changing one later means **Rebuild**.
