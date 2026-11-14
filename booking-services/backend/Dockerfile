@@ -2,8 +2,9 @@
 # booking-services / backend — Medusa server + worker (same image, two Dokploy apps)
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
-#   Docker File = booking-services/backend/Dockerfile, Docker Context Path = booking-services/backend,
-#   Watch Paths = booking-services/backend/**   (BUILD_PLAN.md §8.1; F-011)
+#   Docker File = booking-services/backend/Dockerfile, Docker Context Path = . (repo root),
+#   Watch Paths = booking-services/backend/**, pnpm-workspace.yaml, package.json, pnpm-lock.yaml
+#   (BUILD_PLAN.md §5.3, §8.1; F-011)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
@@ -14,7 +15,7 @@ ARG NODE_VERSION=22
 
 # ---------- build ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /repo
 
 # Optional: absolute backend URL baked into the admin dashboard.
 # Leave empty when the admin is served by this same app (recommended).
@@ -26,18 +27,23 @@ ENV MEDUSA_BACKEND_URL=${MEDUSA_BACKEND_URL}
 ARG UPLOAD_MAX_FILE_SIZE_CEILING_MB=""
 ENV UPLOAD_MAX_FILE_SIZE_CEILING_MB=${UPLOAD_MAX_FILE_SIZE_CEILING_MB}
 
-# Exact pnpm version from package.json "packageManager"
+# Workspace manifests first, for the install cache. Exact pnpm version from
+# the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY booking-services/backend/package.json booking-services/backend/pnpm-lock.yaml booking-services/backend/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile
+ && pnpm install --frozen-lockfile --filter booking-services-backend
 
-COPY . .
-RUN pnpm build
+COPY booking-services/backend booking-services/backend
+RUN pnpm --filter booking-services-backend build
 
-# `medusa build` does not copy the lockfile into .medusa/server
-WORKDIR /app/.medusa/server
-RUN cp /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./ \
- && pnpm install --prod --frozen-lockfile
+# Production install: `medusa build` copies package.json as is, so its
+# "catalog:" versions can't be installed inside .medusa/server. pnpm deploy
+# (pnpm >= 12.2) resolves them into a portable node_modules (SC-1 proof).
+RUN pnpm --filter booking-services-backend --prod deploy /prod \
+ && mkdir /out \
+ && cp -R /prod/node_modules /out/node_modules \
+ && cp -R booking-services/backend/.medusa/server/. /out/
 
 # ---------- runtime ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS runtime
@@ -45,8 +51,8 @@ ENV NODE_ENV=production \
     PORT=9000
 WORKDIR /app
 
-COPY --from=build --chown=node:node /app/.medusa/server ./
-COPY --chown=node:node docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY --from=build --chown=node:node /out ./
+COPY --chown=node:node booking-services/backend/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 USER node
