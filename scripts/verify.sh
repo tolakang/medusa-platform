@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# Verify gate: docs/DEV_FLOW.md Gates 1, 3, 4 (+ Gate 2 via the test runner / image
+# smoke). Plain bash (macOS bash 3.2 compatible). Runs per deployable.
+#
+#   scripts/verify.sh <category | category/app | all> [--image]
+#
+# Backend integration tests need Postgres (the test runner creates and drops
+# its own database, runs migrations and boots the app, MEDUSA_SKILL §10):
+#   DB_HOST DB_PORT DB_USERNAME DB_PASSWORD   (defaults: localhost 5432 postgres "")
+#
+# --image   also build each deployable's image with $CONTAINER_CLI (default:
+#           docker, else podman). If VERIFY_DATABASE_URL is set (reachable from
+#           the container), the backend image is started in server mode and
+#           GET /health must return 200 (fresh-or-upgrade DB, safe migrate).
+#           Optional: VERIFY_DOCKER_NETWORK (e.g. "host" on Linux CI).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+TARGET="${1:-}"
+[ -n "$TARGET" ] || { echo "usage: scripts/verify.sh <category|category/app|all> [--image]"; exit 2; }
+IMAGE=0; [ "${2:-}" = "--image" ] && IMAGE=1
+
+if [ -z "${CONTAINER_CLI:-}" ]; then
+  if command -v docker >/dev/null 2>&1; then CONTAINER_CLI=docker; else CONTAINER_CLI=podman; fi
+fi
+
+list_deployables() {
+  for dir in */backend */storefront */*-portal */pos-app; do
+    [ -f "$dir/package.json" ] || continue
+    case "$TARGET" in
+      all) echo "$dir" ;;
+      */*) [ "$dir" = "$TARGET" ] && echo "$dir" ;;
+      *) case "$dir" in "$TARGET"/*) echo "$dir" ;; esac ;;
+    esac
+  done
+  # A non-matching last folder leaves a false `[ … ]` as the loop's status;
+  # under `set -e` that would abort the caller's $(…) (seen when pos/pos-app
+  # became the last deployable). "No match" is checked by the caller.
+  return 0
+}
+
+step() { echo; echo "---- [$1] $2"; }
+
+DEPLOYABLES=$(list_deployables)
+[ -n "$DEPLOYABLES" ] || { echo "no deployables with package.json for '$TARGET'"; exit 1; }
+
+# Clients must build without a backend; the starter aborts without a key.
+: "${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:=pk_verify_placeholder}"
+export NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+for D in $DEPLOYABLES; do
+  NAME=$(echo "$D" | tr '/' '-')
+  step "$D" "install (frozen lockfile)"
+  (cd "$D" && pnpm install --frozen-lockfile)
+
+  step "$D" "build"
+  (cd "$D" && pnpm build)
+
+  step "$D" "typecheck"
+  (cd "$D" && pnpm typecheck)
+
+  case "$D" in
+    */backend)
+      step "$D" "tests: unit, modules, http (real Postgres)"
+      (cd "$D" && pnpm test:unit && pnpm test:integration:modules && pnpm test:integration:http)
+      ;;
+    *)
+      # Clients with their own unit tests (e.g. pos/pos-app, TASKS P2-10).
+      if grep -q '"test":' "$D/package.json"; then
+        step "$D" "tests: unit"
+        (cd "$D" && pnpm test)
+      fi
+      ;;
+  esac
+
+  if [ "$IMAGE" = 1 ]; then
+    step "$D" "image build ($CONTAINER_CLI)"
+    case "$D" in
+      */backend) $CONTAINER_CLI build -t "$NAME:verify" "$D" ;;
+      # Clients: the key is a build-time ARG (BUILD_PLAN §4.2); the starter's
+      # check-env-variables.js aborts the build without it.
+      *) $CONTAINER_CLI build -t "$NAME:verify" \
+           --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY="$NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$D" ;;
+    esac
+
+    case "$D" in
+      */backend)
+        if [ -n "${VERIFY_DATABASE_URL:-}" ]; then
+          step "$D" "image smoke: server mode, migrate (safe flags), /health"
+          NET_ARGS=""; PORT_ARGS="-p 19000:9000"; URL="http://localhost:19000/health"
+          if [ -n "${VERIFY_DOCKER_NETWORK:-}" ]; then
+            NET_ARGS="--network $VERIFY_DOCKER_NETWORK"
+            [ "$VERIFY_DOCKER_NETWORK" = host ] && PORT_ARGS="" && URL="http://localhost:9000/health"
+          fi
+          CID=$($CONTAINER_CLI run -d $NET_ARGS $PORT_ARGS \
+            -e DATABASE_URL="$VERIFY_DATABASE_URL" -e DATABASE_SSL="${VERIFY_DATABASE_SSL:-false}" \
+            -e JWT_SECRET=verify -e COOKIE_SECRET=verify \
+            -e STORE_CORS=http://localhost -e ADMIN_CORS=http://localhost -e AUTH_CORS=http://localhost \
+            -e MEDUSA_WORKER_MODE=server "$NAME:verify")
+          CODE=000
+          for _ in $(seq 1 60); do
+            sleep 3
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "$URL" || true)
+            [ "$CODE" = 200 ] && break
+            [ "$($CONTAINER_CLI inspect -f '{{.State.Running}}' "$CID")" = true ] || break
+          done
+          # The admin is served by the same image (DEV_FLOW Gate 4).
+          APP=000
+          if [ "$CODE" = 200 ]; then
+            APP=$(curl -s -o /dev/null -w '%{http_code}' "${URL%/health}/app/" || true)
+          fi
+          $CONTAINER_CLI logs "$CID" 2>&1 | grep -E "entrypoint|timed out|error" | tail -5 || true
+          $CONTAINER_CLI rm -f "$CID" >/dev/null
+          [ "$CODE" = 200 ] || { echo "image smoke FAILED: /health=$CODE"; exit 1; }
+          [ "$APP" = 200 ] || { echo "image smoke FAILED: /app/=$APP"; exit 1; }
+          echo "image smoke ok: /health=200, /app/=200"
+
+          # Worker mode on the migrated database: it must start and keep
+          # running (no HTTP to check; REVIEW_FIXES T2).
+          step "$D" "image smoke: worker mode keeps running"
+          WID=$($CONTAINER_CLI run -d $NET_ARGS \
+            -e DATABASE_URL="$VERIFY_DATABASE_URL" -e DATABASE_SSL="${VERIFY_DATABASE_SSL:-false}" \
+            -e JWT_SECRET=verify -e COOKIE_SECRET=verify \
+            -e STORE_CORS=http://localhost -e ADMIN_CORS=http://localhost -e AUTH_CORS=http://localhost \
+            -e MEDUSA_WORKER_MODE=worker -e DISABLE_MEDUSA_ADMIN=true -e RUN_MIGRATIONS=false \
+            -e PORT=9001 "$NAME:verify")
+          sleep 25
+          RUNNING=$($CONTAINER_CLI inspect -f '{{.State.Running}}' "$WID" 2>/dev/null || echo false)
+          $CONTAINER_CLI logs "$WID" 2>&1 | grep -iE "worker|error" | tail -3 || true
+          $CONTAINER_CLI rm -f "$WID" >/dev/null
+          [ "$RUNNING" = true ] || { echo "image smoke FAILED: worker exited"; exit 1; }
+          echo "image smoke ok: worker running"
+        else
+          echo "(skip image smoke: set VERIFY_DATABASE_URL)"
+        fi
+        ;;
+      *)
+        # Clients: the standalone server starts from the image and answers
+        # (server.js at the standalone root, F-010; REVIEW_FIXES T2). Any
+        # HTTP answer counts: there is no backend here.
+        step "$D" "image smoke: the client server answers"
+        CPORT=3000; case "$D" in */storefront) CPORT=8000 ;; esac
+        NET_ARGS=""; PORT_ARGS="-p 18080:$CPORT"; CURL="http://localhost:18080/favicon.ico"
+        if [ "${VERIFY_DOCKER_NETWORK:-}" = host ]; then
+          NET_ARGS="--network host"; PORT_ARGS=""; CURL="http://localhost:$CPORT/favicon.ico"
+        fi
+        CID=$($CONTAINER_CLI run -d $NET_ARGS $PORT_ARGS \
+          -e COOKIE_SECRET=verify-cookie-secret-0123456789 "$NAME:verify")
+        CODE=000
+        for _ in $(seq 1 20); do
+          sleep 2
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' "$CURL" || true)
+          case "$CODE" in 2??|3??|4??) break ;; esac
+          [ "$($CONTAINER_CLI inspect -f '{{.State.Running}}' "$CID")" = true ] || break
+        done
+        $CONTAINER_CLI logs "$CID" 2>&1 | tail -3 || true
+        $CONTAINER_CLI rm -f "$CID" >/dev/null
+        case "$CODE" in
+          2??|3??|4??) echo "image smoke ok: the server answers ($CODE)" ;;
+          *) echo "image smoke FAILED: no answer from the client image ($CODE)"; exit 1 ;;
+        esac
+        ;;
+    esac
+  fi
+done
+
+echo; echo "verify: PASS ($TARGET)"

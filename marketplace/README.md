@@ -1,0 +1,67 @@
+# Marketplace — `marketplace/`
+
+> **Vendors sell their own products.** Code done — Phase 6 (exit P6-13 waits for the owner's staging run). Scope: [BUILD_PLAN.md §6.6](../BUILD_PLAN.md).
+>
+> `backend/` and `storefront/` are a **full copy of Ecommerce** (owner 2026-11-12, TASKS F-072); the vendor features are added task by task (P6-01 onwards). `vendor-portal/` is a Next.js app copied from Reseller's seller portal (P6-09). Local stack: `docker-compose.local.yml` (backend, worker, storefront, vendor portal).
+
+This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
+
+```
+marketplace/
+├── README.md                <- this guide
+├── docker-compose.local.yml <- local stack (Podman or Docker)
+├── backend/                 Medusa server + worker
+│   ├── Dockerfile
+│   ├── docker-entrypoint.sh
+│   └── .env.example
+├── storefront/              customer storefront
+│   ├── Dockerfile
+│   └── .env.example
+└── vendor-portal/           vendor portal
+    ├── Dockerfile
+    └── .env.example
+```
+
+## Dokploy project: `marketplace`
+
+| Service | Type | Build Path | Port → example domain | Env source |
+|---|---|---|---|---|
+| `marketplace-postgres` | Dokploy **PostgreSQL** | — | — | database `marketplace` |
+| `marketplace-redis` | Dokploy **Redis** | — | — | — |
+| `marketplace-backend` | Application (Dockerfile) | `/marketplace/backend` | 9000 → `api.example.com` | `backend/.env.example`, `MEDUSA_WORKER_MODE=server` |
+| `marketplace-worker` | Application (Dockerfile) | `/marketplace/backend` | none | same env + worker overrides |
+| `marketplace-storefront` | Application (Dockerfile) | `/marketplace/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
+| `marketplace-vendor-portal` | Application (Dockerfile) | `/marketplace/vendor-portal` | 3000 → `vendors.example.com` | `vendor-portal/.env.example` (build args + runtime) |
+
+Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `marketplace/<app>/Dockerfile` and **Docker Context Path** `marketplace/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `marketplace/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
+
+## Deploy order (first time)
+
+1. Create `marketplace-postgres` and `marketplace-redis`.
+2. Deploy `marketplace-backend` (server). Migrations run on start. Check `https://api.example.com/health`.
+3. Create the first admin user from the backend's Dokploy terminal:
+   `docker-entrypoint.sh medusa user -e you@example.com -p <password>`
+4. In the admin: create a region, a sales channel and a **publishable API key**.
+5. Deploy `marketplace-worker` (same Build Path, worker overrides).
+6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `marketplace-storefront`.
+7. Deploy `marketplace-vendor-portal`.
+8. Set the final domains in the backend CORS variables and redeploy the backend.
+
+After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
+
+## How the pieces connect
+
+- All clients reach the backend only over HTTP. No shared code, no shared files, no shared build.
+- Backend CORS must list each client domain:
+  - `STORE_CORS` = storefront domain
+  - `ADMIN_CORS` = backend/admin domain
+  - `AUTH_CORS` = every domain where someone logs in
+  - `VENDOR_CORS` = vendor portal domain (custom `/vendors/*` routes)
+- The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §4.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
+- `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
+
+## Independence rules
+
+- This project has its **own** Postgres and Redis. Never point two business projects at the same database.
+- A second business of the same type = a second Dokploy project built from the same folder, with its own env.
+- To add another scenario to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend. See `docs/COMPARISON.md` §4.

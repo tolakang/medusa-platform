@@ -1,0 +1,113 @@
+# pos: whole business project for LOCAL testing (BUILD_PLAN.md §4.3).
+# Dokploy ignores this file. Images and ports are local-only.
+#
+#   podman compose -f pos/docker-compose.local.yml up -d --build   (or: docker compose …)
+#   admin user:  podman exec pos-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
+#   admin:       http://localhost:9000/app (plain http works because SESSION_COOKIE_SECURE=false, TASKS F-043)
+#
+# Host ports are offset to avoid clashing with other local databases. They are the
+# same as ecommerce's, so run one category's stack at a time.
+# The POS app (P2-10) is at http://localhost:3000; the online shop (P2-09) at
+# http://localhost:8000 (build it with the online channel's publishable key:
+#   STOREFRONT_PUBLISHABLE_KEY=pk_... podman compose -f pos/docker-compose.local.yml up -d --build storefront).
+name: pos-local
+
+services:
+  postgres:
+    image: docker.io/library/postgres:15-alpine
+    container_name: pos-local-postgres
+    environment:
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusa
+      POSTGRES_DB: pos
+    ports: ["55432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d pos"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: pos-local-redis
+    ports: ["56379:6379"]
+
+  backend:
+    build: ./backend
+    container_name: pos-local-backend
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    # 8000 belongs to the storefront, which shares this network namespace.
+    ports: ["9000:9000", "8000:8000"]
+    # No curl in the slim image; Node 22 has fetch.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:9000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      retries: 60
+    environment: &backend-env
+      NODE_ENV: production
+      PORT: "9000"
+      DATABASE_URL: postgres://medusa:medusa@postgres:5432/pos
+      DATABASE_SSL: "false"
+      REDIS_URL: redis://redis:6379
+      MEDUSA_FF_CACHING: "true"
+      JWT_SECRET: local-only-jwt-secret
+      COOKIE_SECRET: local-only-cookie-secret
+      # Plain http here, so the admin session cookie must not be Secure (local only).
+      SESSION_COOKIE_SECURE: "false"
+      # Links in account emails (verification, password reset) point here;
+      # without it sign-up emails aren't sent ("Email verification not sent").
+      STOREFRONT_URL: http://localhost:8000
+      STORE_CORS: http://localhost:8000
+      ADMIN_CORS: http://localhost:9000
+      AUTH_CORS: http://localhost:9000,http://localhost:8000,http://localhost:3000
+      POS_CORS: http://localhost:3000
+      MEDUSA_WORKER_MODE: server
+      DISABLE_MEDUSA_ADMIN: "false"
+      RUN_MIGRATIONS: "true"
+
+  worker:
+    build: ./backend
+    container_name: pos-local-worker
+    # Worker starts only after the server has migrated and is healthy
+    # (same order as the Dokploy first deploy, BUILD_PLAN.md §5).
+    depends_on:
+      backend: { condition: service_healthy }
+    environment:
+      <<: *backend-env
+      MEDUSA_WORKER_MODE: worker
+      DISABLE_MEDUSA_ADMIN: "true"
+      RUN_MIGRATIONS: "false"
+
+  pos-app:
+    build: ./pos-app
+    container_name: pos-local-pos-app
+    depends_on:
+      backend: { condition: service_healthy }
+    ports: ["3000:3000"]
+    environment:
+      # Server-side calls only (the app proxies /pos for the browser).
+      MEDUSA_BACKEND_URL: http://backend:9000
+      COOKIE_SECRET: local-only-pos-app-cookie-secret
+
+  # Online shop on the same stock (TASKS P2-09). Same setup as ecommerce's.
+  storefront:
+    build:
+      context: ./storefront
+      args:
+        NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
+        NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${STOREFRONT_PUBLISHABLE_KEY:-pk_set_me}
+        NEXT_PUBLIC_BASE_URL: http://localhost:8000
+        NEXT_PUBLIC_DEFAULT_REGION: kh
+    container_name: pos-local-storefront
+    network_mode: service:backend
+    depends_on:
+      backend: { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      PORT: "8000"
+      MEDUSA_BACKEND_URL: http://localhost:9000
+
+volumes:
+  postgres_data:

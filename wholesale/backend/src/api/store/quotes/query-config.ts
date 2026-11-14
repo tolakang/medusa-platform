@@ -1,0 +1,90 @@
+export const quoteFields = [
+  "id",
+  "status",
+  // REVIEW_FIXES B13: named fields only. The starter returned whole customer,
+  // company and admin user records (`*customer`, `*messages.admin`, …).
+  "customer.id",
+  "customer.email",
+  "customer.first_name",
+  "customer.last_name",
+  "customer.phone",
+  "customer.employee.id",
+  "customer.employee.spending_limit",
+  "customer.employee.is_admin",
+  "customer.employee.company.id",
+  "customer.employee.company.name",
+  "messages.id",
+  "messages.text",
+  "messages.item_id",
+  "messages.admin_id",
+  "messages.customer_id",
+  "messages.created_at",
+  "messages.admin.first_name",
+  "messages.admin.last_name",
+  "messages.customer.first_name",
+  "messages.customer.last_name",
+  "cart.id",
+  "draft_order.id",
+  "draft_order.currency_code",
+  "draft_order.display_id",
+  "draft_order.region_id",
+  "draft_order.status",
+  "draft_order.version",
+  "draft_order.summary",
+  "draft_order.total",
+  "draft_order.subtotal",
+  "draft_order.tax_total",
+  "draft_order.order_change",
+  "draft_order.discount_total",
+  "draft_order.discount_tax_total",
+  "draft_order.original_total",
+  "draft_order.original_tax_total",
+  "draft_order.item_total",
+  "draft_order.item_subtotal",
+  "draft_order.item_tax_total",
+  "draft_order.original_item_total",
+  "draft_order.original_item_subtotal",
+  "draft_order.original_item_tax_total",
+  "draft_order.shipping_total",
+  "draft_order.shipping_subtotal",
+  "draft_order.shipping_tax_total",
+  "draft_order.original_shipping_tax_total",
+  "draft_order.original_shipping_subtotal",
+  "draft_order.original_shipping_total",
+  "draft_order.created_at",
+  "draft_order.updated_at",
+  "*draft_order.items",
+  "*draft_order.items.tax_lines",
+  "*draft_order.items.adjustments",
+  "*draft_order.items.variant",
+  "*draft_order.items.detail",
+  "*draft_order.payment_collections",
+  "*order_change.actions",
+];
+
+// What `?fields=` may never reach (REVIEW_FIXES B13): other people's records
+// through the quote's customer and company, and anything of the admin user
+// who wrote a message except their name.
+const disallowed: (string | RegExp)[] = [
+  "employees",
+  "orders",
+  "addresses",
+  "groups",
+  "account_holders",
+  // Patterns are also tested against each single segment, so they need the
+  // dot: `messages.admin` (the whole record) and any admin field but the name.
+  /\.admin$/,
+  /\.admin\.(?!(first_name|last_name)$)/,
+];
+
+export const retrieveQuoteTransformQueryConfig = {
+  defaults: quoteFields,
+  disallowed,
+  isList: false,
+};
+
+export const listQuotesTransformQueryConfig = {
+  defaults: quoteFields,
+  disallowed,
+  isList: true,
+};
