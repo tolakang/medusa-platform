@@ -11,6 +11,9 @@ packages:
   - booking-services/storefront
   - wholesale/backend
   - wholesale/storefront
+  - reseller/backend
+  - reseller/storefront
+  - reseller/seller-portal
 
 # One lockfile per app (SC-1 proof, point 5): each app keeps its own
 # pnpm-lock.yaml, CI cache path and Dokploy watch paths.

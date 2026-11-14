@@ -3,8 +3,8 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = reseller/seller-portal/Dockerfile,
-#   Docker Context Path = reseller/seller-portal,
-#   Watch Paths = reseller/seller-portal/**
+#   Docker Context Path = . (repo root),
+#   Watch Paths = reseller/seller-portal/**, pnpm-workspace.yaml, package.json, pnpm-lock.yaml  (BUILD_PLAN.md §5.3)
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 3000
@@ -20,7 +20,7 @@ ARG NODE_VERSION=22
 
 # ---------- build ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /repo
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ---- build-time arguments (set in Dokploy "Build-time Arguments") ----
@@ -31,11 +31,15 @@ ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}
 ARG NEXT_PUBLIC_BASE_URL=""
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 
+# Workspace manifests first (root pnpm workspace, Medusa catalog; BUILD_PLAN.md
+# §4.3). Exact pnpm version from the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY reseller/seller-portal/package.json reseller/seller-portal/pnpm-lock.yaml reseller/seller-portal/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile
+ && pnpm install --frozen-lockfile --filter reseller-seller-portal
 
-COPY . .
+COPY reseller/seller-portal reseller/seller-portal
+WORKDIR /repo/reseller/seller-portal
 RUN pnpm build
 
 # ---------- runtime ----------
@@ -46,9 +50,9 @@ ENV NODE_ENV=production \
     PORT=3000
 WORKDIR /app
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /repo/reseller/seller-portal/.next/standalone ./
+COPY --from=build --chown=node:node /repo/reseller/seller-portal/.next/static ./.next/static
+COPY --from=build --chown=node:node /repo/reseller/seller-portal/public ./public
 
 USER node
 EXPOSE 3000
