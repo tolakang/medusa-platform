@@ -10,7 +10,7 @@ import {
   newTranId,
   reqTime,
   signPurchase,
-} from "../client"
+} from "../../../lib/payway/client"
 import PaywayProviderService from "../service"
 
 // ABA PayWay provider (TASKS P1-03). Fake keys only: fetch is mocked, nothing

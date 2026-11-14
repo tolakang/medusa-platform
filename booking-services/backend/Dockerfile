@@ -3,7 +3,8 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = booking-services/backend/Dockerfile, Docker Context Path = . (repo root),
-#   Watch Paths = booking-services/backend/**, pnpm-workspace.yaml, package.json, pnpm-lock.yaml
+#   Watch Paths = booking-services/backend/**, packages/medusa-core/**, pnpm-workspace.yaml,
+#                 package.json, pnpm-lock.yaml
 #   (BUILD_PLAN.md §5.3, §8.1; F-011)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
@@ -30,12 +31,16 @@ ENV UPLOAD_MAX_FILE_SIZE_CEILING_MB=${UPLOAD_MAX_FILE_SIZE_CEILING_MB}
 # Workspace manifests first, for the install cache. Exact pnpm version from
 # the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/medusa-core/package.json packages/medusa-core/pnpm-lock.yaml packages/medusa-core/
 COPY booking-services/backend/package.json booking-services/backend/pnpm-lock.yaml booking-services/backend/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile --filter booking-services-backend
+ && pnpm install --frozen-lockfile --filter booking-services-backend...
 
+# The shared core first: the backend imports its built output (packages/medusa-core).
+COPY packages/medusa-core packages/medusa-core
 COPY booking-services/backend booking-services/backend
-RUN pnpm --filter booking-services-backend build
+RUN pnpm --filter @medusa-platform/medusa-core build \
+ && pnpm --filter booking-services-backend build
 
 # Production install: `medusa build` copies package.json as is, so its
 # "catalog:" versions can't be installed inside .medusa/server. pnpm deploy

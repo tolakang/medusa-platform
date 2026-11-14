@@ -1,0 +1,43 @@
+{
+  "name": "@medusa-platform/medusa-core",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared core of the backends, used in library mode (BUILD_PLAN.md §4). Never listed under plugins.",
+  "license": "MIT",
+  "packageManager": "pnpm@12.18.0",
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "files": [
+    ".medusa/server"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    "./workflows": "./.medusa/server/src/workflows/index.js",
+    "./.medusa/server/src/modules/*": "./.medusa/server/src/modules/*/index.js",
+    "./providers/*": "./.medusa/server/src/providers/*/index.js",
+    "./*": "./.medusa/server/src/*.js"
+  },
+  "scripts": {
+    "build": "medusa plugin:build",
+    "db:generate": "medusa plugin:db:generate",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit --passWithNoTests"
+  },
+  "devDependencies": {
+    "@medusajs/cli": "catalog:",
+    "@medusajs/framework": "catalog:",
+    "@medusajs/medusa": "catalog:",
+    "@swc/core": "^1.7.28",
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.13",
+    "@types/node": "^20.12.11",
+    "jest": "^29.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.2"
+  },
+  "peerDependencies": {
+    "@medusajs/framework": "catalog:",
+    "@medusajs/medusa": "catalog:"
+  }
+}

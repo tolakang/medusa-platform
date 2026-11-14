@@ -43,7 +43,7 @@ import {
   RSA_KEY_UNREADABLE_MESSAGE,
   signPurchase,
   type CheckTransactionResult,
-} from "./client"
+} from "../../lib/payway/client"
 import { safeEqual } from "../../lib/safe-equal"
 
 // ABA PayWay payment provider (TASKS D1, P1-03; Medusa docs "Create a Payment

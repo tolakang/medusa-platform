@@ -24,6 +24,7 @@
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit --passWithNoTests"
   },
   "dependencies": {
+    "@medusa-platform/medusa-core": "workspace:*",
     "@medusajs/admin-sdk": "catalog:",
     "@medusajs/admin-shared": "catalog:",
     "@medusajs/caching": "catalog:",

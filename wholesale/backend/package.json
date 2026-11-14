@@ -24,6 +24,7 @@
   "dependencies": {
     "@fontsource/kantumruy-pro": "5.3.0",
     "@hookform/resolvers": "5.5.7",
+    "@medusa-platform/medusa-core": "workspace:*",
     "@medusajs/admin-sdk": "catalog:",
     "@medusajs/admin-shared": "catalog:",
     "@medusajs/caching": "catalog:",

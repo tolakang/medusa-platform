@@ -54,6 +54,7 @@ S3, Resend, Telegram and PayWay are optional for POS staging: every POS check wo
 4. **Watch Paths**, one per line:
    ```
    pos/backend/**
+   packages/medusa-core/**
    pnpm-workspace.yaml
    package.json
    pnpm-lock.yaml

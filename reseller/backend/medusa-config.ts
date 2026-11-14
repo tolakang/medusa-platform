@@ -187,7 +187,7 @@ const paymentModules =
           options: {
             providers: [
               {
-                resolve: "./src/modules/payway",
+                resolve: "@medusa-platform/medusa-core/providers/payway",
                 id: "payway",
                 options: {
                   merchant_id: PAYWAY_MERCHANT_ID,

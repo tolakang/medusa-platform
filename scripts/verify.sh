@@ -53,6 +53,13 @@ for D in $DEPLOYABLES; do
   step "$D" "install (frozen lockfile)"
   (cd "$D" && pnpm install --frozen-lockfile)
 
+  # Apps that use the shared core (BUILD_PLAN.md §4) import its built output:
+  # build it first, and run its own unit tests (§4.5).
+  if grep -q '"@medusa-platform/medusa-core"' "$D/package.json"; then
+    step "$D" "shared core: build + unit tests (packages/medusa-core)"
+    (cd packages/medusa-core && pnpm build && pnpm test:unit)
+  fi
+
   step "$D" "build"
   (cd "$D" && pnpm build)
 

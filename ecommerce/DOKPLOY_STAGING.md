@@ -105,7 +105,7 @@ openssl rand -hex 32      # SHOPPER_IP_SECRET (backend, storefront)
 Both paths are relative to the repo root (verified on staging 2026-09-25, F-011).
 
 ### 2.4 Watch Paths
-`ecommerce/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (one per line). Write the `/**` glob: a bare `ecommerce/backend/` may not match changed files. The three root files are the workspace's: a Medusa catalog change redeploys the backend.
+`ecommerce/backend/**`, `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` (one per line). Write the `/**` glob: a bare `ecommerce/backend/` may not match changed files. The three root files are the workspace's: a Medusa catalog change redeploys the backend.
 
 ### 2.5 Environment variables
 1. **Environment** → **Environment Variables** (runtime). Paste this and replace every `<…>`:
@@ -297,7 +297,7 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
    | Build Type | Dockerfile |
    | Docker File | `ecommerce/backend/Dockerfile` |
    | Docker Context Path | `.` (the repo root) |
-   | **Watch Paths** | `ecommerce/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` |
+   | **Watch Paths** | `ecommerce/backend/**`, `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` |
 
    Don't leave Watch Paths empty: an empty box redeploys the worker on every push to `main` (F-019).
 

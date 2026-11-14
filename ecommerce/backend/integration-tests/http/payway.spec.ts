@@ -9,7 +9,7 @@ import {
 } from "@medusajs/medusa/core-flows"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
-import { callbackSignature, signPurchase } from "../../src/modules/payway/client"
+import { callbackSignature, signPurchase } from "@medusa-platform/medusa-core/lib/payway/client"
 
 // ABA PayWay through Medusa's real payment flow (TASKS P1-03). The app runs in
 // this process, so only calls to PayWay's servers are faked; everything else

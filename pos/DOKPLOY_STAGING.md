@@ -96,7 +96,7 @@ Save each result in your password manager under these names:
    - **Docker Context Path:** `.` (the repo root)
    - Docker Build Stage: leave empty
    - **Save**
-4. **Watch Paths:** `pos/backend/**` (with `/**` at the end), `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, one per line → **Save**.
+4. **Watch Paths:** `pos/backend/**` (with `/**` at the end), `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, one per line → **Save**.
 
 ### B. Environment variables
 1. **Environment** tab → **Environment Variables** box. Paste this, then replace every `<…>`:
@@ -254,7 +254,7 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed.js
 3. **Build Type: Dockerfile:**
    - Docker File `pos/backend/Dockerfile`
    - Docker Context Path `.` (the repo root)
-4. **Watch Paths:** `pos/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
+4. **Watch Paths:** `pos/backend/**`, `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
 
 ### B. Environment
 1. Copy **all** of `pos-backend`'s Environment Variables, including any optional extras. The worker sends the emails and Telegram alerts and handles PayWay callbacks.
