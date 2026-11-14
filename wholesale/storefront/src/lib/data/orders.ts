@@ -59,7 +59,7 @@ export const listOrders = async (
     .catch((err) => medusaError(err))
 }
 
-// Reorder (BUILD_PLAN.md §6.4): puts an earlier order's items in the cart
+// Reorder (BUILD_PLAN.md §9.4): puts an earlier order's items in the cart
 // again, at today's prices. Items whose variant no longer exists are skipped.
 export const reorder = async (
   orderId: string,

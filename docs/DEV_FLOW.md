@@ -21,7 +21,7 @@ One person or agent may play every role, but must do each stage **in order** and
 
 ## 2. Stage 0: Pick the task
 
-1. Take the **first unchecked task** of the current phase in `docs/TASKS.md`. Phases follow `BUILD_PLAN.md` §7 order rules.
+1. Take the **first unchecked task** of the current phase in `docs/TASKS.md`. Phases follow `BUILD_PLAN.md` §10 order rules.
 2. Open the plan section the task cites. The plan text is the **requirement**; its acceptance criteria are the **definition of success**.
 3. Create a branch: `feat/<category>-<task-id>-<slug>` (or `fix/…`, `chore/…`). Never work on `main`.
 
@@ -42,13 +42,13 @@ e.g. REF acquireLockStep — node_modules/@medusajs/core-flows/dist/locking/step
 
 ## 4. Stage 2: Implement
 
-- Use only the extension points in `BUILD_PLAN.md` §3.1: modules, links, workflows with compensation, hooks, subscribers, jobs, API routes with middlewares, admin extensions.
+- Use only the extension points in `BUILD_PLAN.md` §6.1: modules, links, workflows with compensation, hooks, subscribers, jobs, API routes with middlewares, admin extensions.
 - Work in small increments. After each one, run Gate 1 (§5) before continuing.
 - Every new write path goes through a **workflow** with compensation. Every new route gets **validation** and **auth** middleware.
 - Custom modules: generate migrations with `pnpm medusa db:generate <module>` and commit the migration **and** its `.snapshot-*.json`.
 - Tests are written **with** the code, not after (Gate 3).
 
-## 5. Stage 3: Gates (run from the deployable folder; all must pass)
+## 5. Stage 3: Gates (run from the app folder; all must pass)
 
 ### Gate 1: Build and types
 ```bash
@@ -56,7 +56,7 @@ pnpm install --frozen-lockfile
 pnpm build                 # backend: medusa build (also generates .medusa/types)
 pnpm typecheck             # backend: tsc --noEmit (after build)
 ```
-For storefronts, portals and the POS app, `pnpm build` must succeed **without the backend running** (BUILD_PLAN §4.2, change 5).
+For storefronts, portals and the POS app, `pnpm build` must succeed **without the backend running** (BUILD_PLAN §7.2, change 5).
 
 ### Gate 2: Database and boot (backend)
 Run against a **fresh** Postgres (`docker-compose.local.yml`), then once more against a database migrated by the previous commit (upgrade path):
@@ -70,7 +70,7 @@ cp pnpm-lock.yaml pnpm-workspace.yaml .medusa/server/
 curl -fsS http://localhost:9000/health            # must return 200
 curl -fsS -o /dev/null http://localhost:9000/app/ # must return 200 (server/shared mode)
 ```
-Also check that `db:migrate` printed no prompt and no "links to delete". An unsafe link or search change is a **release step** (BUILD_PLAN §8), not part of the task.
+Also check that `db:migrate` printed no prompt and no "links to delete". An unsafe link or search change is a **release step** (BUILD_PLAN §8.2), not part of the task.
 
 ### Gate 3: Tests
 ```bash
@@ -88,10 +88,10 @@ Minimum test set per task:
 ```bash
 docker build -t <category>-<app>:check <category>/<app>
 ```
-Backend: run the image once with `MEDUSA_WORKER_MODE=server` (health 200) and once with `worker` + `DISABLE_MEDUSA_ADMIN=true` + `RUN_MIGRATIONS=false` (process starts, no HTTP admin). Clients: the image starts and serves its port. `scripts/verify.sh <deployable> --image` does all of this (backend: `/health` and `/app/` 200 in server mode, then the worker still running after 25 s; clients: the server answers on its port).
+Backend: run the image once with `MEDUSA_WORKER_MODE=server` (health 200) and once with `worker` + `DISABLE_MEDUSA_ADMIN=true` + `RUN_MIGRATIONS=false` (process starts, no HTTP admin). Clients: the image starts and serves its port. `scripts/verify.sh <category>/<app> --image` does all of this (backend: `/health` and `/app/` 200 in server mode, then the worker still running after 25 s; clients: the server answers on its port).
 
 ### Gate 5: Guardrails (repo root; each line must print nothing unless noted)
-`scripts/guard.sh <category|all>` runs these checks and more (CI job `guard`); the lines below show what they mean, for a manual check. `D` = the deployable folder.
+`scripts/guard.sh <category|all>` runs these checks and more (CI job `guard`); the lines below show what they mean, for a manual check. `D` = the app folder.
 ```bash
 git diff --name-only origin/main...HEAD -- BUILD_PLAN.md                       # plan is frozen
 grep -rnE "from ['\"]@medusajs/[^'\"]+/dist" $D/src                            # no dist imports
@@ -146,7 +146,7 @@ Answer each question with yes or no plus a pointer. Any "no" sends the task back
 4. Do all write paths use workflows with compensation? Do all new routes have validation + auth + CORS where needed (custom prefixes)?
 5. Are event, job and cart-completion code paths idempotent and tested for retry?
 6. Are migrations and snapshots committed, touching only custom tables?
-7. Did any new env var go into that deployable's `.env.example` with a comment (and its category README if it's a deploy setting)?
+7. Did any new env var go into that app's `.env.example` with a comment (and its category README if it's a deploy setting)?
 8. Are all Gates 1–5 green in the latest run?
 
 Optional extra pass: run the `/code-review` skill on the branch.
@@ -157,7 +157,7 @@ After every finished task or phase, **before the PR is merged and pushed to `mai
 
 1. Load the `medusa-v2` skill (`.claude/skills/medusa-v2/SKILL.md`) and check every Medusa API, import, option, step, route rule and error type in the diff against `docs/MEDUSA_SKILL.md`. Anything not in it is confirmed through the evidence ladder (`docs/MEDUSA_SKILL.md` §0) and **added to `docs/MEDUSA_SKILL.md`** with its source.
 2. Scan the diff for the skill's hard rules: zod only from `@medusajs/framework/zod`; `MedusaError`, never `throw new Error`; `ContainerRegistrationKeys` or module constants, never magic container keys; no `async` workflow constructors; a workflow for every write; validation, auth and CORS on every new route.
-3. Update every related document in the same PR: `docs/TASKS.md` (tick, findings log, session handoff), the category `README.md`, the deployable `README.md`, `.env.example` for new settings, `docs/MEDUSA_SKILL.md` for newly verified facts. The plan changes only through an owner-approved revision.
+3. Update every related document in the same PR: `docs/TASKS.md` (tick, findings log, session handoff), the category `README.md`, the app `README.md`, `.env.example` for new settings, `docs/MEDUSA_SKILL.md` for newly verified facts. The plan changes only through an owner-approved revision.
 4. Write the result in the PR description: the reference sheet and a line `Skill check (DEV_FLOW §7.1): ✅`.
 
 ## 8. Stage 6: Record in `docs/TASKS.md`
@@ -175,10 +175,10 @@ After every finished task or phase, **before the PR is merged and pushed to `mai
 ## 10. Stage 8: Push, CI, merge
 
 1. `git push -u origin <branch>` and open a PR using the template below.
-2. CI runs the same gates: `scripts/guard.sh all`, then `scripts/verify.sh <deployable> --image` for every deployable in the matrix of `.github/workflows/ci.yml` (add a matrix entry when a new deployable gets code).
+2. CI runs the same gates: `scripts/guard.sh all`, then `scripts/verify.sh <category>/<app> --image` for every app in the matrix of `.github/workflows/ci.yml` (add a matrix entry when a new app gets code).
 3. If CI fails, go back to the fix cycle (§6), treating the CI log as the captured error.
 4. Merge to `main` only when CI is green. Fast-forward or squash; never force-push `main`. The `protect main` ruleset requires the check **`ci-ok`** (the last job in `.github/workflows/ci.yml`, which passes only when `guard` and every `verify` job passed), and the repo allows auto-merge (owner, 2026-11-04). So once the pre-merge checks (no PR based on this branch, base `main`) pass, turn on **squash auto-merge** for the PR: GitHub merges it by itself when `ci-ok` is green and holds it when anything fails. Squash merges delete the branch (repo setting).
-5. Dokploy redeploys only the changed deployables (watch paths). Smoke-test staging before production (BUILD_PLAN §8).
+5. Dokploy redeploys only the changed apps (watch paths). Smoke-test staging before production (BUILD_PLAN §8.2).
 
 **PR description template**
 ```

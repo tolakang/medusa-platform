@@ -3,12 +3,12 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = reseller/backend/Dockerfile, Docker Context Path = reseller/backend,
-#   Watch Paths = reseller/backend/**   (BUILD_PLAN.md §5; F-011)
+#   Watch Paths = reseller/backend/**   (BUILD_PLAN.md §8.1; F-011)
 #   server app : MEDUSA_WORKER_MODE=server   (domain -> port 9000)
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
 #
-# Base images are fully qualified for Podman/Buildah (BUILD_PLAN.md §4.1).
+# Base images are fully qualified for Podman/Buildah (BUILD_PLAN.md §7.1).
 # =====================================================================
 ARG NODE_VERSION=22
 

@@ -2,7 +2,7 @@ import { model } from "@medusajs/framework/utils"
 import { SellerCommission } from "./seller-commission"
 
 // A reseller: sells your products on their own storefront domain and earns a
-// commission on each order (BUILD_PLAN §6.5, TASKS P5-01). Their sales
+// commission on each order (BUILD_PLAN §9.5, TASKS P5-01). Their sales
 // channel (and its publishable key) is a module link (P5-02); their login is
 // the custom actor type `seller` (P5-03).
 export const Seller = model

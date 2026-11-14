@@ -4,7 +4,7 @@ import { call, setupB2b } from "../../utils/b2b";
 
 jest.setTimeout(240 * 1000);
 
-// P4-07 (plan §6.4, F-058): `/store/companies/me…` works on the signed-in
+// P4-07 (plan §9.4, F-058): `/store/companies/me…` works on the signed-in
 // customer's own company (from their employee record). The starter's
 // `/store/companies/:id…` routes, which took the company from the URL, are
 // gone. Replaces the starter's companies spec.

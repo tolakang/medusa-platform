@@ -1,4 +1,4 @@
-# marketplace: whole business project for LOCAL testing (BUILD_PLAN.md §4.3).
+# marketplace: whole category for LOCAL testing (BUILD_PLAN.md §7.3).
 # Dokploy ignores this file. Images and ports are local-only.
 #
 #   podman compose -f marketplace/docker-compose.local.yml up -d --build   (or: docker compose …)
@@ -67,7 +67,7 @@ services:
     build: ./backend
     container_name: marketplace-local-worker
     # Worker starts only after the server has migrated and is healthy
-    # (same order as the Dokploy first deploy, BUILD_PLAN.md §5).
+    # (same order as the Dokploy first deploy, BUILD_PLAN.md §8.1).
     depends_on:
       backend: { condition: service_healthy }
     environment:

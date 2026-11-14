@@ -1,6 +1,6 @@
 import { MathBN } from "@medusajs/framework/utils"
 
-// TASKS P5-04 (plan §6.5): what a seller earns on an order. Pure, so the
+// TASKS P5-04 (plan §9.5): what a seller earns on an order. Pure, so the
 // workflows and the unit tests share it.
 
 /** The shop's default rate, percent: RESELLER_DEFAULT_COMMISSION_RATE, else 10 (`.env.example`). */

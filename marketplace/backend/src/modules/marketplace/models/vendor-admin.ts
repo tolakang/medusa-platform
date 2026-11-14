@@ -2,7 +2,7 @@ import { model } from "@medusajs/framework/utils"
 import { Vendor } from "./vendor"
 
 // A person who signs in for a vendor (actor type `vendor`, as in the official
-// Vendors example; BUILD_PLAN §6.6, TASKS P6-01, P6-03). One email is one
+// Vendors example; BUILD_PLAN §9.6, TASKS P6-01, P6-03). One email is one
 // vendor admin, so a login always maps to exactly one vendor.
 export const VendorAdmin = model
   .define("vendor_admin", {

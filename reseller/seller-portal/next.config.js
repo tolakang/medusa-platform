@@ -1,5 +1,5 @@
 /**
- * Seller portal (TASKS P5-08). Web client standard (plan §4.2): standalone
+ * Seller portal (TASKS P5-08). Client standard (plan §7.2): standalone
  * output for the Docker runtime stage, traced from this folder only (F-010).
  *
  * @type {import('next').NextConfig}

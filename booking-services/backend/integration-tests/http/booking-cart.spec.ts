@@ -10,7 +10,7 @@ import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
 
-// TASKS P3-04 (BUILD_PLAN §6.3): add-booking-to-cart creates the hold and
+// TASKS P3-04 (BUILD_PLAN §9.3): add-booking-to-cart creates the hold and
 // the line item together, with compensation. Data as on staging (demo
 // catalog + Cambodia shop); a demo variant stands in for a service.
 jest.setTimeout(180 * 1000)

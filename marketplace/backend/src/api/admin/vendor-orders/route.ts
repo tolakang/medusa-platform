@@ -10,7 +10,7 @@ const GetAdminVendorOrders = z.object({ vendor_id: z.string().min(1).optional() 
 // GET /admin/vendor-orders (TASKS P6-07): the vendors' child orders (the ones
 // vendors fulfil and reports count), newest first, with their vendor and
 // parent order. The admin's own order list shows parents and children
-// together; this is the "child orders only" view (plan §6.6).
+// together; this is the "child orders only" view (plan §9.6).
 export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const parsed = GetAdminVendorOrders.safeParse(req.query)
   if (!parsed.success) {

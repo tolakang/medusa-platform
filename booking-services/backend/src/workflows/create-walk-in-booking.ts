@@ -2,7 +2,7 @@ import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@med
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
-// TASKS P3-11 (BUILD_PLAN §6.3): staff book a customer at the counter. Same
+// TASKS P3-11 (BUILD_PLAN §9.3): staff book a customer at the counter. Same
 // row lock, opening hours and capacity as an online hold (createHold), but
 // confirmed straight away with no hold and no cart; it may start up to now.
 // Compensation deletes it.

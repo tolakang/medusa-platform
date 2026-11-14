@@ -1,5 +1,5 @@
 /**
- * Vendor portal (TASKS P6-09). Web client standard (plan §4.2): standalone
+ * Vendor portal (TASKS P6-09). Client standard (plan §7.2): standalone
  * output for the Docker runtime stage, traced from this folder only (F-010).
  *
  * @type {import('next').NextConfig}

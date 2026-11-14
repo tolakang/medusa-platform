@@ -32,7 +32,7 @@ import type PosModuleService from "../modules/pos/service"
 import { ensurePosInStoreOptionWorkflow } from "./pos-in-store"
 import { POS_PAYMENT_METHOD_KEY } from "./pos-shift"
 
-// pos-checkout (BUILD_PLAN §6.2, TASKS P2-05), as in Medusa's POS recipe: the
+// pos-checkout (BUILD_PLAN §9.2, TASKS P2-05), as in Medusa's POS recipe: the
 // sale is a draft order in the register's sales channel (createOrderWorkflow
 // with status draft, as the admin draft-order route does), promotions through
 // promo_codes, converted to an order (convertDraftOrderWorkflow), paid in full

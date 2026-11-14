@@ -17,7 +17,7 @@ import {
 } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
 
-// Bookings (TASKS P3-11, BUILD_PLAN §6.3): a day or week calendar per
+// Bookings (TASKS P3-11, BUILD_PLAN §9.3): a day or week calendar per
 // resource, in the resource's own time zone, with walk-in booking and
 // cancellation. Reads GET /admin/booking/resources and
 // GET /admin/booking/bookings; writes POST /admin/booking/bookings (walk-in)

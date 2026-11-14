@@ -6,7 +6,7 @@ import { headers as nextHeaders } from "next/headers"
 // this app; this app talks to Medusa with the vendor's token, so the token
 // never reaches the browser and the backend needs no CORS entry for the app.
 // Server-side calls prefer the private Dokploy hostname (MEDUSA_BACKEND_URL),
-// as the web client standard's change 6 does for the storefront.
+// as the client standard's change 6 does for the storefront.
 
 const BACKEND_URL =
   process.env.MEDUSA_BACKEND_URL || process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"

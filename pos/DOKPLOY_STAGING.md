@@ -1,6 +1,6 @@
 # Runbook: `pos-staging` on Dokploy (TASKS P2-14)
 
-A click-by-click setup of the POS business project on a Dokploy **staging** project. You don't need any other runbook. Do the steps **in order**. Each step ends with **Check** (what you should see) and **Reply with** (what to send so I can verify from here). Field names are Dokploy's own. They were verified on the Ecommerce staging, findings F-011, F-012, F-016, F-017, F-019, F-020 and F-021 (`../ecommerce/DOKPLOY_STAGING.md`).
+A click-by-click setup of the POS category on a Dokploy **staging** project. You don't need any other runbook. Do the steps **in order**. Each step ends with **Check** (what you should see) and **Reply with** (what to send so I can verify from here). Field names are Dokploy's own. They were verified on the Ecommerce staging, findings F-011, F-012, F-016, F-017, F-019, F-020 and F-021 (`../ecommerce/DOKPLOY_STAGING.md`).
 
 **Never paste secret values** in chat: keys, passwords, connection URLs, tokens. When a check needs one, the command prints only its length.
 
@@ -16,7 +16,7 @@ When you're done you have one Dokploy project, `pos-staging`, with **6 services*
 | `pos-pos-app` | till app (PWA) | `<till host>` → 3000 | 6 |
 
 
-> **Shared core (plan Revision 16):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/pos`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
+> **Shared core (plan §4–§5):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/pos`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
 ---
 
 ## Step 0: Decide and prepare (about 5 minutes)
@@ -466,7 +466,7 @@ With your three hosts, the `pk_…` key and the order number, I check:
 |---|---|
 | `https://<api host>/health` | 200 `OK` |
 | `https://<api host>/app/` | 200 |
-| `/store/products` with your key, T-shirt L / Black | `inventory_quantity` **8**: 10 minus the 2 sold at the till, so the till took stock from the shop's location only (plan §6.2 acceptance) |
+| `/store/products` with your key, T-shirt L / Black | `inventory_quantity` **8**: 10 minus the 2 sold at the till, so the till took stock from the shop's location only (plan §9.2 acceptance) |
 | `https://<shop host>/kh` and a product page | render |
 | Shop checkout delivery options | "Phnom Penh Delivery" shown, "In store (POS)" **not** shown |
 | `https://<till host>/login` | 200 |

@@ -1,10 +1,10 @@
 # Marketplace — `marketplace/`
 
-> **Vendors sell their own products.** Code done — Phase 6 (exit P6-13 waits for the owner's staging run). Scope: [BUILD_PLAN.md §6.6](../BUILD_PLAN.md).
+> **Vendors sell their own products.** Code done — Phase 6 (exit P6-13 waits for the owner's staging run). Scope: [BUILD_PLAN.md §9.6](../BUILD_PLAN.md).
 >
 > `backend/` and `storefront/` are a **full copy of Ecommerce** (owner 2026-11-12, TASKS F-072); the vendor features are added task by task (P6-01 onwards). `vendor-portal/` is a Next.js app copied from Reseller's seller portal (P6-09). Local stack: `docker-compose.local.yml` (backend, worker, storefront, vendor portal).
 
-This folder is **one complete business project**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
+This folder is **one complete category**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
 
 ```
 marketplace/
@@ -35,7 +35,7 @@ marketplace/
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `marketplace/<app>/Dockerfile` and **Docker Context Path** `marketplace/<app>` (both relative to the repo root; verified on Dokploy staging 2026-09-25, finding F-011), and a **watch path** `marketplace/<app>/**`, so a change to one app never redeploys another. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
-### Shared core and release branches (plan Revision 16)
+### Shared core and release branches (plan §4–§5)
 
 **Build from the repo root.** This applies from this category's SC-1 PR on (`docs/TASKS.md` → *Shared core*); that PR says when to switch, and until then the values above stay. For each app (`backend`, `storefront`, `vendor-portal`), in Dokploy:
 - **Docker File:** `marketplace/<app>/Dockerfile` (unchanged).
@@ -52,7 +52,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
   ```
   To release an older checked commit instead, put its hash in place of `origin/main`.
 - **Optional record:** tag each release too, e.g. `git tag marketplace-<yyyy-mm-dd> origin/release/marketplace && git push origin marketplace-<yyyy-mm-dd>`. Dokploy still follows the branch; the tag is only a readable history.
-- **Rollback:** move the branch back to the previous release, then run any `db:rollback` the release notes need (plan §8):
+- **Rollback:** move the branch back to the previous release, then run any `db:rollback` the release notes need (plan §8.2):
   ```bash
   git push --force origin <previous commit>:refs/heads/release/marketplace
   ```
@@ -81,12 +81,12 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
   - `ADMIN_CORS` = backend/admin domain
   - `AUTH_CORS` = every domain where someone logs in
   - `VENDOR_CORS` = vendor portal domain (custom `/vendors/*` routes)
-- The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §4.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
+- The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §7.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
 
 ## Independence rules
 
-- Shared backend code comes only from `packages/medusa-core` (plan Revision 16); this category's own code stays here, and its clients never use the core.
-- This project has its **own** Postgres and Redis. Never point two business projects at the same database.
+- Shared backend code comes only from `packages/medusa-core` (plan §4–§5); this category's own code stays here, and its clients never use the core.
+- This project has its **own** Postgres and Redis. Never point two businesses at the same database.
 - A second business of the same type = a second Dokploy project built from the same folder, with its own env.
-- To add another scenario to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend. See `docs/COMPARISON.md` §4.
+- To add another category's features to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend.

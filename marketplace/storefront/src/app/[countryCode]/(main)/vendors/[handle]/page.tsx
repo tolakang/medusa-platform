@@ -8,7 +8,7 @@ import { Heading, Text } from "@modules/common/components/ui"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import PaginatedProducts from "@modules/store/templates/paginated-products"
 
-// A vendor's shop page (TASKS P6-08, plan §6.6): the vendor's name and logo
+// A vendor's shop page (TASKS P6-08, plan §9.6): the vendor's name and logo
 // and its published products, with this region's prices. Rendered per
 // request, like the product pages.
 export const dynamic = "force-dynamic"

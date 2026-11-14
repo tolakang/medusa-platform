@@ -1,7 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 
 // A Telegram chat that asked for updates on an order (TASKS P1-17). Kept in
-// its own module: no columns on core tables (plan §3.1). Plain order ID, no
+// its own module: no columns on core tables (plan §6.1). Plain order ID, no
 // module link: nothing queries orders through it.
 // One row per order and chat: a second, simultaneous /start for the same
 // order can't add a duplicate (unique index; DML EntityIndex `unique`).

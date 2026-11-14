@@ -5,7 +5,7 @@ import { useState } from "react"
 import { adminLink, errorText, money, STATUS_COLOR } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
-// Vendor payouts (TASKS P6-07, BUILD_PLAN §6.6): the manual payout report.
+// Vendor payouts (TASKS P6-07, BUILD_PLAN §9.6): the manual payout report.
 // Each month's job makes one payout per vendor and currency (P6-06); pay it
 // outside Medusa, then record the transfer's reference here. Reads
 // GET /admin/vendor-payouts[/:id]; writes POST /admin/vendor-payouts/:id/pay.

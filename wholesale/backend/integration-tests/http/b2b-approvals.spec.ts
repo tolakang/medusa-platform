@@ -4,7 +4,7 @@ import { call, setupB2b } from "../utils/b2b";
 
 jest.setTimeout(240 * 1000);
 
-// P4-05 (plan §6.4: "approval flow for orders above a limit"; owner
+// P4-05 (plan §9.4: "approval flow for orders above a limit"; owner
 // 2026-11-10: no threshold = every cart, a company admin skips the
 // company-admin approval, quote acceptance runs the checkout rules).
 medusaIntegrationTestRunner({

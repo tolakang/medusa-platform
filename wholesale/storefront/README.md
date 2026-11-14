@@ -1,6 +1,6 @@
 # wholesale / storefront
 
-Next.js B2B buyer shop for the wholesale business project. Standard: `BUILD_PLAN.md` §4.2; scope: §6.4 (TASKS P4-08).
+Next.js B2B buyer shop for the wholesale category. Standard: `BUILD_PLAN.md` §7.2; scope: §6.4 (TASKS P4-08).
 
 **Starter:** `medusajs/b2b-starter` `apps/storefront` at commit **`f352e3c`** (2026-11-09, Medusa 2.22.6, Next.js 16.3.8). Here: Next.js **16.4.5**, `@medusajs/ui` **4.2.13** (the repo's pin rule), pnpm 12.18.0.
 
@@ -20,7 +20,7 @@ Next.js B2B buyer shop for the wholesale business project. Standard: `BUILD_PLAN
 
 ## Changes to the starter
 
-Plan §4.2 changes:
+Plan §7.2 changes:
 
 1. Standalone pnpm package: own `packageManager`, lockfile and settings-only `pnpm-workspace.yaml` (the starter root's `@types/react` overrides).
 2. Renamed `@b2b-starter/storefront` → `wholesale-storefront`; `typecheck` and `test` scripts added.

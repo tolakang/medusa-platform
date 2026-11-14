@@ -2,7 +2,7 @@ import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@med
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
-// TASKS P3-06 (BUILD_PLAN §6.3): renew a cart's booking holds when the
+// TASKS P3-06 (BUILD_PLAN §9.3): renew a cart's booking holds when the
 // customer starts paying. Run by the middleware on
 // POST /store/payment-collections/:id/payment-sessions (src/api/middlewares.ts):
 // createPaymentSessionsWorkflow has no hooks in 2.22.2 and no event is

@@ -3,7 +3,7 @@ import { Booking } from "./booking"
 import { BookingSchedule } from "./booking-schedule"
 
 // Something that can be booked: a person, a room, a piece of equipment or a
-// venue (BUILD_PLAN §6.3, TASKS P3-01). Which services (product variants) it
+// venue (BUILD_PLAN §9.3, TASKS P3-01). Which services (product variants) it
 // offers is a module link (P3-02); no columns on core tables.
 export const BookingResource = model
   .define("booking_resource", {

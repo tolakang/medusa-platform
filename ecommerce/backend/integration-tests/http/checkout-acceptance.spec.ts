@@ -9,7 +9,7 @@ import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
 import { renderMessage } from "../../src/modules/telegram/templates"
 
-// P1-07 acceptance test (plan §6.1): browse → cart → checkout → order visible
+// P1-07 acceptance test (plan §9.1): browse → cart → checkout → order visible
 // in admin, through the same store and admin APIs the storefront and the
 // dashboard use. Data as on staging: the starter's demo products
 // (seed-initial-data) plus the Cambodia shop (seed). Payment is Medusa's

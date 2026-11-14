@@ -1,7 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 import { PosShift } from "./pos-shift"
 
-// A till in a shop (BUILD_PLAN §6.2, TASKS P2-01). Its stock location and
+// A till in a shop (BUILD_PLAN §9.2, TASKS P2-01). Its stock location and
 // sales channel are module links (P2-02); no columns on core tables.
 export const PosRegister = model
   .define("pos_register", {

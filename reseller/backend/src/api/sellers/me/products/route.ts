@@ -7,7 +7,7 @@ import { linkProductsToSalesChannelWorkflow } from "@medusajs/medusa/core-flows"
 import { sellerCatalog, sellerChannelId } from "../../seller-catalog"
 import type { PostSellerProductsType } from "../../validators"
 
-// GET /sellers/me/products (plan §6.5, TASKS P5-06): your products the
+// GET /sellers/me/products (plan §9.5, TASKS P5-06): your products the
 // seller can offer, with `selected` for those in their channel.
 export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const channelId = await sellerChannelId(req.scope, req.auth_context.actor_id)

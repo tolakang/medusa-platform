@@ -6,7 +6,7 @@ import { toast } from "@medusajs/ui"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
-// Reorder and invoice download for a placed order (BUILD_PLAN.md §6.4).
+// Reorder and invoice download for a placed order (BUILD_PLAN.md §9.4).
 const OrderActions = ({ orderId }: { orderId: string }) => {
   const { countryCode } = useParams<{ countryCode: string }>()
   const router = useRouter()

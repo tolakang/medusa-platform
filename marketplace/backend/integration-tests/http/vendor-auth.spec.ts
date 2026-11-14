@@ -18,7 +18,7 @@ jest.setTimeout(120 * 1000)
 
 const PORTAL = "https://vendors.marketplace.test"
 
-// TASKS P6-03 (plan §6.6): the `vendor` actor type as in the official Vendors
+// TASKS P6-03 (plan §9.6): the `vendor` actor type as in the official Vendors
 // example: register, POST /vendors with the registration token, sign in;
 // the vendor waits for the admin's approval; every /vendors route needs a
 // signed-in vendor admin of an active vendor, behind VENDOR_CORS.

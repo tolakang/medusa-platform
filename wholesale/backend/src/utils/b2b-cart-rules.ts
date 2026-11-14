@@ -5,7 +5,7 @@ import {
   ModuleCompanyStatus,
 } from "../types";
 
-// P4-04 (plan §6.4): the B2B cart rules, as pure functions so the hooks stay
+// P4-04 (plan §9.4): the B2B cart rules, as pure functions so the hooks stay
 // thin and the rules can be unit-tested. The hooks load the data
 // (src/utils/load-b2b-buyer.ts) and throw what these return.
 
@@ -154,7 +154,7 @@ export function spendOrders(orders: B2bOrder[]): B2bOrder[] {
   return orders.filter(countsAsSpend);
 }
 
-// P4-05 (plan §6.4: "approval flow for orders above a limit").
+// P4-05 (plan §9.4: "approval flow for orders above a limit").
 
 export type B2bApprovalSettings = {
   requires_admin_approval?: boolean | null;

@@ -5,7 +5,7 @@ import { call, setupB2b } from "../utils/b2b";
 
 jest.setTimeout(240 * 1000);
 
-// docs/REVIEW_FIXES.md batch 2: the company's credit keeps counting an order
+// the medusa-apps review fix list batch 2: the company's credit keeps counting an order
 // after its employee leaves (B4, B5), a cancelled order isn't due (B3), and
 // two checkouts of one company at the same moment can't both use the last
 // of its credit (B6).

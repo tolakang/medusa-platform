@@ -12,7 +12,7 @@ import {
   type ReportShift,
 } from "../../lib/shift-report"
 
-// POS → Shift report (TASKS P2-07, BUILD_PLAN §6.2): shifts per register,
+// POS → Shift report (TASKS P2-07, BUILD_PLAN §9.2): shifts per register,
 // cashier and day, with expected cash, counted cash and the variance. Reads
 // GET /admin/pos/shifts (P2-06); the summary groups the loaded shifts, up to
 // REPORT_LIMIT, newest first.

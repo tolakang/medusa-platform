@@ -13,7 +13,7 @@ import { bookingIdOf } from "../lib/booking-cart-rules"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
-// TASKS P3-08 (BUILD_PLAN §6.3): cancel a booking with the cancellation
+// TASKS P3-08 (BUILD_PLAN §9.3): cancel a booking with the cancellation
 // policy and refund it. A pending hold or a confirmed booking can be
 // cancelled until it starts; a confirmed booking cancelled at least
 // BOOKING_CANCEL_HOURS before the start is refunded the amount of its order

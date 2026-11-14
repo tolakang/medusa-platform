@@ -10,7 +10,7 @@ import { adminHeaders, createAdminUser } from "../utils/admin";
 
 jest.setTimeout(240 * 1000);
 
-// P4-04 (plan §6.4): add-to-cart needs an approved company and the minimum
+// P4-04 (plan §9.4): add-to-cart needs an approved company and the minimum
 // order quantity; checkout needs the employee's spending limit (over the
 // company's reset window, past orders included) and, on net terms, the
 // company's credit limit (unpaid orders included).

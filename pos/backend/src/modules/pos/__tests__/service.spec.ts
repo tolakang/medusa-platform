@@ -6,7 +6,7 @@ import PosModuleService from "../service"
 
 jest.setTimeout(60 * 1000)
 
-// TASKS P2-01: module `pos` with pos_register and pos_shift (BUILD_PLAN §6.2).
+// TASKS P2-01: module `pos` with pos_register and pos_shift (BUILD_PLAN §9.2).
 moduleIntegrationTestRunner<PosModuleService>({
   moduleName: POS_MODULE,
   moduleModels: [PosRegister, PosShift],

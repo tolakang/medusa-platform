@@ -83,7 +83,7 @@ const recordVendorCommissionsStep = createStep(
   }
 )
 
-// record-vendor-commission (BUILD_PLAN §6.6, TASKS P6-06): run by
+// record-vendor-commission (BUILD_PLAN §9.6, TASKS P6-06): run by
 // create-vendor-orders for the child orders it makes.
 export const recordVendorCommissionsWorkflow = createWorkflow(
   "record-vendor-commission",

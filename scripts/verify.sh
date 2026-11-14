@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Verify gate: docs/DEV_FLOW.md Gates 1, 3, 4 (+ Gate 2 via the test runner / image
-# smoke). Plain bash (macOS bash 3.2 compatible). Runs per deployable.
+# smoke). Plain bash (macOS bash 3.2 compatible). Runs per app.
 #
 #   scripts/verify.sh <category | category/app | all> [--image]
 #
@@ -8,7 +8,7 @@
 # its own database, runs migrations and boots the app, MEDUSA_SKILL §10):
 #   DB_HOST DB_PORT DB_USERNAME DB_PASSWORD   (defaults: localhost 5432 postgres "")
 #
-# --image   also build each deployable's image with $CONTAINER_CLI (default:
+# --image   also build each app's image with $CONTAINER_CLI (default:
 #           docker, else podman). If VERIFY_DATABASE_URL is set (reachable from
 #           the container), the backend image is started in server mode and
 #           GET /health must return 200 (fresh-or-upgrade DB, safe migrate).
@@ -35,14 +35,14 @@ list_deployables() {
   done
   # A non-matching last folder leaves a false `[ … ]` as the loop's status;
   # under `set -e` that would abort the caller's $(…) (seen when pos/pos-app
-  # became the last deployable). "No match" is checked by the caller.
+  # became the last app). "No match" is checked by the caller.
   return 0
 }
 
 step() { echo; echo "---- [$1] $2"; }
 
 DEPLOYABLES=$(list_deployables)
-[ -n "$DEPLOYABLES" ] || { echo "no deployables with package.json for '$TARGET'"; exit 1; }
+[ -n "$DEPLOYABLES" ] || { echo "no apps with package.json for '$TARGET'"; exit 1; }
 
 # Clients must build without a backend; the starter aborts without a key.
 : "${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY:=pk_verify_placeholder}"
@@ -77,7 +77,7 @@ for D in $DEPLOYABLES; do
     step "$D" "image build ($CONTAINER_CLI)"
     case "$D" in
       */backend) $CONTAINER_CLI build -t "$NAME:verify" "$D" ;;
-      # Clients: the key is a build-time ARG (BUILD_PLAN §4.2); the starter's
+      # Clients: the key is a build-time ARG (BUILD_PLAN §7.2); the starter's
       # check-env-variables.js aborts the build without it.
       *) $CONTAINER_CLI build -t "$NAME:verify" \
            --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY="$NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$D" ;;

@@ -453,7 +453,7 @@ export async function placeOrder(cartId?: string) {
     ...(await getAuthHeaders()),
   }
 
-  // Marketplace checkout (TASKS P6-08, plan §6.6): the backend's
+  // Marketplace checkout (TASKS P6-08, plan §9.6): the backend's
   // complete-vendor route completes the cart into the customer's order and
   // splits it into one order per vendor. Same answer shape as the core
   // /store/carts/:id/complete for a placed order.

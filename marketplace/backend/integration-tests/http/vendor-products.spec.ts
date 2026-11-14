@@ -11,7 +11,7 @@ import { VENDOR_PRODUCT_NEEDS_APPROVAL_MESSAGE } from "../../src/lib/vendor-prod
 
 jest.setTimeout(120 * 1000)
 
-// TASKS P6-04 (plan §6.6): create-vendor-product as in the official Vendors
+// TASKS P6-04 (plan §9.6): create-vendor-product as in the official Vendors
 // example: the product goes into the store's default sales channel and is
 // linked to the vendor; it stays unpublished until the marketplace publishes
 // it while MARKETPLACE_REQUIRE_PRODUCT_APPROVAL is on (F-075).

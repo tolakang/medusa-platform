@@ -6,7 +6,7 @@ import { call, setupB2b } from "../utils/b2b";
 
 jest.setTimeout(240 * 1000);
 
-// P4-06 (plan §6.4): net-terms orders pay through the system provider and
+// P4-06 (plan §9.4): net-terms orders pay through the system provider and
 // are captured in the admin when the invoice is paid; every order has an
 // invoice PDF (invoice tutorial pattern) with the terms and due date.
 medusaIntegrationTestRunner({

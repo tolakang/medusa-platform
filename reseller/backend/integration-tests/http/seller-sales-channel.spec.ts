@@ -14,7 +14,7 @@ import { createSellerWorkflow } from "../../src/workflows/seller/create-seller"
 
 jest.setTimeout(120 * 1000)
 
-// TASKS P5-02 (plan §6.5): seller ↔ sales channel, one to one; the channel's
+// TASKS P5-02 (plan §9.5): seller ↔ sales channel, one to one; the channel's
 // publishable key is the seller's storefront key.
 medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {

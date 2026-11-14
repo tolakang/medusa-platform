@@ -4,7 +4,7 @@ import { call, setupB2b } from "../utils/b2b";
 
 jest.setTimeout(240 * 1000);
 
-// docs/REVIEW_FIXES.md batch 3: the bulk add route (B12) and the quote
+// the medusa-apps review fix list batch 3: the bulk add route (B12) and the quote
 // routes (B13) don't hand out other people's records.
 medusaIntegrationTestRunner({
   env: { JWT_SECRET: "supersecret" },

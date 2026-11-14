@@ -3,7 +3,7 @@ const checkEnvVariables = require("./check-env-variables")
 checkEnvVariables()
 
 /**
- * Product image bucket (S3 / R2 / MinIO). Build-time args (BUILD_PLAN.md §4.2,
+ * Product image bucket (S3 / R2 / MinIO). Build-time args (BUILD_PLAN.md §7.2,
  * starter change 4; the starter read MEDUSA_CLOUD_S3_* instead).
  */
 const S3_HOSTNAME = process.env.S3_IMAGE_HOSTNAME

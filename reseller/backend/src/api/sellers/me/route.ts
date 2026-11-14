@@ -4,7 +4,7 @@ import type {
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 
-// GET /sellers/me (plan §6.5; TASKS P5-03): the signed-in seller and their
+// GET /sellers/me (plan §9.5; TASKS P5-03): the signed-in seller and their
 // sales channel. P5-06 adds products and commissions.
 export const GET = async (
   req: AuthenticatedMedusaRequest,

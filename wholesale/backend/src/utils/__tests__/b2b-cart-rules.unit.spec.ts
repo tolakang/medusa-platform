@@ -12,7 +12,7 @@ import {
   spendOrders,
 } from "../b2b-cart-rules";
 
-// P4-04 (plan §6.4): the B2B cart rules.
+// P4-04 (plan §9.4): the B2B cart rules.
 
 const company = (over: Partial<B2bCompany> = {}): B2bCompany => ({
   id: "comp_1",

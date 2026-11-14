@@ -1,4 +1,4 @@
-// Quick order (BUILD_PLAN.md §6.4: bulk add by SKU / CSV). One item per
+// Quick order (BUILD_PLAN.md §9.4: bulk add by SKU / CSV). One item per
 // line: `SKU, quantity`. The separator may be a comma, semicolon, tab or
 // spaces; a missing quantity means 1; a header row is skipped; the same SKU
 // on several lines is added up.

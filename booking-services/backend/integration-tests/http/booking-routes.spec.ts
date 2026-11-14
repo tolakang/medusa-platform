@@ -10,7 +10,7 @@ import seed from "../../src/scripts/seed"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 
-// TASKS P3-10 (BUILD_PLAN §6.3): GET /store/booking/availability,
+// TASKS P3-10 (BUILD_PLAN §9.3): GET /store/booking/availability,
 // GET /store/booking/slots, POST /store/booking/cancel, plus
 // POST /store/booking/cart (F-047), through the real store API.
 jest.setTimeout(240 * 1000)

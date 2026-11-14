@@ -5,7 +5,7 @@ import { SELLER_SUSPENDED_MESSAGE } from "../../src/api/seller-auth"
 
 jest.setTimeout(120 * 1000)
 
-// TASKS F-081 (plan §6.5): the shop activates or suspends a seller and sets
+// TASKS F-081 (plan §9.5): the shop activates or suspends a seller and sets
 // their name, domain and commission rate (POST /admin/sellers/:id, the admin
 // Sellers page). Before, a seller's status could only be set at the invite,
 // so a seller invited as pending stayed pending.

@@ -13,10 +13,10 @@ import { BookingSchedule } from "./models/booking-schedule"
 import { candidateSlots, fitsWeeklyHours, isValidTimeZone, peakOverlap } from "./utils/slot"
 
 export type BookingModuleOptions = {
-  // Minutes a pending hold blocks its slot (BOOKING_HOLD_MINUTES, plan §6.3).
+  // Minutes a pending hold blocks its slot (BOOKING_HOLD_MINUTES, plan §9.3).
   holdMinutes?: number
   // A cancellation at least this many hours before the start is refunded
-  // (BOOKING_CANCEL_HOURS, plan §6.3; P3-08).
+  // (BOOKING_CANCEL_HOURS, plan §9.3; P3-08).
   cancelHours?: number
 }
 
@@ -32,7 +32,7 @@ export type SlotRequest = {
   starts_at: Date
   ends_at: Date
   // A cart's own hold doesn't count against itself, so a retried checkout
-  // stays valid (plan §6.3, P3-05).
+  // stays valid (plan §9.3, P3-05).
   ignore_cart_id?: string
   // For tests and jobs; defaults to the current time.
   now?: Date

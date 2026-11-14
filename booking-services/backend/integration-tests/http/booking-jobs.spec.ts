@@ -12,7 +12,7 @@ import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
 import { sendBookingRemindersWorkflow } from "../../src/workflows/send-booking-reminders"
 
-// TASKS P3-09 (BUILD_PLAN §6.3): the release job and the 24-hour reminders,
+// TASKS P3-09 (BUILD_PLAN §9.3): the release job and the 24-hour reminders,
 // and the P3-15 acceptance criterion: an abandoned checkout frees the slot
 // automatically.
 jest.setTimeout(240 * 1000)

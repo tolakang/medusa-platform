@@ -7,7 +7,7 @@ import SellerModuleService from "../service"
 jest.setTimeout(60 * 1000)
 
 // TASKS P5-01: module `seller` with seller and seller_commission
-// (BUILD_PLAN §6.5).
+// (BUILD_PLAN §9.5).
 moduleIntegrationTestRunner<SellerModuleService>({
   moduleName: SELLER_MODULE,
   moduleModels: [Seller, SellerCommission],

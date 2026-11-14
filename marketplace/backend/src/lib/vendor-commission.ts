@@ -1,7 +1,7 @@
 import type { BigNumberInput } from "@medusajs/framework/types"
 import { MathBN } from "@medusajs/framework/utils"
 
-// TASKS P6-06 (plan §6.6): commission and payout rules. Pure, shared by the
+// TASKS P6-06 (plan §9.6): commission and payout rules. Pure, shared by the
 // workflows and the unit tests. Same rules as Reseller (P5-04, P5-05, D11).
 
 type Env = Record<string, string | undefined>

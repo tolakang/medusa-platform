@@ -15,7 +15,7 @@ import { recordSellerCommissionWorkflow } from "../../src/workflows/seller/recor
 
 jest.setTimeout(240 * 1000)
 
-// TASKS P5-04 (plan §6.5), with the acceptance tests P5-09 and P5-10: an
+// TASKS P5-04 (plan §9.5), with the acceptance tests P5-09 and P5-10: an
 // order in an active seller's channel creates exactly one commission, even
 // when the event is processed twice; orders in your own channel create none.
 // Cancelling the order cancels it; a refund recalculates it.

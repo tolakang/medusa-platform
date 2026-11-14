@@ -19,7 +19,7 @@ FAILED=0
 fail() { echo "  FAIL: $*"; FAILED=1; }
 pass() { echo "  ok:   $*"; }
 
-# Deployables that already contain app code (a package.json).
+# Apps that already contain app code (a package.json).
 list_deployables() {
   for dir in */backend */storefront */*-portal */pos-app; do
     [ -f "$dir/package.json" ] || continue
@@ -80,7 +80,7 @@ $(printf '%s\n' "$LOCK_OUT" | grep -E '^FAIL')"
 fi
 
 DEPLOYABLES=$(list_deployables)
-[ -n "$DEPLOYABLES" ] || { echo "no deployables with package.json for '$TARGET'"; exit $FAILED; }
+[ -n "$DEPLOYABLES" ] || { echo "no apps with package.json for '$TARGET'"; exit $FAILED; }
 
 for D in $DEPLOYABLES; do
   echo "== $D"
@@ -136,7 +136,7 @@ for D in $DEPLOYABLES; do
   esac
 
   # 12. No NEW type suppressions (DEV_FLOW §6). Starter code keeps its own:
-  #     <deployable>/.guard-baseline holds the repo commit that imported the
+  #     <category>/<app>/.guard-baseline holds the repo commit that imported the
   #     starter; lines are "new" relative to it (else relative to BASE_REF).
   #     A copied app (e.g. pos/storefront, TASKS P2-09) names its source too:
   #     "<commit> <source app>"; then a suppression is new unless the source
@@ -165,7 +165,7 @@ for D in $DEPLOYABLES; do
   fi
 done
 
-# 13. Every deployable with app code is built and tested in CI: the matrix
+# 13. Every app with app code is built and tested in CI: the matrix
 #     in ci.yml is written by hand (REVIEW_FIXES T8).
 if [ "$TARGET" = all ]; then
   echo "== ci"
@@ -173,7 +173,7 @@ if [ "$TARGET" = all ]; then
   for D in $DEPLOYABLES; do
     grep -qE "^[[:space:]]*- $D[[:space:]]*$" .github/workflows/ci.yml || MISSING="$MISSING $D"
   done
-  [ -z "$MISSING" ] && pass "every deployable is in the CI matrix" || fail "not in the CI matrix (.github/workflows/ci.yml):$MISSING"
+  [ -z "$MISSING" ] && pass "every app is in the CI matrix" || fail "not in the CI matrix (.github/workflows/ci.yml):$MISSING"
 fi
 
 echo

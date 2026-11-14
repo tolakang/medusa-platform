@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query"
 import { adminLink, errorText, money, STATUS_COLOR } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
-// Vendor orders (TASKS P6-07, BUILD_PLAN §6.6): the child orders vendors
+// Vendor orders (TASKS P6-07, BUILD_PLAN §9.6): the child orders vendors
 // fulfil, which reports count. Medusa's own Orders list shows the
 // customers' parent orders (they hold the payment) and these together.
 // Reads GET /admin/vendor-orders.

@@ -4,7 +4,7 @@ import { cookies as nextCookies, headers as nextHeaders } from "next/headers"
 import { unstable_rethrow } from "next/navigation"
 import { SELLER_COOKIE } from "@lib/util/seller-cookie"
 
-// Which seller a request belongs to (BUILD_PLAN §6.5, TASKS P5-07). One
+// Which seller a request belongs to (BUILD_PLAN §9.5, TASKS P5-07). One
 // deployment serves every seller's domain; the backend maps the request's
 // host (or, with SELLER_RESOLVE_MODE=path, the handle chosen at
 // /api/seller/<handle>) to that seller's publishable key, and lib/config.ts

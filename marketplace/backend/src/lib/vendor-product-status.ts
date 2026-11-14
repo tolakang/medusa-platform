@@ -1,6 +1,6 @@
 import { MedusaError } from "@medusajs/framework/utils"
 
-// MARKETPLACE_REQUIRE_PRODUCT_APPROVAL (BUILD_PLAN §6.6, TASKS P6-04): on
+// MARKETPLACE_REQUIRE_PRODUCT_APPROVAL (BUILD_PLAN §9.6, TASKS P6-04): on
 // unless set to "false". With it on, a vendor's product stays unpublished
 // until the marketplace publishes it (admin product moderation, P6-07).
 export function productApprovalRequired(env: NodeJS.ProcessEnv = process.env) {

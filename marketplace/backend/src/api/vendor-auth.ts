@@ -13,7 +13,7 @@ import {
 } from "@medusajs/framework/utils"
 import cors from "cors"
 
-// Access to /vendors/* (BUILD_PLAN §6.6, TASKS P6-03), like Reseller's
+// Access to /vendors/* (BUILD_PLAN §9.6, TASKS P6-03), like Reseller's
 // /sellers/* (reseller/backend/src/api/seller-auth.ts). Medusa's own CORS
 // covers only /store, /admin and /auth (MEDUSA_SKILL §7), so /vendors gets the
 // docs' cors + parseCorsOrigins middleware with VENDOR_CORS. The portal's

@@ -5,7 +5,7 @@ import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 
 // TASKS P3-02: booking resource ↔ product variant (many-to-many) and
-// booking → order (many → one) (BUILD_PLAN §6.3), created with the Link
+// booking → order (many → one) (BUILD_PLAN §9.3), created with the Link
 // service and read back with Query in both directions.
 jest.setTimeout(120 * 1000)
 

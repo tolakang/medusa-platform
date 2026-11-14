@@ -7,7 +7,7 @@ import { createVendorWorkflow } from "../../workflows/marketplace/create-vendor"
 import { vendorResponse } from "../vendor-auth"
 import type { PostVendorCreateType } from "./validators"
 
-// POST /vendors (BUILD_PLAN §6.6, TASKS P6-03), called with the registration
+// POST /vendors (BUILD_PLAN §9.6, TASKS P6-03), called with the registration
 // token from POST /auth/vendor/emailpass/register. Creates the vendor
 // (pending until the admin approves it) and its first admin; then the admin
 // signs in at POST /auth/vendor/emailpass.

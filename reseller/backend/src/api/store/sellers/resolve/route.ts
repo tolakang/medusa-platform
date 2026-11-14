@@ -3,7 +3,7 @@ import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/util
 import { z } from "@medusajs/framework/zod"
 import { normalizeHost } from "../../../../modules/seller/host"
 
-// GET /store/sellers/resolve?domain=<host> | ?handle=<handle> (plan §6.5,
+// GET /store/sellers/resolve?domain=<host> | ?handle=<handle> (plan §9.5,
 // TASKS P5-07): the multi-tenant storefront asks, server-side, which seller
 // a request belongs to and gets that seller's publishable key. Only active
 // sellers; anything else is 404 and the storefront serves your own channel.

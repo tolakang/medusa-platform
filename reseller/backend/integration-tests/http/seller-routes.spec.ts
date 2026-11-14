@@ -12,7 +12,7 @@ import SellerModuleService from "../../src/modules/seller/service"
 
 jest.setTimeout(240 * 1000)
 
-// TASKS P5-06 (plan §6.5): /sellers/me/products (the seller picks which of
+// TASKS P5-06 (plan §9.5): /sellers/me/products (the seller picks which of
 // your products show in their channel) and /sellers/me/commissions.
 medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {

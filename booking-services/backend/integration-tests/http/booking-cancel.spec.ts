@@ -12,7 +12,7 @@ import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
 import { cancelBookingWorkflow } from "../../src/workflows/cancel-booking"
 
-// TASKS P3-08 (BUILD_PLAN §6.3) and the P3-16 acceptance criterion:
+// TASKS P3-08 (BUILD_PLAN §9.3) and the P3-16 acceptance criterion:
 // cancellation inside the policy (BOOKING_CANCEL_HOURS, default 24) refunds;
 // outside it doesn't.
 jest.setTimeout(300 * 1000)

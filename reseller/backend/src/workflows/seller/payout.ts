@@ -9,10 +9,10 @@ import {
 } from "./steps/payout"
 
 /**
- * Monthly payout batch (plan §6.5, TASKS P5-05): on the payout day, every
+ * Monthly payout batch (plan §9.5, TASKS P5-05): on the payout day, every
  * pending commission from before this month is approved, and the workflow
  * returns what each seller is owed. Money is sent outside Medusa; then
- * markSellerPayoutPaidWorkflow records it (manual payouts, as plan §6.6
+ * markSellerPayoutPaidWorkflow records it (manual payouts, as plan §9.6
  * starts the marketplace's). A `seller_payout` record is "later" (§6.5).
  */
 export const sellerPayoutBatchWorkflow = createWorkflow(

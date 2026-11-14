@@ -98,7 +98,7 @@ async function setCacheId(request: NextRequest, response: NextResponse) {
   return newCacheId
 }
 
-// Wholesale: the shop is for signed-in buyers (BUILD_PLAN.md §6.4,
+// Wholesale: the shop is for signed-in buyers (BUILD_PLAN.md §9.4,
 // NEXT_PUBLIC_REQUIRE_LOGIN, default on). Without a session cookie only the
 // sign-in / sign-up page and the legal pages open; everything else goes to
 // sign-in. This hides the shop's pages, not the Store API itself.

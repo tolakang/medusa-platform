@@ -5,7 +5,7 @@ import { IP_SECRET, marketplaceTestKit } from "../helpers/marketplace"
 
 jest.setTimeout(240 * 1000)
 
-// TASKS P6-10 (plan §6.6 acceptance): a cart with items from two vendors
+// TASKS P6-10 (plan §9.6 acceptance): a cart with items from two vendors
 // produces two child orders that each vendor sees and fulfils separately,
 // and only its own. Also the vendor portal's order routes (P6-09).
 medusaIntegrationTestRunner({

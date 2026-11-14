@@ -10,7 +10,7 @@ import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
 
-// TASKS P3-06 (BUILD_PLAN §6.3): creating a payment session renews the
+// TASKS P3-06 (BUILD_PLAN §9.3): creating a payment session renews the
 // cart's booking holds, so a slow payment doesn't lose the slot.
 jest.setTimeout(240 * 1000)
 

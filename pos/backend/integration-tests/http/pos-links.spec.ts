@@ -5,7 +5,7 @@ import { POS_MODULE } from "../../src/modules/pos"
 import type PosModuleService from "../../src/modules/pos/service"
 
 // TASKS P2-02: register → stock location, register → sales channel,
-// shift → orders (BUILD_PLAN §6.2), created with the Link service and read
+// shift → orders (BUILD_PLAN §9.2), created with the Link service and read
 // back with Query in both directions.
 jest.setTimeout(120 * 1000)
 

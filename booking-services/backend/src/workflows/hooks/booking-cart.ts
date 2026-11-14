@@ -16,7 +16,7 @@ import {
 import { BOOKING_MODULE } from "../../modules/booking"
 import type BookingModuleService from "../../modules/booking/service"
 
-// TASKS P3-05 (BUILD_PLAN §6.3): the cart hooks for bookings. All three only
+// TASKS P3-05 (BUILD_PLAN §9.3): the cart hooks for bookings. All three only
 // read and throw; none of them changes the cart (the completeCartWorkflow
 // reference forbids mutating the cart in its validate hook).
 

@@ -12,7 +12,7 @@ import { IP_SECRET, marketplaceTestKit } from "../helpers/marketplace"
 
 jest.setTimeout(240 * 1000)
 
-// TASKS P6-06 and P6-11 (plan §6.6): a commission per vendor child order,
+// TASKS P6-06 and P6-11 (plan §9.6): a commission per vendor child order,
 // monthly payouts per vendor and currency, the admin's payout report, and
 // "payouts equal order totals minus commission".
 medusaIntegrationTestRunner({

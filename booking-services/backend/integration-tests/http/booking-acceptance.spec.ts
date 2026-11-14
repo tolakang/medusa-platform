@@ -9,7 +9,7 @@ import seedBookingDemo from "../../src/scripts/seed-booking-demo"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 
-// Phase 3 acceptance (BUILD_PLAN §6.3), through the store API the
+// Phase 3 acceptance (BUILD_PLAN §9.3), through the store API the
 // storefront uses, on the Cambodia seed + booking demo (Haircut, Sophea):
 // - P3-14: two customers can't hold the same slot, even at the same moment.
 // - P3-17: a retried cart completion doesn't double-book or fail on its own

@@ -2,7 +2,7 @@ import { model } from "@medusajs/framework/utils"
 import { Vendor } from "./vendor"
 
 // What the marketplace keeps of one child order, and what it owes the vendor
-// for it (BUILD_PLAN §6.6, TASKS P6-06, F-078). One per child order
+// for it (BUILD_PLAN §9.6, TASKS P6-06, F-078). One per child order
 // (`order_id` unique). The order is in the Order Module: its id is plain
 // text, no foreign key into core tables.
 export const VendorCommission = model
@@ -19,7 +19,7 @@ export const VendorCommission = model
     rate: model.float(),
     // The marketplace's commission: base × rate.
     amount: model.bigNumber(),
-    // What the vendor is owed for the order: order_total − amount (plan §6.6
+    // What the vendor is owed for the order: order_total − amount (plan §9.6
     // acceptance: "payouts equal order totals minus commission").
     payout_amount: model.bigNumber(),
     currency_code: model.text(),

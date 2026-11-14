@@ -5,7 +5,7 @@ import { useState } from "react"
 import { errorText, STATUS_COLOR } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
-// Vendors (TASKS P6-07, BUILD_PLAN §6.6): the approval queue (pending first),
+// Vendors (TASKS P6-07, BUILD_PLAN §9.6): the approval queue (pending first),
 // approve / suspend / reactivate, and each vendor's commission rate. Reads
 // GET /admin/vendors; writes POST /admin/vendors/:id (P6-03).
 

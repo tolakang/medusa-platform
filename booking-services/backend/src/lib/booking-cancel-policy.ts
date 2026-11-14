@@ -1,4 +1,4 @@
-// The cancellation policy (TASKS P3-08, plan §6.3: BOOKING_CANCEL_HOURS).
+// The cancellation policy (TASKS P3-08, plan §9.3: BOOKING_CANCEL_HOURS).
 // Pure, so it's unit-tested on its own.
 
 export type CancelDecision =

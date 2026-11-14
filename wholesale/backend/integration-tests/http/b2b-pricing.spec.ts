@@ -15,7 +15,7 @@ import { adminHeaders, createAdminUser } from "../utils/admin";
 
 jest.setTimeout(180 * 1000);
 
-// P4-03 (plan §6.4): a B2B sales channel with its own publishable key, price
+// P4-03 (plan §9.4): a B2B sales channel with its own publishable key, price
 // lists per customer group (`customer.groups.id`) and quantity tiers
 // (`min_quantity` / `max_quantity`). Gold pays 80% of the base price (75%
 // from 10 units), Silver 90% (85%); see DEMO_PRICE_TIERS.

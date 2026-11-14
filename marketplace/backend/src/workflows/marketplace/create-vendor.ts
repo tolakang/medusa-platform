@@ -103,7 +103,7 @@ const createVendorWithAdminStep = createStep(
   }
 )
 
-// Vendor sign-up (BUILD_PLAN §6.6, TASKS P6-03): POST /auth/vendor/emailpass/
+// Vendor sign-up (BUILD_PLAN §9.6, TASKS P6-03): POST /auth/vendor/emailpass/
 // register, then POST /vendors with that registration token. The token's
 // auth identity becomes the vendor admin (app_metadata.vendor_id = the
 // vendor admin's id, as in the official Vendors example). The vendor waits

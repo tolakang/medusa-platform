@@ -1,6 +1,6 @@
 # Runbook: `ecommerce-staging` on Dokploy (TASKS P0-18, P0-19, P1-09)
 
-A step-by-step setup and operations guide for the Ecommerce business project on Dokploy. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`docs/TASKS.md`). Everything here was verified on the live staging; the finding numbers (F-0xx) point to the evidence in `docs/TASKS.md`.
+A step-by-step setup and operations guide for the Ecommerce category on Dokploy. Field names are Dokploy's own (docs.dokploy.com, checked 2026-09-25). The project layout is decision **D6** (`docs/TASKS.md`). Everything here was verified on the live staging; the finding numbers (F-0xx) point to the evidence in `docs/TASKS.md`.
 
 **Section numbers are stable.** Other files cite them (e.g. "runbook §2.5", "§7.2", "§9"), so new material goes inside a section, never as a renumbering.
 
@@ -22,13 +22,13 @@ A step-by-step setup and operations guide for the Ecommerce business project on 
 **Never paste secret values** in chat, git or tickets: keys, passwords, connection URLs, tokens. When you share a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 
 
-> **Shared core (plan Revision 16):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/ecommerce`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
+> **Shared core (plan §4–§5):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/ecommerce`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
 ---
 
 ## 0. Before you start
 
 ### 0.1 You need
-- A Dokploy server, with the GitHub provider connected to `<github-owner>/medusa-apps` (Dokploy → **Git** → **GitHub App**).
+- A Dokploy server, with the GitHub provider connected to `<github-owner>/medusa-platform` (Dokploy → **Git** → **GitHub App**).
 - Two hostnames, either:
   - your DNS: `api.staging.<your-domain>` and `shop.staging.<your-domain>`, each an **A record** to the Dokploy server's IP; or
   - Dokploy's **Generated** domains (HTTP only: then use `http://` in every URL below).
@@ -246,7 +246,7 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
    docker service inspect <service> --format '{{json .Spec.UpdateConfig}}'
    ```
 
-**C. Replicas** = `1` (one migrating server per deploy, plan §8).
+**C. Replicas** = `1` (one migrating server per deploy, plan §8.2).
 
 ### 2.8 Deploy
 1. **Deploy**, and wait for the deployment to finish.
@@ -640,7 +640,7 @@ Once per project; repeat for production. Do these after the backend, worker and 
 ## 9. Smoke test after every deploy
 
 CI proves the code (tests, image build, `/health` on an empty database). This checks the **deployed** shop with its real settings.
-- **When:** on staging after every deploy, before promoting to production, and on production right after its deploy (BUILD_PLAN §8 "smoke test, then production").
+- **When:** on staging after every deploy, before promoting to production, and on production right after its deploy (BUILD_PLAN §8.2 "smoke test, then production").
 - **Rule:** stop at the first ❌ and send the output; don't change settings first (DEV_FLOW §6).
 - It adds no delay to the deploy itself: it is what you check once Dokploy shows the deploy as done, while the shop keeps running.
 
@@ -774,7 +774,7 @@ Production is a **separate Dokploy project `ecommerce`**, built with §1–§4 a
 
 ### 11.1 Before you start
 - [ ] Dokploy updated to v0.29.9 or newer (§10.0).
-- [ ] Server hardened (plan §5 *Server access*):
+- [ ] Server hardened (plan §8.1 *Server access*):
   - SSH-key login only;
   - no password login for root or any uid-0 account (`kt`);
   - no public Postgres port;
@@ -804,10 +804,10 @@ Fresh for production; never copy a staging value.
 3. Run the smoke test (§9) the **production** way: at checkout, press **Cancel** on the PayWay page. Pay for real only on purpose, then refund it from the admin.
 4. Record the date, commit and ✅ per line in `docs/TASKS.md` under P1-08.
 
-### 11.4 Every later release (plan §8)
+### 11.4 Every later release (plan §8.2)
 1. Deploy to staging first, and run the smoke test.
 2. **Back up production** (▶ on the backup row, §7.2).
 3. Keep the backend at **one** replica while it migrates, and deploy.
 4. Run the smoke test (§9).
 
-**Rollback** (plan §8) = redeploy the previous commit, plus `medusa db:rollback` of the migrated modules, or a restore of that backup.
+**Rollback** (plan §8.2) = redeploy the previous commit, plus `medusa db:rollback` of the migrated modules, or a restore of that backup.

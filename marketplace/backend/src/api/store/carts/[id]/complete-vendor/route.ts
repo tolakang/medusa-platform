@@ -2,7 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { createVendorOrdersWorkflow } from "../../../../../workflows/marketplace/create-vendor-orders"
 
-// POST /store/carts/:id/complete-vendor (BUILD_PLAN §6.6, TASKS P6-05): the
+// POST /store/carts/:id/complete-vendor (BUILD_PLAN §9.6, TASKS P6-05): the
 // marketplace storefront calls this instead of POST /store/carts/:id/complete
 // (P6-08). It completes the cart into the parent order (payment) and makes
 // one child order per vendor. The answer has the core route's shape

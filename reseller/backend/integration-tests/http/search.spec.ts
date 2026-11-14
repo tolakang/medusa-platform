@@ -13,7 +13,7 @@ import seedInitialData from "../../src/scripts/seed-initial-data"
 import { resolveProductIds } from "../../src/search/helpers/resolve-product-ids"
 
 // Runner + api client: docs/MEDUSA_SKILL.md §10. `/store/search` (Search Module,
-// default since 2.21.1, BUILD_PLAN §6.1) always narrows product results to
+// default since 2.21.1, BUILD_PLAN §9.1) always narrows product results to
 // status "published" and the publishable key's sales channels
 // (@medusajs/medusa api/store/search/route.js). The storefront sends
 // `match_strategy: "last"` (storefront src/lib/search-client.ts).

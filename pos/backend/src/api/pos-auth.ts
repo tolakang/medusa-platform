@@ -10,7 +10,7 @@ import cors from "cors"
 import { POS_MODULE } from "../modules/pos"
 import type PosModuleService from "../modules/pos/service"
 
-// Access to /pos/* (BUILD_PLAN §6.2, TASKS P2-03). Medusa's own CORS covers only
+// Access to /pos/* (BUILD_PLAN §9.2, TASKS P2-03). Medusa's own CORS covers only
 // /store, /admin and /auth (docs "Handling CORS in API Routes"), so /pos gets
 // the docs' cors + parseCorsOrigins middleware with POS_CORS.
 export function posCors(req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) {

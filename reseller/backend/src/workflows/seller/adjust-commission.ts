@@ -3,7 +3,7 @@ import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
 import { adjustSellerCommissionStep } from "./steps/adjust-commission"
 
 /**
- * cancel-commission (plan §6.5, TASKS P5-04), on order.canceled and
+ * cancel-commission (plan §9.5, TASKS P5-04), on order.canceled and
  * payment.refunded. Same lock as recording, so the two never interleave.
  */
 export const adjustSellerCommissionWorkflow = createWorkflow(

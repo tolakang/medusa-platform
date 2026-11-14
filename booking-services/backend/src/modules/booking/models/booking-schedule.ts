@@ -1,7 +1,7 @@
 import { model } from "@medusajs/framework/utils"
 import { BookingResource } from "./booking-resource"
 
-// Weekly opening hours of a resource (BUILD_PLAN §6.3, TASKS P3-01): one row
+// Weekly opening hours of a resource (BUILD_PLAN §9.3, TASKS P3-01): one row
 // per weekday and time range, in the resource's own time zone. Several rows
 // on one weekday make split hours (e.g. 09:00-12:00 and 13:00-17:00).
 // The DML has no time-of-day type, so times are zero-padded "HH:MM" text;

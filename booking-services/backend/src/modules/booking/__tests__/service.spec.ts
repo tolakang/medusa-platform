@@ -8,7 +8,7 @@ import BookingModuleService from "../service"
 jest.setTimeout(60 * 1000)
 
 // TASKS P3-01: module `booking` with booking_resource, booking_schedule and
-// booking (BUILD_PLAN §6.3).
+// booking (BUILD_PLAN §9.3).
 moduleIntegrationTestRunner<BookingModuleService>({
   moduleName: BOOKING_MODULE,
   moduleModels: [BookingResource, BookingSchedule, Booking],

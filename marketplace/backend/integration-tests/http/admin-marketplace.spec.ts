@@ -3,7 +3,7 @@ import { IP_SECRET, marketplaceTestKit } from "../helpers/marketplace"
 
 jest.setTimeout(240 * 1000)
 
-// TASKS P6-07 (plan §6.6): the admin's routes behind the marketplace pages:
+// TASKS P6-07 (plan §9.6): the admin's routes behind the marketplace pages:
 // product moderation, vendor child orders, and the parent/child split on the
 // order page. (The vendor queue and payout report routes are tested in
 // vendor-auth.spec.ts and vendor-payouts.spec.ts.)
