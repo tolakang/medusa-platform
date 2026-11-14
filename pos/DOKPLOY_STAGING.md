@@ -16,6 +16,8 @@ When you're done you have one Dokploy project, `pos-staging`, with **6 services*
 | `pos-pos-app` | till app (PWA) | `<till host>` → 3000 | 6 |
 
 
+> **Quick start:** to set up a new POS staging from zero on `medusa-platform`, follow [STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md) (Parts A–H); this runbook is the full reference behind it.
+>
 > **Shared core (plan §4–§5):** POS is in the root pnpm workspace (SC-1): every app builds with Docker Context Path `.` (the repo root) and also watches the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. The steps below show these values. Production deploys from `release/pos`, which only you move. Details: `README.md` → *Shared core and release branches*.
 ---
 
