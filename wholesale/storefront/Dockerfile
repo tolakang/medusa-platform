@@ -3,8 +3,8 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = wholesale/storefront/Dockerfile,
-#   Docker Context Path = wholesale/storefront,
-#   Watch Paths = wholesale/storefront/**
+#   Docker Context Path = . (repo root),
+#   Watch Paths = wholesale/storefront/**, pnpm-workspace.yaml, package.json, pnpm-lock.yaml  (BUILD_PLAN.md §5.3)
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000
@@ -17,7 +17,7 @@ ARG NODE_VERSION=22
 
 # ---------- build ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /repo
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ---- build-time arguments (set in Dokploy "Build-time Arguments") ----
@@ -46,11 +46,15 @@ ENV S3_IMAGE_PATHNAME=${S3_IMAGE_PATHNAME}
 ARG NEXT_PUBLIC_REQUIRE_LOGIN="true"
 ENV NEXT_PUBLIC_REQUIRE_LOGIN=${NEXT_PUBLIC_REQUIRE_LOGIN}
 
+# Workspace manifests first (root pnpm workspace, Medusa catalog; BUILD_PLAN.md
+# §4.3). Exact pnpm version from the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY wholesale/storefront/package.json wholesale/storefront/pnpm-lock.yaml wholesale/storefront/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile
+ && pnpm install --frozen-lockfile --filter wholesale-storefront
 
-COPY . .
+COPY wholesale/storefront wholesale/storefront
+WORKDIR /repo/wholesale/storefront
 RUN pnpm build
 
 # ---------- runtime ----------
@@ -61,9 +65,9 @@ ENV NODE_ENV=production \
     PORT=8000
 WORKDIR /app
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /repo/wholesale/storefront/.next/standalone ./
+COPY --from=build --chown=node:node /repo/wholesale/storefront/.next/static ./.next/static
+COPY --from=build --chown=node:node /repo/wholesale/storefront/public ./public
 
 USER node
 EXPOSE 8000
