@@ -16,7 +16,7 @@ When you're done you have one Dokploy project, `pos-staging`, with **6 services*
 | `pos-pos-app` | till app (PWA) | `<till host>` → 3000 | 6 |
 
 
-> **Shared core (plan §4–§5):** once this category's SC-1 PR is merged, the Docker Context Path of every app becomes `.` (the repo root) and the watch paths grow. Production deploys from `release/pos`, which only you move. Details: `README.md` → *Shared core and release branches*. Until SC-1, follow the steps below as written.
+> **Shared core (plan §4–§5):** POS is in the root pnpm workspace (SC-1): every app builds with Docker Context Path `.` (the repo root) and also watches the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. The steps below show these values. Production deploys from `release/pos`, which only you move. Details: `README.md` → *Shared core and release branches*.
 ---
 
 ## Step 0: Decide and prepare (about 5 minutes)
@@ -91,10 +91,10 @@ Save each result in your password manager under these names:
    - **Save**
 3. **Build Type: Dockerfile**:
    - **Docker File:** `pos/backend/Dockerfile`
-   - **Docker Context Path:** `pos/backend`
+   - **Docker Context Path:** `.` (the repo root)
    - Docker Build Stage: leave empty
    - **Save**
-4. **Watch Paths:** `pos/backend/**` (with `/**` at the end) → **Save**.
+4. **Watch Paths:** `pos/backend/**` (with `/**` at the end), `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, one per line → **Save**.
 
 ### B. Environment variables
 1. **Environment** tab → **Environment Variables** box. Paste this, then replace every `<…>`:
@@ -251,8 +251,8 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed.js
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `pos/backend/Dockerfile`
-   - Docker Context Path `pos/backend`
-4. **Watch Paths:** `pos/backend/**`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
+   - Docker Context Path `.` (the repo root)
+4. **Watch Paths:** `pos/backend/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Never leave this box empty: an empty box redeploys the worker on every push (F-019).
 
 ### B. Environment
 1. Copy **all** of `pos-backend`'s Environment Variables, including any optional extras. The worker sends the emails and Telegram alerts and handles PayWay callbacks.
@@ -288,8 +288,8 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed.js
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `pos/storefront/Dockerfile`
-   - Docker Context Path `pos/storefront`
-4. **Watch Paths:** `pos/storefront/**`.
+   - Docker Context Path `.` (the repo root)
+4. **Watch Paths:** `pos/storefront/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`.
 
 ### B. Build Time Arguments
 These are built into the shop's code. Changing one later means **Rebuild**.
@@ -345,8 +345,8 @@ CLIENT_IP_HEADER=
    - **Build Path `/`**, Trigger **On Push**.
 3. **Build Type: Dockerfile:**
    - Docker File `pos/pos-app/Dockerfile`
-   - Docker Context Path `pos/pos-app`
-4. **Watch Paths:** `pos/pos-app/**`.
+   - Docker Context Path `.` (the repo root)
+4. **Watch Paths:** `pos/pos-app/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`.
 
 ### B. Environment
 1. **Build Time Arguments:** none.

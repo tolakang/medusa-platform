@@ -1,5 +1,7 @@
 # Build Plan — Medusa Platform
 
+> **Revision 4 (2026-11-14, SC-1 for POS).** §7 no longer lists which categories have moved; that status lives in the root `pnpm-workspace.yaml` `packages:` list and `docs/TASKS.md` → SC-1, so later SC-1 PRs need no plan change.
+>
 > **Revision 3 (2026-11-14, SC-1 for Ecommerce, owner: "Start SC-1 for Ecommerce").** §7.1 and §7.2 describe the root-workspace setup proven by the SC-1 proof: Medusa packages as `"catalog:"`, pnpm settings in the root `pnpm-workspace.yaml`, one lockfile per app, images built from the repo root (backend production install via `pnpm deploy`), one root `.dockerignore`; apps not moved yet keep the per-app setup. §4.3 records the lockfile and Docker context choice, §11 two notes. The starter's `@types/react` overrides are not carried to the root (TASKS F-093).
 >
 > **Revision 2 (2026-11-14, owner: "add the release order to the plan").** §8.2 adds the release order for a change that reaches several categories: Ecommerce, then POS, then the other four, one at a time after a clean day in production (D15, TASKS F-092).
@@ -269,7 +271,7 @@ Tests that depend on background work (scheduled jobs, search indexing) control i
 
 There are two standards: **7.1 backend** (the same in every `*/backend`) and **7.2 client** (every `storefront`, `*-portal` and `pos-app`). Each app commits its `Dockerfile` and `.env.example`; backends also commit `docker-entrypoint.sh`. An app with no code yet keeps these as templates.
 
-**Two setups during SC-1** (§5.2). An app whose category has moved is in the **root workspace**: it is listed in the root `pnpm-workspace.yaml`, writes `"catalog:"` for Medusa packages, has no `pnpm-workspace.yaml` or `.dockerignore` of its own, and builds from the repo root. An app whose category hasn't moved yet keeps the **per-app setup**: its own settings-only `pnpm-workspace.yaml` and `.dockerignore`, exact pins, and Docker from its own folder. Below, the workspace setup comes first and the per-app differences are marked *(not moved yet)*. Moved so far: `ecommerce/`.
+**Two setups during SC-1** (§5.2). An app whose category has moved is in the **root workspace**: it is listed in the root `pnpm-workspace.yaml`, writes `"catalog:"` for Medusa packages, has no `pnpm-workspace.yaml` or `.dockerignore` of its own, and builds from the repo root. An app whose category hasn't moved yet keeps the **per-app setup**: its own settings-only `pnpm-workspace.yaml` and `.dockerignore`, exact pins, and Docker from its own folder. Below, the workspace setup comes first and the per-app differences are marked *(not moved yet)*. Which categories have moved: the `packages:` list of the root `pnpm-workspace.yaml`, and `docs/TASKS.md` → SC-1.
 
 ### 7.1 Backend standard (`<category>/backend/`)
 
@@ -959,6 +961,7 @@ This file is frozen for the builder:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 4 | 2026-11-14 | §7: the list of moved categories points to the root `pnpm-workspace.yaml` and TASKS SC-1 instead (SC-1 for POS). |
 | 3 | 2026-11-14 | App standards for the root workspace (§7.1, §7.2; SC-1 for Ecommerce): `"catalog:"`, root pnpm settings, one lockfile per app, repo-root images with `pnpm deploy` for backends, a root `.dockerignore`; the per-app setup marked *not moved yet*. §4.3 lockfile and Docker context, §11 notes. TASKS F-093. |
 | 2 | 2026-11-14 | Release order (§8.2, D15): Ecommerce → POS → the other four, one category at a time, 24 hours of a clean production run between them, stop and roll back only the affected category. TASKS F-092. |
 | 1 | 2026-11-14 | First plan of `medusa-platform`, structured around the shared core: glossary (§2), shared core in library mode (§4), migration with the SC-1 proof, data invariants, stop rule and fallbacks (§5); everything already built kept in §9; the backlog after the core (§10); D14, R-j, R-l. Replaces the medusa-apps plan (Revisions 1 to 16, at tag `pre-shared-core`). TASKS F-089, F-090, F-091. |

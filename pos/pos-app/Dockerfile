@@ -3,8 +3,8 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = pos/pos-app/Dockerfile,
-#   Docker Context Path = pos/pos-app,
-#   Watch Paths = pos/pos-app/**
+#   Docker Context Path = . (repo root),
+#   Watch Paths = pos/pos-app/**, pnpm-workspace.yaml, package.json, pnpm-lock.yaml  (BUILD_PLAN.md §5.3)
 #   Full steps: pos/DOKPLOY_STAGING.md step 6.
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
@@ -21,7 +21,7 @@ ARG NODE_VERSION=22
 
 # ---------- build ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /repo
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ---- build-time arguments (set in Dokploy "Build-time Arguments") ----
@@ -32,11 +32,15 @@ ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}
 ARG NEXT_PUBLIC_BASE_URL=""
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 
+# Workspace manifests first (root pnpm workspace, Medusa catalog; BUILD_PLAN.md
+# §4.3). Exact pnpm version from the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY pos/pos-app/package.json pos/pos-app/pnpm-lock.yaml pos/pos-app/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile
+ && pnpm install --frozen-lockfile --filter pos-pos-app
 
-COPY . .
+COPY pos/pos-app pos/pos-app
+WORKDIR /repo/pos/pos-app
 RUN pnpm build
 
 # ---------- runtime ----------
@@ -47,9 +51,9 @@ ENV NODE_ENV=production \
     PORT=3000
 WORKDIR /app
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /repo/pos/pos-app/.next/standalone ./
+COPY --from=build --chown=node:node /repo/pos/pos-app/.next/static ./.next/static
+COPY --from=build --chown=node:node /repo/pos/pos-app/public ./public
 
 USER node
 EXPOSE 3000
