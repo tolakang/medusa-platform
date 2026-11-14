@@ -3,8 +3,8 @@
 #
 # Dokploy: Build Type = Dockerfile, Build Path = /,
 #   Docker File = pos/storefront/Dockerfile,
-#   Docker Context Path = pos/storefront,
-#   Watch Paths = pos/storefront/**
+#   Docker Context Path = . (repo root),
+#   Watch Paths = pos/storefront/**, pnpm-workspace.yaml, package.json, pnpm-lock.yaml  (BUILD_PLAN.md §5.3)
 #   Environment -> Build-time Arguments: the ARG values below
 #   Environment -> Runtime variables   : see .env.example
 #   Domain -> port 8000
@@ -18,14 +18,14 @@ ARG NODE_VERSION=22
 
 # ---------- build ----------
 FROM docker.io/library/node:${NODE_VERSION}-bookworm-slim AS build
-WORKDIR /app
+WORKDIR /repo
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ---- build-time arguments (set in Dokploy "Build-time Arguments") ----
 # PUBLIC backend URL, e.g. https://api.example.com (used by the browser and the build; baked in)
 ARG NEXT_PUBLIC_MEDUSA_BACKEND_URL=""
 ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=${NEXT_PUBLIC_MEDUSA_BACKEND_URL}
-# Publishable API key of the ONLINE sales channel (Admin > Settings > Publishable API Keys)
+# Publishable API key (Admin > Settings > Publishable API Keys)
 ARG NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=""
 ENV NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY}
 # This storefront's public URL, e.g. https://shop.example.com
@@ -50,11 +50,15 @@ ENV S3_IMAGE_HOSTNAME=${S3_IMAGE_HOSTNAME}
 ARG S3_IMAGE_PATHNAME="/**"
 ENV S3_IMAGE_PATHNAME=${S3_IMAGE_PATHNAME}
 
+# Workspace manifests first (root pnpm workspace, Medusa catalog; BUILD_PLAN.md
+# §4.3). Exact pnpm version from the root package.json "packageManager".
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY pos/storefront/package.json pos/storefront/pnpm-lock.yaml pos/storefront/
 RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
- && pnpm install --frozen-lockfile
+ && pnpm install --frozen-lockfile --filter pos-storefront
 
-COPY . .
+COPY pos/storefront pos/storefront
+WORKDIR /repo/pos/storefront
 RUN pnpm build
 
 # ---------- runtime ----------
@@ -65,9 +69,9 @@ ENV NODE_ENV=production \
     PORT=8000
 WORKDIR /app
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /repo/pos/storefront/.next/standalone ./
+COPY --from=build --chown=node:node /repo/pos/storefront/.next/static ./.next/static
+COPY --from=build --chown=node:node /repo/pos/storefront/public ./public
 
 USER node
 EXPOSE 8000

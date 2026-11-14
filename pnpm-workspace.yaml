@@ -4,6 +4,9 @@
 packages:
   - ecommerce/backend
   - ecommerce/storefront
+  - pos/backend
+  - pos/storefront
+  - pos/pos-app
 
 # One lockfile per app (SC-1 proof, point 5): each app keeps its own
 # pnpm-lock.yaml, CI cache path and Dokploy watch paths.
