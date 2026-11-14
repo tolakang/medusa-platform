@@ -31,7 +31,7 @@
 
 Owner, 2026-11-14: "I want this as share core, update everything", then "review, verify, improve in a smart way", then "make a fresh plan structure" focused on the shared core. Approved choices: P3-19 after SC-1 and SC-2; SC-1 one category per PR. One PR per step, DEV_FLOW gates green and the skill check before each merge. Way back: tag `pre-shared-core` (`48f02c9`).
 
-- [~] **SC-0** Fresh plan (Revision 1 of `medusa-platform`: glossary, shared core, migration, categories, backlog), `CLAUDE.md`, the READMEs and staging runbooks (*Shared core and release branches*), MEDUSA_SKILL (plugin, build and pnpm facts), this file; carried-over material dropped (F-091); repo wording standardised to the glossary. Branch `docs/plan-rev16-shared-core`, PR #2. **Owner:** add the `plan-revision` label, then lock the plan (`docs/PLAN_LOCK.md`).
+- [x] **SC-0** — done: `4bdce2a` (PR #2, merged 2026-11-14 with the owner's `plan-revision` label; CI green on all 15 apps). Fresh plan (Revision 1 of `medusa-platform`: glossary, shared core, migration, categories, backlog), `CLAUDE.md`, the READMEs and staging runbooks (*Shared core and release branches*), MEDUSA_SKILL (plugin, build and pnpm facts), this file; carried-over material dropped (F-091); repo wording standardised to the glossary. **Owner:** lock the plan again (`docs/PLAN_LOCK.md`).
 - [ ] **SC-1 proof** (throwaway branch, never merged; plan §5.1 points 1–6): workspace + catalog + minimal core in library mode + `ecommerce/backend`; image from the repo root via `pnpm deploy` answers `/health`; an app not yet moved still builds; lockfile layout and `.dockerignore` chosen. Results → this task and MEDUSA_SKILL; the first SC-1 PR rewrites plan §7.1/§7.2. **If points 2 or 3 fail: stop and ask the owner (plan §5.4).**
 - [ ] **SC-1** Root workspace, Medusa `catalog` and merged pnpm settings, **one category per PR, Ecommerce first**; the owner switches its apps' Dokploy fields after the PR is green and before it merges (plan §5.3).
   - [ ] ecommerce · [ ] pos · [ ] booking-services · [ ] wholesale · [ ] reseller · [ ] marketplace
@@ -84,7 +84,7 @@ Owner, 2026-11-14: "I want this as share core, update everything", then "review,
 
 ## Session handoff: start here in a new session
 
-**2026-11-14 (fresh plan, medusa-platform):** The repo has one plan, built around the shared core (`BUILD_PLAN.md` Revision 1, F-091), in PR #2 with this file, the READMEs, runbooks and MEDUSA_SKILL. Carried-over handovers, reports, finished task history and generic docs were dropped (they are at tag `pre-shared-core`). **Next: the SC-1 proof** (plan §5.1), then SC-1 for Ecommerce, then SC-2 by feature (PayWay first). P3-19 waits for SC-1 and SC-2.
+**2026-11-14 (fresh plan, medusa-platform):** The repo has one plan, built around the shared core (`BUILD_PLAN.md` Revision 1, F-091), merged in PR #2 (`4bdce2a`, SC-0 done) with this file, the READMEs, runbooks and MEDUSA_SKILL. Carried-over handovers, reports, finished task history and generic docs were dropped (they are at tag `pre-shared-core`). **Next: the SC-1 proof** (plan §5.1), then SC-1 for Ecommerce, then SC-2 by feature (PayWay first). P3-19 waits for SC-1 and SC-2.
 
 **Operator notes:** never paste secrets into chat; when sharing logs, filter them (`grep -v -i "secret\|access-key\|api_key"`). The Dokploy terminal opens in `/`. Copying files to the server over SSH does not work with the current SSH setup; use Dokploy's own buttons (e.g. Restore Backup) instead. Other Claude sessions may share this checkout: check the branch before committing.
 
