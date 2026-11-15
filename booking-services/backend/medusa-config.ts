@@ -258,7 +258,7 @@ module.exports = defineConfig({
     // Telegram chats following an order (TASKS P1-17).
     { resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
-    { resolve: "./src/modules/wishlist" },
+    { resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/wishlist" },
     // Bookable resources, weekly hours and bookings (TASKS P3-01); a pending
     // hold blocks its slot for BOOKING_HOLD_MINUTES (default 15, P3-03).
     {
