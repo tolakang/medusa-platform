@@ -147,7 +147,7 @@ const notificationModule = {
         : localProvider("local-email", "email"),
       TELEGRAM_BOT_TOKEN
         ? {
-            resolve: "./src/modules/telegram",
+            resolve: "@medusa-platform/medusa-core/providers/telegram",
             id: "telegram",
             options: {
               channels: ["telegram"],
@@ -160,7 +160,7 @@ const notificationModule = {
       // to each customer's own chat (the notification's `to`).
       TELEGRAM_CUSTOMER_BOT_TOKEN
         ? {
-            resolve: "./src/modules/telegram",
+            resolve: "@medusa-platform/medusa-core/providers/telegram",
             id: "telegram-customer",
             options: {
               channels: ["telegram_customer"],
@@ -249,7 +249,7 @@ module.exports = defineConfig({
     notificationModule,
     ...paymentModules,
     // Telegram chats following an order (TASKS P1-17).
-    { resolve: "./src/modules/telegram-links" },
+    { resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
     { resolve: "./src/modules/wishlist" },
     // Auth Module with the default email + password provider and two-factor

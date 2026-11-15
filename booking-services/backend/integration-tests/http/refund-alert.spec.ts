@@ -6,7 +6,7 @@ import {
   refundPaymentWorkflow,
 } from "@medusajs/medusa/core-flows"
 import paymentRefundedAlert, { config } from "../../src/subscribers/payment-refunded-alert"
-import { renderMessage } from "../../src/modules/telegram/templates"
+import { renderMessage } from "@medusa-platform/medusa-core/lib/telegram/templates"
 
 // Staff refund alert from the shared core (packages/medusa-core, BUILD_PLAN.md
 // §4.1, §4.2). No TELEGRAM_BOT_TOKEN in tests, so "telegram" goes to

@@ -7,7 +7,7 @@ import {
 import jwt from "jsonwebtoken"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
-import { renderMessage } from "../../src/modules/telegram/templates"
+import { renderMessage } from "@medusa-platform/medusa-core/lib/telegram/templates"
 
 // P1-07 acceptance test (plan §9.1): browse → cart → checkout → order visible
 // in admin, through the same store and admin APIs the storefront and the

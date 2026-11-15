@@ -1,6 +1,6 @@
-import { isValidTelegramContact, telegramContactLabel } from "../../lib/telegram-contact"
+import { isValidTelegramContact, telegramContactLabel } from "@medusa-platform/medusa-core/lib/telegram-contact"
 import { phoneProblem } from "../contact-validation"
-import { renderMessage } from "../../modules/telegram/templates"
+import { renderMessage } from "@medusa-platform/medusa-core/lib/telegram/templates"
 import { ORDER_PLACED_STAFF_TEMPLATE } from "@medusa-platform/medusa-core/lib/order-notification"
 
 describe("isValidTelegramContact", () => {
