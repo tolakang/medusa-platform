@@ -3,22 +3,22 @@ import {
   defineMiddlewares,
   validateAndTransformBody,
 } from '@medusajs/framework/http'
-import { PostAdminUploadLimit } from './admin/upload-limit/validators'
-import { PostCustomerPassword } from './store/customers/me/password/validators'
+import { PostAdminUploadLimit } from '@medusa-platform/medusa-core/api/admin/upload-limit/validators'
+import { PostCustomerPassword } from '@medusa-platform/medusa-core/api/store/customers/me/password/validators'
 import { PostWishlistItem } from '@medusa-platform/medusa-core/api/store/customers/me/wishlists/items/validators'
 import {
   requireContact,
   requireContactBeforePayment,
   validatePhoneFields,
-} from './contact-validation'
-import { enforceUploadLimits } from './upload-limits'
+} from '@medusa-platform/medusa-core/api/contact-validation'
+import { enforceUploadLimits } from '@medusa-platform/medusa-core/api/upload-limits'
 import {
   AUTH_LIMITS,
   limitPerIp,
   limitVerificationEmails,
   requireCaptcha,
   requireStrongPassword,
-} from './auth-guards'
+} from '@medusa-platform/medusa-core/api/auth-guards'
 import { requireVendor, vendorCors } from './vendor-auth'
 import { refuseExistingInventoryItems, refuseVendorOrderMetadata } from './marketplace-guards'
 import { PostVendorCreate } from './vendors/validators'

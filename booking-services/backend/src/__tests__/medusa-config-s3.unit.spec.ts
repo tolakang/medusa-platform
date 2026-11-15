@@ -79,7 +79,7 @@ describe("medusa-config admin upload size", () => {
   }
 
   it("defaults to the default upload ceiling", () => {
-    const { DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB } = require("../lib/upload-limit-setting")
+    const { DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB } = require("@medusa-platform/medusa-core/lib/upload-limit-setting")
     expect(adminMaxBytes(undefined)).toEqual(DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB * 1024 * 1024)
   })
 

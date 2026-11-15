@@ -18,9 +18,10 @@ Listing the package under `plugins` would switch every module, route, subscriber
 | Notifications: Resend provider (`createResendNotificationService`, the app passes its email renderer), order emails, `order-placed` (customer email and staff alert) | `src/lib/resend/`, `src/lib/order-notification.ts`, `src/workflows/notify-order-placed.ts`, `src/subscribers/order-placed.ts` | the five with notifications (not Wholesale) | SC-2 |
 | Telegram: provider (both bots), module `telegram_links`, customer updates, order link and webhook routes, set-webhook script | `src/providers/telegram`, `src/lib/telegram/templates.ts`, `src/lib/telegram-customer.ts`, `src/lib/telegram-contact.ts`, `src/lib/phone.ts` (copy), `src/modules/telegram-links`, `src/workflows/telegram-customer.ts`, `src/subscribers/telegram-customer-updates.ts`, `src/api/store/orders/[id]/telegram-link`, `src/api/telegram/webhook`, `src/scripts/telegram-set-webhook.ts` | the five with notifications (not Wholesale) | SC-2 |
 | Wishlist: module `wishlist`, 3 links, 5 store routes, workflows, share tokens | `src/modules/wishlist`, `src/links/wishlist-*.ts`, `src/api/store/customers/me/wishlists`, `src/api/store/wishlists`, `src/workflows/wishlist.ts`, `src/lib/wishlist-share.ts` | the five with notifications (not Wholesale) | SC-2 |
+| Account security: account emails, password change and reset, CAPTCHA, per-IP rate limits, phone and contact checks, upload limit, auth guards | `src/lib/{auth-email,captcha,rate-limit,upload-limit-setting,phone,safe-equal}.ts`, `src/lib/resend/{account-email,emails}.ts`, `src/api/{auth-guards,upload-limits,contact-validation}.ts`, `src/api/admin/upload-limit`, `src/api/store/customers/me/password{,-reset}`, `src/subscribers/auth-*.ts`, `src/workflows/{change-password,send-auth-email}.ts` | the five (Booking keeps its own `contact-validation.ts`; Marketplace hooks the verification link) | SC-2 |
 | Refund alert (staff Telegram on `payment.refunded`) | `src/subscribers/payment-refunded-alert.ts`, `src/workflows/notify-payment-refunded.ts`, `src/lib/refund-alert.ts` | the five with Telegram (not Wholesale) | owner, 2026-11-15 |
 
-Later features (account security, housekeeping, then search and seeds) move here one per PR (§5.2).
+Later features (housekeeping, then search and seeds) move here one per PR (§5.2).
 
 ## Rules
 

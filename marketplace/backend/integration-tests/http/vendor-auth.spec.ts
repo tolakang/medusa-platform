@@ -10,7 +10,7 @@ import {
 } from "../../src/workflows/marketplace/create-vendor"
 import { MARKETPLACE_MODULE } from "../../src/modules/marketplace"
 import type MarketplaceModuleService from "../../src/modules/marketplace/service"
-import { VERIFY_EMAIL_TEMPLATE } from "../../src/lib/auth-email"
+import { VERIFY_EMAIL_TEMPLATE } from "@medusa-platform/medusa-core/lib/auth-email"
 import { VENDOR_EMAIL_NOT_VERIFIED_MESSAGE } from "../../src/lib/vendor-email"
 import { confirmVendorEmail } from "../helpers/vendor-email"
 
