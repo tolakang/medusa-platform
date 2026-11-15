@@ -1,5 +1,7 @@
 # Build Plan — Medusa Platform
 
+> **Revision 6 (2026-11-15, owner: "update every document to point to kiri instead of podman").** The local container engine is Kiri (Docker API) instead of Podman: §7.1 (base image names, `HEALTHCHECK`) and §7.3 (starting the local stack). Production and CI don't change. TASKS F-097.
+
 > **Revision 5 (2026-11-15, owner: "I want the list in the plan, move what can").** §4.2 adds two features to the core, product search and the seed scripts, after the planned ones; the auth guards join account security; the admin setup and the product image widget are listed as waiting for a proven core widget. §4.3 records that each backend injects the core (TASKS F-095), §7.1 the Dockerfile's install of the app with the core. §5.2 SC-2 order. TASKS F-096.
 
 > **Revision 4 (2026-11-14, SC-1 for POS).** §7 no longer lists which categories have moved; that status lives in the root `pnpm-workspace.yaml` `packages:` list and `docs/TASKS.md` → SC-1, so later SC-1 PRs need no plan change.
@@ -357,7 +359,7 @@ The variable names match the official deployment guide. Migrations run only on t
 #### Backend Dockerfile
 
 Built from the **repo root** (Dokploy Docker Context Path `.`, §5.3), with the root `.dockerignore`:
-1. **Build stage:** `docker.io/library/node:22-bookworm-slim`. The fully-qualified name lets Podman/Buildah build it too, and the image is multi-arch (arm64 and amd64).
+1. **Build stage:** `docker.io/library/node:22-bookworm-slim`. The fully-qualified name resolves the same way in every builder (Kiri locally, Dokploy), and the image is multi-arch (arm64 and amd64).
 2. Copy the root `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, then the app's `package.json` and `pnpm-lock.yaml` (and, from SC-2, the core's). Install the pnpm version read from the root `packageManager`, then `pnpm install --frozen-lockfile --filter <app>...` (the app with its workspace dependencies, the core).
 3. Copy the core's folder and the app's, build the core first (`pnpm --filter @medusa-platform/medusa-core build`), then run `pnpm --filter <app> build` (`medusa build` → `.medusa/server`, including the compiled admin).
 4. **Production install:** `medusa build` copies `package.json` as is, so its `"catalog:"` (and `"workspace:*"`) versions can't be installed inside `.medusa/server`. `pnpm --filter <app> --prod deploy /prod` resolves them into a portable `node_modules` (pnpm ≥ 12.2, SC-1 proof); `/prod/node_modules` goes next to the contents of `.medusa/server`.
@@ -373,7 +375,7 @@ Built from the **repo root** (Dokploy Docker Context Path `.`, §5.3), with the 
    - **Other commands** are passed through (e.g. `medusa user -e … -p …` to create an admin).
 8. **Build args:** `MEDUSA_BACKEND_URL` (optional, baked into the admin bundle), plus the category's build args in §9 (e.g. Ecommerce's upload ceiling).
 
-There is no `HEALTHCHECK` instruction (Podman ignores it in OCI format). Health checks are set in Dokploy against `GET /health` (§8.1).
+There is no `HEALTHCHECK` instruction: health checks are set in Dokploy against `GET /health` (§8.1).
 
 #### `.env.example`
 
@@ -457,7 +459,7 @@ STOREFRONT_URL=
 ### 7.3 Local stack
 
 Each category has a `docker-compose.local.yml` (Postgres, Redis, backend, clients) to run the whole category locally. Dokploy ignores it.
-- **Start it** with Podman (`podman compose -f <category>/docker-compose.local.yml up -d --build`) or Docker.
+- **Start it** with Kiri, the local container engine (Docker API): `docker compose -f <category>/docker-compose.local.yml up -d --build`.
 - **Plain http:** the stack serves http, so the backend sets `SESSION_COOKIE_SECURE=false`. It also sets `STOREFRONT_URL`, so account emails work (F-043, F-050).
 - **Networking:** the storefront shares the backend's network namespace, so `localhost:9000` is the backend in the browser and in the container.
 - **One stack at a time:** host ports are the same in every category.
@@ -968,6 +970,7 @@ This file is frozen for the builder:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 6 | 2026-11-15 | Local container engine Kiri instead of Podman (§7.1 base images and `HEALTHCHECK`, §7.3 local stack). TASKS F-097. |
 | 5 | 2026-11-15 | Shared-core features (§4.2): search and seeds added after housekeeping, auth guards under account security, admin setup and widget listed as not yet; §4.3 the core injected into each backend with exact peers (F-095); §5.2 SC-2 order; §7.1 Dockerfile install and build of the core. TASKS F-096. |
 | 4 | 2026-11-14 | §7: the list of moved categories points to the root `pnpm-workspace.yaml` and TASKS SC-1 instead (SC-1 for POS). |
 | 3 | 2026-11-14 | App standards for the root workspace (§7.1, §7.2; SC-1 for Ecommerce): `"catalog:"`, root pnpm settings, one lockfile per app, repo-root images with `pnpm deploy` for backends, a root `.dockerignore`; the per-app setup marked *not moved yet*. §4.3 lockfile and Docker context, §11 notes. TASKS F-093. |
