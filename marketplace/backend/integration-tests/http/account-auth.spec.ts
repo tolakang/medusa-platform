@@ -1,7 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { PASSWORD_RESET_TEMPLATE, VERIFY_EMAIL_TEMPLATE } from "../../src/lib/auth-email"
-import { PASSWORD_TOO_SHORT_MESSAGE, RESEND_TOO_SOON_MESSAGE } from "../../src/api/auth-guards"
+import { PASSWORD_RESET_TEMPLATE, VERIFY_EMAIL_TEMPLATE } from "@medusa-platform/medusa-core/lib/auth-email"
+import { PASSWORD_TOO_SHORT_MESSAGE, RESEND_TOO_SOON_MESSAGE } from "@medusa-platform/medusa-core/api/auth-guards"
 
 // Account emails (TASKS P1-18): customers verify their email before they can
 // sign in, and reset a forgotten password through an emailed link. Real

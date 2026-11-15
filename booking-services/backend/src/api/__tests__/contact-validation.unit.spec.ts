@@ -1,4 +1,4 @@
-import { isValidPhone } from "../../lib/phone"
+import { isValidPhone } from "@medusa-platform/medusa-core/lib/phone"
 import { phoneProblem, validatePhoneFields } from "../contact-validation"
 
 describe("isValidPhone", () => {

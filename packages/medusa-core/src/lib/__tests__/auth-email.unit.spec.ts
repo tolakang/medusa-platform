@@ -7,7 +7,7 @@ import {
   storefrontLink,
   VERIFY_EMAIL_TEMPLATE,
 } from "../auth-email"
-import { renderEmail } from "../../modules/resend/templates"
+import { renderCoreEmail as renderEmail } from "../resend/emails"
 
 const config = (admin: Record<string, unknown>) => ({ admin }) as unknown as ConfigModule
 

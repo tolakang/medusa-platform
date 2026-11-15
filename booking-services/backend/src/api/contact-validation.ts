@@ -1,6 +1,6 @@
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
-import { isValidPhone, PHONE_MESSAGE } from "../lib/phone"
+import { isValidPhone, PHONE_MESSAGE } from "@medusa-platform/medusa-core/lib/phone"
 import {
   isValidTelegramContact,
   TELEGRAM_CONTACT_KEY,

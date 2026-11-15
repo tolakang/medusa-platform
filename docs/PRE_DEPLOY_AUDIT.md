@@ -44,7 +44,7 @@ Pass when every per-user route has auth plus actor scoping, and an IDOR test exi
 
 Check:
 - No custom code issues its own reset or verification tokens with a longer life, logs them, or stores them in plain text: `git grep -niE "reset.?token|expires" -- '<category>/*/src'`.
-- The reset email subscriber (`src/subscribers/auth-*.ts`) builds the link from `STOREFRONT_URL` or the admin URL, not from a request header (host-header injection).
+- The reset email subscriber (`packages/medusa-core/src/subscribers/auth-*.ts`) builds the link from `STOREFRONT_URL` or the admin URL, not from a request header (host-header injection).
 - The storefront never puts the token in logs, analytics or a third-party URL. Check that the reset page drops the token from the URL after reading it.
 - **Test:** use a token twice (2nd → 401), and use it after 15 minutes (→ 401). Cite the existing integration test (`account-auth.spec.ts`) or add one.
 - Changing the password from the account (`password_change`) asks for the old password.
@@ -75,7 +75,7 @@ Check:
 
 ## 5. Rate limiting
 
-**Repo baseline (TASKS P1-21):** `src/api/auth-guards.ts` → `limitPerIp(name, limit, windowSeconds)` returns 429 with `Retry-After`. It is applied to customer `login`, `signup`, `password_reset`, `password_change` and `verification` (and `cashier_*` in pos). It counts **in memory**, which is correct only while the server runs **one replica** (BUILD_PLAN §8.1). The client IP comes from `x-shopper-ip` plus its shared secret, `CLIENT_IP_HEADER`, or `req.ip`.
+**Repo baseline (TASKS P1-21):** `packages/medusa-core/src/api/auth-guards.ts` → `limitPerIp(name, limit, windowSeconds)` returns 429 with `Retry-After`. It is applied to customer `login`, `signup`, `password_reset`, `password_change` and `verification` (and `cashier_*` in pos). It counts **in memory**, which is correct only while the server runs **one replica** (BUILD_PLAN §8.1). The client IP comes from `x-shopper-ip` plus its shared secret, `CLIENT_IP_HEADER`, or `req.ip`.
 
 Check:
 - List the matchers: `git grep -n "limitPerIp(" -- '<category>/backend/src/api/middlewares.ts'`. Compare that list against every auth route the category exposes, including **admin login `/auth/user/emailpass*`** and its reset password route, and any custom actor's login. A missing one is a FIX, or a RISK with a reason: for example, admin is only reachable behind an IP allowlist.

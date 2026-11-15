@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto"
-import { safeEqual } from "./safe-equal"
+import { safeEqual } from "@medusa-platform/medusa-core/lib/safe-equal"
 
 // Invite codes (the medusa-apps review fix list B11). An invited seller or cashier used
 // to be claimed by whoever registered the invited email first, because these

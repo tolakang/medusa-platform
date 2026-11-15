@@ -1,8 +1,8 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import jwt from "jsonwebtoken"
-import { PASSWORD_CHANGED_TEMPLATE } from "../../src/lib/auth-email"
-import { WRONG_CURRENT_PASSWORD } from "../../src/workflows/change-password"
+import { PASSWORD_CHANGED_TEMPLATE } from "@medusa-platform/medusa-core/lib/auth-email"
+import { WRONG_CURRENT_PASSWORD } from "@medusa-platform/medusa-core/workflows/change-password"
 
 // Change password while signed in (owner, 2026-10-06): POST
 // /store/customers/me/password with the current and the new password.

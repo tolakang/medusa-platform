@@ -1,8 +1,8 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { Modules } from "@medusajs/framework/utils"
 import jwt from "jsonwebtoken"
-import { CAPTCHA_FAILED_MESSAGE } from "../../src/api/auth-guards"
-import { TURNSTILE_SITEVERIFY_URL } from "../../src/lib/captcha"
+import { CAPTCHA_FAILED_MESSAGE } from "@medusa-platform/medusa-core/api/auth-guards"
+import { TURNSTILE_SITEVERIFY_URL } from "@medusa-platform/medusa-core/lib/captcha"
 
 // CAPTCHA on customer sign-in, sign-up and forgot password (TASKS P1-21),
 // through Medusa's real auth routes. Cloudflare's Siteverify is faked: the

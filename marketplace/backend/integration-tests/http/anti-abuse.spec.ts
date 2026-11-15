@@ -1,7 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { AUTH_LIMITS } from "../../src/api/auth-guards"
-import { VERIFY_EMAIL_TEMPLATE } from "../../src/lib/auth-email"
+import { AUTH_LIMITS } from "@medusa-platform/medusa-core/api/auth-guards"
+import { VERIFY_EMAIL_TEMPLATE } from "@medusa-platform/medusa-core/lib/auth-email"
 import { cleanupUnverifiedAccountsWorkflow } from "../../src/workflows/cleanup-unverified-accounts"
 
 // Per-IP limits on customer auth and the cleanup of never-verified sign-ups

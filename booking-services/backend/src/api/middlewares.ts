@@ -4,8 +4,8 @@ import {
   defineMiddlewares,
   validateAndTransformBody,
 } from '@medusajs/framework/http'
-import { PostAdminUploadLimit } from './admin/upload-limit/validators'
-import { PostCustomerPassword } from './store/customers/me/password/validators'
+import { PostAdminUploadLimit } from '@medusa-platform/medusa-core/api/admin/upload-limit/validators'
+import { PostCustomerPassword } from '@medusa-platform/medusa-core/api/store/customers/me/password/validators'
 import { PostWishlistItem } from '@medusa-platform/medusa-core/api/store/customers/me/wishlists/items/validators'
 import {
   requireContact,
@@ -19,14 +19,14 @@ import {
   PostAdminBookingResourceUpdate,
   PostAdminWalkIn,
 } from './admin/booking/validators'
-import { enforceUploadLimits } from './upload-limits'
+import { enforceUploadLimits } from '@medusa-platform/medusa-core/api/upload-limits'
 import {
   AUTH_LIMITS,
   limitPerIp,
   limitVerificationEmails,
   requireCaptcha,
   requireStrongPassword,
-} from './auth-guards'
+} from '@medusa-platform/medusa-core/api/auth-guards'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.

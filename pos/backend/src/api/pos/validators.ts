@@ -1,5 +1,5 @@
 import { z } from "@medusajs/framework/zod"
-import { isValidPhone, PHONE_MESSAGE } from "../../lib/phone"
+import { isValidPhone, PHONE_MESSAGE } from "@medusa-platform/medusa-core/lib/phone"
 import { POS_PAYMENT_METHODS } from "../../workflows/pos-checkout"
 
 // Bodies and queries of the cashier routes under /pos (TASKS P2-06). The

@@ -206,7 +206,7 @@ const paymentModules =
     : []
 
 // Must match DEFAULT_UPLOAD_MAX_FILE_SIZE_CEILING_MB in
-// src/lib/upload-limit-setting.ts (checked by a unit test).
+// the shared core's src/lib/upload-limit-setting.ts (checked by a unit test).
 const uploadCeilingMb = Number(process.env.UPLOAD_MAX_FILE_SIZE_CEILING_MB)
 const uploadCeilingBytes =
   (Number.isFinite(uploadCeilingMb) && uploadCeilingMb > 0 ? uploadCeilingMb : 5) * 1024 * 1024
