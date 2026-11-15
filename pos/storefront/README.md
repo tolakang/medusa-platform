@@ -34,6 +34,6 @@ Service `pos-storefront` in the `pos` project (`../README.md`): Build Path `/`, 
 pnpm install --frozen-lockfile
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder pnpm build   # must pass with the backend down
 pnpm typecheck
-podman build --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder -t pos-storefront:check .
+docker build -f Dockerfile --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder -t pos-storefront:check ../..   # context: the repo root
 ```
 The full local stack is in `../docker-compose.local.yml`.

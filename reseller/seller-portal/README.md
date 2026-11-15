@@ -21,7 +21,7 @@ MEDUSA_BACKEND_URL=http://localhost:9000 COOKIE_SECRET=$(openssl rand -hex 16) p
 ## Verify
 ```bash
 pnpm build && pnpm typecheck && pnpm test
-podman build -t reseller-seller-portal:check .
+docker build -f Dockerfile -t reseller-seller-portal:check ../..   # context: the repo root
 ```
 
 ## Deploy

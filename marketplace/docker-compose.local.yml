@@ -1,8 +1,8 @@
 # marketplace: whole category for LOCAL testing (BUILD_PLAN.md §7.3).
 # Dokploy ignores this file. Images and ports are local-only.
 #
-#   podman compose -f marketplace/docker-compose.local.yml up -d --build   (or: docker compose …)
-#   admin user:  podman exec marketplace-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
+#   docker compose -f marketplace/docker-compose.local.yml up -d --build   (docker = Kiri)
+#   admin user:  docker exec marketplace-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
 #   admin:       http://localhost:9000/app (plain http works because SESSION_COOKIE_SECURE=false, TASKS F-043)
 #
 # Host ports are offset to avoid clashing with other local databases. Same
@@ -84,7 +84,7 @@ services:
   # backend both in the browser (host) and inside this container. Local only:
   # on Dokploy the public URL is used, plus MEDUSA_BACKEND_URL (internal).
   # Get the key after seeding (backend/README.md):
-  #   STOREFRONT_PUBLISHABLE_KEY=pk_... podman compose -f marketplace/docker-compose.local.yml up -d --build storefront
+  #   STOREFRONT_PUBLISHABLE_KEY=pk_... docker compose -f marketplace/docker-compose.local.yml up -d --build storefront
   storefront:
     build:
       context: ..   # repo root (root pnpm workspace, BUILD_PLAN.md §5.3)

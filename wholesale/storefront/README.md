@@ -79,4 +79,4 @@ pnpm typecheck
 pnpm test                                                      # quick-order line parser
 ```
 
-Or from the repo root: `CONTAINER_CLI=podman scripts/verify.sh wholesale/storefront --image`. The full local stack is in `../docker-compose.local.yml`.
+Or from the repo root: `scripts/verify.sh wholesale/storefront --image`. The full local stack is in `../docker-compose.local.yml`.

@@ -39,7 +39,7 @@ pnpm seed:b2b demo-pricing                  # + Gold / Silver groups and price l
 ```bash
 pnpm build && pnpm typecheck
 DB_HOST=localhost DB_PORT=5432 DB_USERNAME=medusa DB_PASSWORD=medusa pnpm test:integration:http
-podman build -t wholesale-backend:check .
+docker build -f Dockerfile -t wholesale-backend:check ../..   # context: the repo root
 ```
 
 ## Deploy

@@ -10,7 +10,7 @@
 #   worker app : MEDUSA_WORKER_MODE=worker, DISABLE_MEDUSA_ADMIN=true,
 #                RUN_MIGRATIONS=false        (no domain)
 #
-# Base images are fully qualified for Podman/Buildah (BUILD_PLAN.md §7.1).
+# Base images are fully qualified, so every builder (Kiri locally, Dokploy) resolves them the same way (BUILD_PLAN.md §7.1).
 # =====================================================================
 ARG NODE_VERSION=22
 
