@@ -1,15 +1,15 @@
 # pos: whole category for LOCAL testing (BUILD_PLAN.md §7.3).
 # Dokploy ignores this file. Images and ports are local-only.
 #
-#   podman compose -f pos/docker-compose.local.yml up -d --build   (or: docker compose …)
-#   admin user:  podman exec pos-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
+#   docker compose -f pos/docker-compose.local.yml up -d --build   (Kiri locally; or: podman compose …)
+#   admin user:  docker exec pos-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
 #   admin:       http://localhost:9000/app (plain http works because SESSION_COOKIE_SECURE=false, TASKS F-043)
 #
 # Host ports are offset to avoid clashing with other local databases. They are the
 # same as ecommerce's, so run one category's stack at a time.
 # The POS app (P2-10) is at http://localhost:3000; the online shop (P2-09) at
 # http://localhost:8000 (build it with the online channel's publishable key:
-#   STOREFRONT_PUBLISHABLE_KEY=pk_... podman compose -f pos/docker-compose.local.yml up -d --build storefront).
+#   STOREFRONT_PUBLISHABLE_KEY=pk_... docker compose -f pos/docker-compose.local.yml up -d --build storefront).
 name: pos-local
 
 services:

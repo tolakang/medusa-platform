@@ -30,6 +30,6 @@ Steps: `../DOKPLOY_STAGING.md` section 4 (Build Path `/`, Docker File `booking-s
 pnpm install --frozen-lockfile
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder pnpm build   # must pass with the backend down
 pnpm typecheck
-podman build --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder -t booking-services-storefront:check .
+docker build -f Dockerfile --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder -t booking-services-storefront:check ../..   # context: the repo root
 ```
 The full local stack is in `../docker-compose.local.yml`.

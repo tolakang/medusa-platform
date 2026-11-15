@@ -9,7 +9,7 @@
 #   DB_HOST DB_PORT DB_USERNAME DB_PASSWORD   (defaults: localhost 5432 postgres "")
 #
 # --image   also build each app's image with $CONTAINER_CLI (default:
-#           docker, else podman). If VERIFY_DATABASE_URL is set (reachable from
+#           docker, else podman; locally docker is Kiri). If VERIFY_DATABASE_URL is set (reachable from
 #           the container), the backend image is started in server mode and
 #           GET /health must return 200 (fresh-or-upgrade DB, safe migrate).
 #           Optional: VERIFY_DOCKER_NETWORK (e.g. "host" on Linux CI).

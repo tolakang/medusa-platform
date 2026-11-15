@@ -29,7 +29,7 @@ pnpm install --frozen-lockfile
 pnpm build
 pnpm typecheck
 pnpm test        # format helpers and the sealed session cookie
-podman build -t marketplace-vendor-portal:check .
+docker build -f Dockerfile -t marketplace-vendor-portal:check ../..   # context: the repo root
 ```
 
-Or from the repo root: `CONTAINER_CLI=podman scripts/verify.sh marketplace/vendor-portal --image`. The local stack has it as `vendor-portal` in `../docker-compose.local.yml`.
+Or from the repo root: `scripts/verify.sh marketplace/vendor-portal --image`. The local stack has it as `vendor-portal` in `../docker-compose.local.yml`.

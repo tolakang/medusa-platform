@@ -12,7 +12,7 @@ Medusa **2.22.6** (since 2026-11-10, TASKS V-06; started on 2.22.2, then 2.22.3)
 
 ## Run locally
 ```bash
-podman compose -f ../docker-compose.local.yml up -d postgres redis   # or docker compose
+docker compose -f ../docker-compose.local.yml up -d postgres redis   # Kiri locally; or podman compose
 cp .env.example .env    # then set DATABASE_URL=postgres://medusa:medusa@localhost:55432/booking_services etc.
 pnpm install --frozen-lockfile
 pnpm medusa db:migrate --execute-safe-links --execute-safe-search
@@ -38,7 +38,7 @@ pnpm seed:initial                           # optional demo data (EU regions, de
 ```bash
 pnpm build && pnpm typecheck
 DB_HOST=localhost DB_PORT=55432 DB_USERNAME=medusa DB_PASSWORD=medusa pnpm test:integration:http
-podman build -t booking-services-backend:check .
+docker build -f Dockerfile -t booking-services-backend:check ../..   # context: the repo root
 ```
 
 ## Deploy

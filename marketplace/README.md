@@ -9,7 +9,7 @@ This folder is **one complete category**. Copy the whole folder's setup into one
 ```
 marketplace/
 ├── README.md                <- this guide
-├── docker-compose.local.yml <- local stack (Podman or Docker)
+├── docker-compose.local.yml <- local stack (Docker: Kiri locally, or Podman)
 ├── backend/                 Medusa server + worker
 │   ├── Dockerfile
 │   ├── docker-entrypoint.sh
