@@ -1,6 +1,9 @@
-import ResendNotificationProviderService, { RESEND_EMAILS_URL } from "../service"
 import type { Logger } from "@medusajs/framework/types"
-import { renderEmail } from "../templates"
+import { createResendNotificationService, RESEND_EMAILS_URL } from "../service"
+import { renderOrderEmail as renderEmail } from "../order-email"
+
+// Built the way an app builds it, here with the core's order emails only.
+const ResendNotificationProviderService = createResendNotificationService(renderEmail)
 
 // Fake key only: fetch is mocked, nothing is sent (TASKS P1-04).
 const options = { api_key: "re_test_example", from: "Shop <orders@example.com>" }

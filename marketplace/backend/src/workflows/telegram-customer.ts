@@ -15,7 +15,7 @@ import {
   ORDER_NOTIFICATION_FIELDS,
   ORDER_STATUS_TEMPLATES,
   type OrderStatusUpdate,
-} from "../lib/order-notification"
+} from "@medusa-platform/medusa-core/lib/order-notification"
 import { TELEGRAM_CUSTOMER_CHANNEL } from "../lib/telegram-customer"
 import { TELEGRAM_START_HELP_TEMPLATE } from "../modules/telegram/templates"
 import { TELEGRAM_LINKS_MODULE } from "../modules/telegram-links"
