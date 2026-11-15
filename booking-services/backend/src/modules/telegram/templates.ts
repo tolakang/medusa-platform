@@ -15,7 +15,7 @@ import {
   ORDER_SHIPPED_STAFF_TEMPLATE,
   orderProgress,
   type OrderNotificationData,
-} from "../../lib/order-notification"
+} from "@medusa-platform/medusa-core/lib/order-notification"
 import { TELEGRAM_CONTACT_KEY, telegramContactLabel } from "../../lib/telegram-contact"
 import {
   PAYMENT_REFUNDED_STAFF_TEMPLATE,

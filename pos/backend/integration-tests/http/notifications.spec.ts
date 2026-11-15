@@ -1,6 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { notifyOrderPlacedWorkflow } from "../../src/workflows/notify-order-placed"
+import { notifyOrderPlacedWorkflow } from "@medusa-platform/medusa-core/workflows"
 import orderPlacedHandler, { config } from "../../src/subscribers/order-placed"
 
 // Runner: docs/MEDUSA_SKILL.md §10. No RESEND_API_KEY / TELEGRAM_BOT_TOKEN in tests,
