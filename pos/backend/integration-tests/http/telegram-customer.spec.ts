@@ -4,7 +4,7 @@ import { createDefaultsWorkflow } from "@medusajs/medusa/core-flows"
 import telegramCustomerUpdates, {
   config as subscriberConfig,
 } from "../../src/subscribers/telegram-customer-updates"
-import { notifyOrderStatusWorkflow } from "../../src/workflows/telegram-customer"
+import { notifyOrderStatusWorkflow } from "@medusa-platform/medusa-core/workflows"
 
 // Customer order updates on Telegram (TASKS P1-17). The route and webhook read
 // these at request time. No TELEGRAM_CUSTOMER_BOT_TOKEN, so the

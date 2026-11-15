@@ -1,7 +1,7 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Container, Heading, Text } from "@medusajs/ui"
-import { TELEGRAM_CONTACT_KEY, telegramContactLabel } from "../../lib/telegram-contact"
+import { TELEGRAM_CONTACT_KEY, telegramContactLabel } from "@medusa-platform/medusa-core/lib/telegram-contact"
 
 // Shows the Telegram contact the customer gave at checkout (TASKS P1-16 step A)
 // in the order's side column (zone from @medusajs/admin-shared 2.21.1). Staff

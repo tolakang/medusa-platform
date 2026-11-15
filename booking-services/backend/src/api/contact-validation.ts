@@ -5,7 +5,7 @@ import {
   isValidTelegramContact,
   TELEGRAM_CONTACT_KEY,
   TELEGRAM_CONTACT_MESSAGE,
-} from "../lib/telegram-contact"
+} from "@medusa-platform/medusa-core/lib/telegram-contact"
 
 // Contact rules for the store API (TASKS P1-14, P1-16).
 //
