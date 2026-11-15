@@ -88,13 +88,16 @@ if grep -q '^catalog:' pnpm-workspace.yaml 2>/dev/null; then
   CHANGED="$CHANGED pnpm-workspace.yaml package.json pnpm-lock.yaml"
 fi
 
-for dir in */backend */storefront */*-portal */pos-app; do
+# packages/* (the shared core) follow every bump: their Medusa peer
+# dependencies are exact versions (docs learn/fundamentals/plugins/create).
+for dir in packages/* */backend */storefront */*-portal */pos-app; do
   [ -f "$dir/package.json" ] || continue
+  case "$dir:$TARGET" in packages/*) ;; *)
   case "$TARGET" in
     all) ;;
     */*) [ "$dir" = "$TARGET" ] || continue ;;
     *) case "$dir" in "$TARGET"/*) ;; *) continue ;; esac ;;
-  esac
+  esac ;; esac
   echo; echo "---- $dir"
   VERSION="$VERSION" UI_VERSION="$UI_VERSION" PNPM_VERSION="$PNPM_VERSION" node -e '
     const fs = require("fs"); const p = process.argv[1];

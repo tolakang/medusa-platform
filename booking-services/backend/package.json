@@ -61,5 +61,10 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2",
     "vite": "^7.3.7"
+  },
+  "dependenciesMeta": {
+    "@medusa-platform/medusa-core": {
+      "injected": true
+    }
   }
 }

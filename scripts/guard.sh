@@ -95,6 +95,16 @@ if [ -f pnpm-workspace.yaml ]; then
   grep -q "patchedDependencies" pnpm-workspace.yaml && fail "pnpm patches in the root pnpm-workspace.yaml" || pass "no pnpm patches at the root"
 fi
 
+# 3c. The shared core's Medusa peer dependencies are exact and equal the
+#     catalog (docs learn/fundamentals/plugins/create); "catalog:" there is not
+#     resolved when the core is injected into an app (F-095).
+for PJ in packages/*/package.json; do
+  [ -f "$PJ" ] || continue
+  WANT=$(catalog_entries | grep -v '"@medusajs/ui"' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+$' | sort -u | head -1)
+  BAD=$(node -e 'const p=require("./"+process.argv[1]).peerDependencies||{};for(const[k,v]of Object.entries(p))if(k.startsWith("@medusajs/")&&k!=="@medusajs/ui"&&v!==process.argv[2])console.log(k+"@"+v)' "$PJ" "$WANT")
+  [ -z "$BAD" ] && pass "$PJ: Medusa peers on the catalog version ($WANT)" || fail "$PJ: Medusa peers must be $WANT: $BAD"
+done
+
 DEPLOYABLES=$(list_deployables)
 [ -n "$DEPLOYABLES" ] || { echo "no apps with package.json for '$TARGET'"; exit $FAILED; }
 
