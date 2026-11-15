@@ -88,7 +88,7 @@ Minimum test set per task:
 ```bash
 docker build -f <category>/<app>/Dockerfile -t <category>-<app>:check .   # repo root (BUILD_PLAN §7.1)
 ```
-Locally `docker` is **Kiri** (Docker API; `~/.kiri/bin/docker`, context `kiri`). Podman works too (`CONTAINER_CLI=podman`).
+Locally `docker` is **Kiri** (Docker API; `~/.kiri/bin/docker`, context `kiri`).
 Backend: run the image once with `MEDUSA_WORKER_MODE=server` (health 200) and once with `worker` + `DISABLE_MEDUSA_ADMIN=true` + `RUN_MIGRATIONS=false` (process starts, no HTTP admin). Clients: the image starts and serves its port. `scripts/verify.sh <category>/<app> --image` does all of this (backend: `/health` and `/app/` 200 in server mode, then the worker still running after 25 s; clients: the server answers on its port).
 
 ### Gate 5: Guardrails (repo root; each line must print nothing unless noted)

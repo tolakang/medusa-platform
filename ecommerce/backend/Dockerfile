@@ -10,7 +10,7 @@
 #                RUN_MIGRATIONS=false        (no domain)
 #
 # Built from the repo root (root pnpm workspace, Medusa catalog; BUILD_PLAN.md
-# §4.3, SC-1 proof). Base images are fully qualified for Podman/Buildah (§7.1).
+# §4.3, SC-1 proof). Base images are fully qualified, so every builder (Kiri locally, Dokploy) resolves them the same way (§7.1).
 # =====================================================================
 ARG NODE_VERSION=22
 

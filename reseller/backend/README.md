@@ -23,7 +23,7 @@ Backend of the ecommerce category (this app now runs Medusa **2.22.6**, see the 
 
 ## Run locally
 ```bash
-docker compose -f ../docker-compose.local.yml up -d postgres redis   # Kiri locally; or podman compose
+docker compose -f ../docker-compose.local.yml up -d postgres redis   # docker = Kiri
 cp .env.example .env    # then set DATABASE_URL=postgres://medusa:medusa@localhost:55432/ecommerce etc.
 pnpm install --frozen-lockfile
 pnpm medusa db:migrate --execute-safe-links --execute-safe-search

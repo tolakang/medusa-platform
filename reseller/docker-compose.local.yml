@@ -1,7 +1,7 @@
 # reseller: whole category for LOCAL testing (BUILD_PLAN.md §7.3).
 # Dokploy ignores this file. Images and ports are local-only.
 #
-#   docker compose -f reseller/docker-compose.local.yml up -d --build   (Kiri locally; or: podman compose …)
+#   docker compose -f reseller/docker-compose.local.yml up -d --build   (docker = Kiri)
 #   admin user:  docker exec reseller-local-backend docker-entrypoint.sh medusa user -e admin@example.com -p supersecret
 #   admin:       http://localhost:9000/app (plain http works because SESSION_COOKIE_SECURE=false, TASKS F-043)
 #
