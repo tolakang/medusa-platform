@@ -2,7 +2,7 @@ import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { AUTH_LIMITS } from "@medusa-platform/medusa-core/api/auth-guards"
 import { VERIFY_EMAIL_TEMPLATE } from "@medusa-platform/medusa-core/lib/auth-email"
-import { cleanupUnverifiedAccountsWorkflow } from "../../src/workflows/cleanup-unverified-accounts"
+import { cleanupUnverifiedAccountsWorkflow } from "@medusa-platform/medusa-core/workflows"
 
 // Per-IP limits on customer auth and the cleanup of never-verified sign-ups
 // (TASKS P1-21). The client IP comes from a test header (CLIENT_IP_HEADER),

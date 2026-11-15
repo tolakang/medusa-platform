@@ -1,7 +1,7 @@
 import type { MedusaRequest } from "@medusajs/framework/http"
-import { clientIp, TOO_MANY_ATTEMPTS_MESSAGE } from "@medusa-platform/medusa-core/api/auth-guards"
+import { clientIp, TOO_MANY_ATTEMPTS_MESSAGE } from "../../api/auth-guards"
 import { isAbandonedSignUp, retentionDays } from "../../workflows/cleanup-unverified-accounts"
-import { FixedWindowLimiter } from "@medusa-platform/medusa-core/lib/rate-limit"
+import { FixedWindowLimiter } from "../rate-limit"
 
 describe("FixedWindowLimiter (TASKS P1-21)", () => {
   it("allows the limit per window per key, then refuses until the window ends", () => {
