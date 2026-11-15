@@ -149,3 +149,8 @@ minimumReleaseAgeExclude:
   - "@medusajs/workflow-engine-inmemory@2.22.6"
   - "@medusajs/workflow-engine-redis@2.22.6"
   - "@medusajs/workflows-sdk@2.22.6"
+
+# The core is injected into each app (a copy whose Medusa peers are the
+# app's own), refreshed after its build.
+syncInjectedDepsAfterScripts:
+  - build

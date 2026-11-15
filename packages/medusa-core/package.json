@@ -2,7 +2,7 @@
   "name": "@medusa-platform/medusa-core",
   "version": "0.0.1",
   "private": true,
-  "description": "Shared core of the backends, used in library mode (BUILD_PLAN.md §4). Never listed under plugins.",
+  "description": "Shared core of the backends, used in library mode (BUILD_PLAN.md \u00a74). Never listed under plugins.",
   "license": "MIT",
   "packageManager": "pnpm@12.18.0",
   "engines": {
@@ -37,7 +37,7 @@
     "typescript": "^5.6.2"
   },
   "peerDependencies": {
-    "@medusajs/framework": "catalog:",
-    "@medusajs/medusa": "catalog:"
+    "@medusajs/framework": "2.22.6",
+    "@medusajs/medusa": "2.22.6"
   }
 }

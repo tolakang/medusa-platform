@@ -17,6 +17,11 @@ import {
   type OrderNotificationData,
 } from "../../lib/order-notification"
 import { TELEGRAM_CONTACT_KEY, telegramContactLabel } from "../../lib/telegram-contact"
+import {
+  PAYMENT_REFUNDED_STAFF_TEMPLATE,
+  refundAlertStaffMessage,
+  type RefundAlertData,
+} from "@medusa-platform/medusa-core/lib/refund-alert"
 
 function orderPlacedStaff(order: OrderNotificationData) {
   const telegram = telegramContactLabel(order.metadata?.[TELEGRAM_CONTACT_KEY])
@@ -115,6 +120,10 @@ export function renderMessage(
 ): string | null {
   if (template === ORDER_PLACED_STAFF_TEMPLATE) {
     return orderPlacedStaff((data?.order ?? {}) as OrderNotificationData)
+  }
+  // Refund alert: the message comes from the shared core.
+  if (template === PAYMENT_REFUNDED_STAFF_TEMPLATE) {
+    return refundAlertStaffMessage(data as unknown as RefundAlertData)
   }
   if (template === TELEGRAM_START_HELP_TEMPLATE) {
     return START_HELP
