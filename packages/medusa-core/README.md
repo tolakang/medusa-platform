@@ -17,9 +17,10 @@ Listing the package under `plugins` would switch every module, route, subscriber
 | PayWay (provider `pp_payway_payway`) | `src/providers/payway`, `src/lib/payway/client.ts`, `src/lib/safe-equal.ts` | all six backends | SC-2 |
 | Notifications: Resend provider (`createResendNotificationService`, the app passes its email renderer), order emails, `order-placed` (customer email and staff alert) | `src/lib/resend/`, `src/lib/order-notification.ts`, `src/workflows/notify-order-placed.ts`, `src/subscribers/order-placed.ts` | the five with notifications (not Wholesale) | SC-2 |
 | Telegram: provider (both bots), module `telegram_links`, customer updates, order link and webhook routes, set-webhook script | `src/providers/telegram`, `src/lib/telegram/templates.ts`, `src/lib/telegram-customer.ts`, `src/lib/telegram-contact.ts`, `src/lib/phone.ts` (copy), `src/modules/telegram-links`, `src/workflows/telegram-customer.ts`, `src/subscribers/telegram-customer-updates.ts`, `src/api/store/orders/[id]/telegram-link`, `src/api/telegram/webhook`, `src/scripts/telegram-set-webhook.ts` | the five with notifications (not Wholesale) | SC-2 |
+| Wishlist: module `wishlist`, 3 links, 5 store routes, workflows, share tokens | `src/modules/wishlist`, `src/links/wishlist-*.ts`, `src/api/store/customers/me/wishlists`, `src/api/store/wishlists`, `src/workflows/wishlist.ts`, `src/lib/wishlist-share.ts` | the five with notifications (not Wholesale) | SC-2 |
 | Refund alert (staff Telegram on `payment.refunded`) | `src/subscribers/payment-refunded-alert.ts`, `src/workflows/notify-payment-refunded.ts`, `src/lib/refund-alert.ts` | the five with Telegram (not Wholesale) | owner, 2026-11-15 |
 
-Later features (wishlist, account security, housekeeping, then search and seeds) move here one per PR (§5.2).
+Later features (account security, housekeeping, then search and seeds) move here one per PR (§5.2).
 
 ## Rules
 
@@ -30,6 +31,7 @@ Later features (wishlist, account security, housekeeping, then search and seeds)
 - **Peer dependencies are exact** (`2.22.6`, as the Medusa plugin docs show), not `catalog:`: pnpm doesn't resolve `catalog:` in an injected copy. `scripts/update-medusa.sh` bumps them with the catalog and `scripts/guard.sh` (3c) checks they match.
 - **A provider with app templates** (Resend) is a factory in `src/lib/`: the app's own `src/modules/<name>/index.ts` calls it with the app's renderer and registers the result, so the app's `resolve`, `id` and the provider's `identifier` stay as they were.
 - **A module** is registered from its built folder: `{ resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/<name>" }`; its migrations keep their file names, so a migrated database runs nothing new. **A route or script** is a one-line file in the app: `export { GET } from "@medusa-platform/medusa-core/api/…/route"`, `export { default } from "@medusa-platform/medusa-core/scripts/<name>"`.
+- **A link** moves with its module and is never defined in both places: the app's `src/links/<name>.ts` is `export { default } from "@medusa-platform/medusa-core/links/<name>"`. **Middlewares** stay in the app's `src/api/middlewares.ts` and import the core's validators.
 - **A subscriber** is switched on in an app by a one-line file in its `src/subscribers`: `export { default, config } from "@medusa-platform/medusa-core/subscribers/<name>"`.
 
 ## Build and test

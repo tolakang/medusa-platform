@@ -1,9 +1,2 @@
-import { defineLink } from "@medusajs/framework/utils"
-import SalesChannelModule from "@medusajs/medusa/sales-channel"
-import WishlistModule from "../modules/wishlist"
-
-export default defineLink(
-  { linkable: WishlistModule.linkable.wishlist.id, field: "sales_channel_id" },
-  SalesChannelModule.linkable.salesChannel,
-  { readOnly: true }
-)
+// Wishlist link, from the shared core with its module (BUILD_PLAN.md §4.4).
+export { default } from "@medusa-platform/medusa-core/links/wishlist-sales-channel"

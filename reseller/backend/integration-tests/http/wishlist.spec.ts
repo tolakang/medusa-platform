@@ -8,7 +8,7 @@ import {
 import jwt from "jsonwebtoken"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
-import { createShareToken } from "../../src/lib/wishlist-share"
+import { createShareToken } from "@medusa-platform/medusa-core/lib/wishlist-share"
 
 // Wishlist + shared links (TASKS P1-19), through the real store routes,
 // workflows and module. Customers sign in with a JWT signed with the test

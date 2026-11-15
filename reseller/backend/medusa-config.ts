@@ -251,7 +251,7 @@ module.exports = defineConfig({
     // Telegram chats following an order (TASKS P1-17).
     { resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/telegram-links" },
     // Customer wishlists (TASKS P1-19).
-    { resolve: "./src/modules/wishlist" },
+    { resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/wishlist" },
     // Sellers and their commissions (BUILD_PLAN §9.5, TASKS P5-01).
     { resolve: "./src/modules/seller" },
     // Auth Module with the default email + password provider and two-factor

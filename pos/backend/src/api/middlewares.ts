@@ -18,7 +18,7 @@ import {
 } from './pos/validators'
 import { PostAdminUploadLimit } from './admin/upload-limit/validators'
 import { PostCustomerPassword } from './store/customers/me/password/validators'
-import { PostWishlistItem } from './store/customers/me/wishlists/items/validators'
+import { PostWishlistItem } from '@medusa-platform/medusa-core/api/store/customers/me/wishlists/items/validators'
 import {
   requireContact,
   requireContactBeforePayment,
