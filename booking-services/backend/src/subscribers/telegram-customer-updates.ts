@@ -1,6 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import type { OrderStatusUpdate } from "../lib/order-notification"
+import type { OrderStatusUpdate } from "@medusa-platform/medusa-core/lib/order-notification"
 import { notifyOrderStatusWorkflow } from "../workflows/telegram-customer"
 
 // Order shipped / delivered / canceled → staff group alert (owner, 2026-09-29)

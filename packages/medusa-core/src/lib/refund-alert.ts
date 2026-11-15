@@ -4,6 +4,8 @@
 // template with refundAlertStaffMessage (src/modules/telegram/templates.ts).
 // Plain text: the provider sends no parse_mode.
 
+import { formatMoney } from "./order-notification"
+
 export const PAYMENT_REFUNDED_STAFF_TEMPLATE = "payment-refunded-staff"
 
 // payment.refunded carries only the payment's ID (@medusajs/utils
@@ -67,16 +69,6 @@ export type RefundAlertData = {
   currency_code: string
   refunded_total: number
   payment_amount: number
-}
-
-export function formatMoney(amount: unknown, currencyCode?: string | null) {
-  const value = Number(amount ?? 0)
-  const currency = (currencyCode || "usd").toUpperCase()
-  try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value)
-  } catch {
-    return `${value} ${currency}`
-  }
 }
 
 // The event names no refund, so the alert is about the newest one; the

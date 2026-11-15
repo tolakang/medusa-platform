@@ -1,7 +1,7 @@
 // The 24-hour booking reminder email (TASKS P3-09). Pure, unit-tested in
 // src/lib/__tests__/booking-reminder.unit.spec.ts; rendered by the Resend
 // provider (src/modules/resend/templates.ts).
-import { escapeHtml } from "./order-notification"
+import { escapeHtml } from "@medusa-platform/medusa-core/lib/order-notification"
 
 export const BOOKING_REMINDER_TEMPLATE = "booking-reminder"
 

@@ -1,7 +1,7 @@
 import { isValidTelegramContact, telegramContactLabel } from "../../lib/telegram-contact"
 import { phoneProblem } from "../contact-validation"
 import { renderMessage } from "../../modules/telegram/templates"
-import { ORDER_PLACED_STAFF_TEMPLATE } from "../../lib/order-notification"
+import { ORDER_PLACED_STAFF_TEMPLATE } from "@medusa-platform/medusa-core/lib/order-notification"
 
 describe("isValidTelegramContact", () => {
   it.each(["@example_shop", "example_shop", "Test_Customer", "012 345 678", "+855 12 345 678", "", null, undefined])(
