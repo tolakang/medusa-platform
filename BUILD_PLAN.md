@@ -1,5 +1,7 @@
 # Build Plan — Medusa Platform
 
+> **Revision 5 (2026-11-15, owner: "I want the list in the plan, move what can").** §4.2 adds two features to the core, product search and the seed scripts, after the planned ones; the auth guards join account security; the admin setup and the product image widget are listed as waiting for a proven core widget. §4.3 records that each backend injects the core (TASKS F-095), §7.1 the Dockerfile's install of the app with the core. §5.2 SC-2 order. TASKS F-096.
+
 > **Revision 4 (2026-11-14, SC-1 for POS).** §7 no longer lists which categories have moved; that status lives in the root `pnpm-workspace.yaml` `packages:` list and `docs/TASKS.md` → SC-1, so later SC-1 PRs need no plan change.
 >
 > **Revision 3 (2026-11-14, SC-1 for Ecommerce, owner: "Start SC-1 for Ecommerce").** §7.1 and §7.2 describe the root-workspace setup proven by the SC-1 proof: Medusa packages as `"catalog:"`, pnpm settings in the root `pnpm-workspace.yaml`, one lockfile per app, images built from the repo root (backend production install via `pnpm deploy`), one root `.dockerignore`; apps not moved yet keep the per-app setup. §4.3 records the lockfile and Docker context choice, §11 two notes. The starter's `@types/react` overrides are not carried to the root (TASKS F-093).
@@ -162,10 +164,14 @@ What goes in is only code that is the same in several backends (measured 2026-11
 | **Notifications** | Resend email provider with a hook for app templates (Booking's reminder), order notifications (workflow, subscriber, helpers) | five (not wholesale) |
 | **Telegram** | both bots (staff alerts, customer updates), module `telegram_links`, the webhook and order link routes, customer updates, the Telegram contact helper | five |
 | **Wishlist** | module `wishlist`, its three links and five routes, workflow and share helper | five |
-| **Account security** | auth emails (with a hook for Marketplace's vendor email), password change and reset, CAPTCHA, per-IP rate limits, phone and contact checks, the upload limit | five |
+| **Account security** | auth emails (with a hook for Marketplace's vendor email), password change and reset, CAPTCHA, per-IP rate limits, phone and contact checks, the upload limit, the auth guards (`src/api/auth-guards.ts`) | five |
 | **Housekeeping** | the unverified-account cleanup (job and workflow), the storefront revalidate subscriber | five |
+| **Search** (added in Revision 5) | the product search index definition (`src/search/product.ts`) and its three helpers (option values, pricing, product IDs) | five (Wholesale's index differs and stays in its app) |
+| **Seeds** (added in Revision 5) | the seed scripts (`seed.ts`, `seed-initial-data.ts`, `seed-demo-products.ts`); each app keeps a one-line script file, because Medusa finds scripts in the app's `src/scripts` | five (not wholesale) |
 
 Where one app differs, the core offers a hook or that app keeps its own version. Wholesale uses PayWay only.
+
+**Not yet:** the admin setup (`src/admin/lib/sdk.ts`, `src/admin/i18n`) and the product image rules widget are the same in five apps too, but admin extensions stay in the apps until a core widget is shown to work (§4.1). **Never:** clients (they don't use the core), each app's `medusa-config.ts`, Dockerfile and entrypoint, and code only one app uses.
 
 ### 4.3 Workspace and catalog
 
@@ -173,7 +179,8 @@ Where one app differs, the core offers a hook or that app keeps its own version.
 - **pnpm settings** (`publicHoistPattern`, `allowBuilds`, `overrides`, `minimumReleaseAgeExclude`) are read only from the root `pnpm-workspace.yaml`, so each app's settings are merged there when it joins. A setting one app doesn't share (Wholesale has no `tsconfig-paths` override) is checked against that app's lockfile first.
 - **Lockfile:** one per app (`sharedWorkspaceLockfile: false`), chosen by the SC-1 proof (§5.1 point 5): each app keeps its own `pnpm-lock.yaml`, CI cache path and watch paths, and `pnpm deploy` works with it. The root gets a small `pnpm-lock.yaml` that only pins pnpm itself.
 - **Docker context:** the repo root, with one root `.dockerignore` (§5.1 point 6).
-- **The core** declares `@medusajs/framework` as a peer dependency (docs `learn/configurations/pnpm`), and its Medusa packages as dev and peer dependencies (docs `learn/fundamentals/plugins/create`).
+- **The core** declares `@medusajs/framework` as a peer dependency (docs `learn/configurations/pnpm`), and its Medusa packages as dev and peer dependencies (docs `learn/fundamentals/plugins/create`), the peers as exact versions equal to the catalog (`scripts/update-medusa.sh` moves them, `scripts/guard.sh` checks them).
+- **Injected, not linked** (TASKS F-095): each backend lists the core under `dependenciesMeta` with `injected: true`, and the root sets `syncInjectedDepsAfterScripts: [build]`. The backend then gets a copy of the core whose Medusa packages are its own; a plain link would load the core's own dev copy of Medusa, and code that imports `core-flows` would register Medusa's workflows twice and stop the app.
 
 ### 4.4 Data stays the same
 
@@ -213,7 +220,7 @@ Results go into TASKS and MEDUSA_SKILL, and the first SC-1 PR rewrites §7.1 and
 | **SC-0** | This plan, `CLAUDE.md`, the READMEs and staging runbooks, MEDUSA_SKILL, TASKS; tag `pre-shared-core` | merged |
 | **SC-1 proof** | §5.1 | every point shown, with evidence |
 | **SC-1** | Root `package.json` and `pnpm-workspace.yaml` with the catalog and the merged pnpm settings, **one category per PR, Ecommerce first**: each of its apps writes `"catalog:"`, drops its own `pnpm-workspace.yaml`, builds from the repo root with the proven recipe, and gets its new Dokploy context and watch paths. `scripts/update-medusa.sh` (one catalog edit), `verify.sh`, `guard.sh` (the exact-pin check reads the catalog), the weekly update check and the CI matrix follow | each app's lockfile changes only in the expected Medusa lines; the category's staging redeploys and answers `/health` (categories not on staging yet: the local stack) |
-| **SC-2** | The core in library mode, **one feature per PR** in the order of §4.2: PayWay → notifications → Telegram → wishlist → account security → housekeeping. Every app using the feature switches from its own copy in the same PR | every app's tests pass; on a copy of a migrated database `db:migrate` runs nothing and the provider IDs still match (§4.4) |
+| **SC-2** | The core in library mode, **one feature per PR** in the order of §4.2: PayWay → notifications → Telegram → wishlist → account security → housekeeping → search → seeds. Every app using the feature switches from its own copy in the same PR | every app's tests pass; on a copy of a migrated database `db:migrate` runs nothing and the provider IDs still match (§4.4) |
 | **SC-3** | Release branches: `release/ecommerce` and `release/pos` first, then the rest; GitHub protection on `release/*`; production apps point at them. No category is in production yet, so this lands **before the first production deploy** (P1-08). The owner creates and moves them | the owner has moved each branch once |
 
 ### 5.3 Dokploy order for SC-1
@@ -351,8 +358,8 @@ The variable names match the official deployment guide. Migrations run only on t
 
 Built from the **repo root** (Dokploy Docker Context Path `.`, §5.3), with the root `.dockerignore`:
 1. **Build stage:** `docker.io/library/node:22-bookworm-slim`. The fully-qualified name lets Podman/Buildah build it too, and the image is multi-arch (arm64 and amd64).
-2. Copy the root `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, then the app's `package.json` and `pnpm-lock.yaml` (and, from SC-2, the core's). Install the pnpm version read from the root `packageManager`, then `pnpm install --frozen-lockfile --filter <app>`.
-3. Copy the app's folder (and the core's) and run `pnpm --filter <app> build` (`medusa build` → `.medusa/server`, including the compiled admin).
+2. Copy the root `package.json`, `pnpm-lock.yaml` and `pnpm-workspace.yaml`, then the app's `package.json` and `pnpm-lock.yaml` (and, from SC-2, the core's). Install the pnpm version read from the root `packageManager`, then `pnpm install --frozen-lockfile --filter <app>...` (the app with its workspace dependencies, the core).
+3. Copy the core's folder and the app's, build the core first (`pnpm --filter @medusa-platform/medusa-core build`), then run `pnpm --filter <app> build` (`medusa build` → `.medusa/server`, including the compiled admin).
 4. **Production install:** `medusa build` copies `package.json` as is, so its `"catalog:"` (and `"workspace:*"`) versions can't be installed inside `.medusa/server`. `pnpm --filter <app> --prod deploy /prod` resolves them into a portable `node_modules` (pnpm ≥ 12.2, SC-1 proof); `/prod/node_modules` goes next to the contents of `.medusa/server`.
 5. **Runtime stage:** same base image. Copy only that folder (`.medusa/server` + `node_modules`), run as the `node` user, expose `9000`.
 
@@ -961,6 +968,7 @@ This file is frozen for the builder:
 
 | Rev | Date | What changed |
 |---|---|---|
+| 5 | 2026-11-15 | Shared-core features (§4.2): search and seeds added after housekeeping, auth guards under account security, admin setup and widget listed as not yet; §4.3 the core injected into each backend with exact peers (F-095); §5.2 SC-2 order; §7.1 Dockerfile install and build of the core. TASKS F-096. |
 | 4 | 2026-11-14 | §7: the list of moved categories points to the root `pnpm-workspace.yaml` and TASKS SC-1 instead (SC-1 for POS). |
 | 3 | 2026-11-14 | App standards for the root workspace (§7.1, §7.2; SC-1 for Ecommerce): `"catalog:"`, root pnpm settings, one lockfile per app, repo-root images with `pnpm deploy` for backends, a root `.dockerignore`; the per-app setup marked *not moved yet*. §4.3 lockfile and Docker context, §11 notes. TASKS F-093. |
 | 2 | 2026-11-14 | Release order (§8.2, D15): Ecommerce → POS → the other four, one category at a time, 24 hours of a clean production run between them, stop and roll back only the affected category. TASKS F-092. |
