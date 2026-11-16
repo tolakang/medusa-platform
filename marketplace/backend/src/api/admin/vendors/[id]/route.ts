@@ -8,7 +8,8 @@ import type MarketplaceModuleService from "../../../../modules/marketplace/servi
 import { ADMIN_VENDOR_FIELDS } from "../route"
 import type { PostAdminVendorType } from "../validators"
 import { ensureVendorStockLocation } from "../../../../lib/vendor-stock"
-import { emailVerified, VENDOR_EMAIL_NOT_VERIFIED_MESSAGE } from "../../../../lib/vendor-email"
+import { emailVerified } from "@medusa-platform/medusa-core/lib/email-verified"
+import { VENDOR_EMAIL_NOT_VERIFIED_MESSAGE } from "../../../../lib/vendor-email"
 
 const vendorById = async (req: AuthenticatedMedusaRequest, id: string) => {
   const {

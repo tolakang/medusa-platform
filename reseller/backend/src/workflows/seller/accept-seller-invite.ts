@@ -8,7 +8,7 @@ import {
 import { setAuthAppMetadataStep } from "@medusajs/medusa/core-flows"
 import { SELLER_MODULE } from "../../modules/seller"
 import SellerModuleService from "../../modules/seller/service"
-import { inviteCodeMatches } from "../../lib/invite-code"
+import { inviteCodeMatches } from "@medusa-platform/medusa-core/lib/invite-code"
 import { normalizeEmail } from "./steps/create-seller"
 
 export const NO_SELLER_INVITATION_MESSAGE =
