@@ -22,7 +22,16 @@ import {
   PostAdminWalkIn,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
-import { PostProviderAccept, PostProviderCreate, PostProviderMe } from './providers/validators'
+import {
+  PostProviderAccept,
+  PostProviderCreate,
+  PostProviderDayOff,
+  PostProviderHours,
+  PostProviderMe,
+  PostProviderService,
+  PostProviderServiceUpdate,
+  PostProviderWalkIn,
+} from './providers/validators'
 import { enforceUploadLimits } from '@medusa-platform/medusa-core/api/upload-limits'
 import {
   AUTH_LIMITS,
@@ -129,6 +138,32 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/providers/me',
       middlewares: [validateAndTransformBody(PostProviderMe)],
+    },
+    {
+      // A provider's own calendars and services (TASKS P3-32).
+      method: ['POST'],
+      matcher: '/providers/me/bookings',
+      middlewares: [validateAndTransformBody(PostProviderWalkIn)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/resources/:id',
+      middlewares: [validateAndTransformBody(PostProviderHours)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/resources/:id/days-off',
+      middlewares: [validateAndTransformBody(PostProviderDayOff)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/services',
+      middlewares: [validateAndTransformBody(PostProviderService)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/services/:id',
+      middlewares: [validateAndTransformBody(PostProviderServiceUpdate)],
     },
     {
       // Provider sign-up and sign-in: the same per-IP limits and password rule
