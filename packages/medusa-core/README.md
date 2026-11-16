@@ -20,9 +20,10 @@ Listing the package under `plugins` would switch every module, route, subscriber
 | Wishlist: module `wishlist`, 3 links, 5 store routes, workflows, share tokens | `src/modules/wishlist`, `src/links/wishlist-*.ts`, `src/api/store/customers/me/wishlists`, `src/api/store/wishlists`, `src/workflows/wishlist.ts`, `src/lib/wishlist-share.ts` | the five with notifications (not Wholesale) | SC-2 |
 | Account security: account emails, password change and reset, CAPTCHA, per-IP rate limits, phone and contact checks, upload limit, auth guards | `src/lib/{auth-email,captcha,rate-limit,upload-limit-setting,phone,safe-equal}.ts`, `src/lib/resend/{account-email,emails}.ts`, `src/api/{auth-guards,upload-limits,contact-validation}.ts`, `src/api/admin/upload-limit`, `src/api/store/customers/me/password{,-reset}`, `src/subscribers/auth-*.ts`, `src/workflows/{change-password,send-auth-email}.ts` | the five (Booking keeps its own `contact-validation.ts`; Marketplace hooks the verification link) | SC-2 |
 | Housekeeping: unverified-account cleanup (job and workflow), storefront revalidate | `src/jobs/cleanup-unverified-accounts.ts`, `src/workflows/cleanup-unverified-accounts.ts`, `src/subscribers/storefront-revalidate.ts` | the five (not Wholesale) | SC-2 |
+| Search: the product search index (`product`) and its helpers | `src/search/product.ts`, `src/search/helpers/` | the five (Wholesale keeps its own index) | SC-2 (Revision 5) |
 | Refund alert (staff Telegram on `payment.refunded`) | `src/subscribers/payment-refunded-alert.ts`, `src/workflows/notify-payment-refunded.ts`, `src/lib/refund-alert.ts` | the five with Telegram (not Wholesale) | owner, 2026-11-15 |
 
-Later features (search, then seeds) move here one per PR (§5.2).
+Later features (seeds) move here one per PR (§5.2).
 
 ## Rules
 
@@ -35,6 +36,7 @@ Later features (search, then seeds) move here one per PR (§5.2).
 - **A module** is registered from its built folder: `{ resolve: "@medusa-platform/medusa-core/.medusa/server/src/modules/<name>" }`; its migrations keep their file names, so a migrated database runs nothing new. **A route or script** is a one-line file in the app: `export { GET } from "@medusa-platform/medusa-core/api/…/route"`, `export { default } from "@medusa-platform/medusa-core/scripts/<name>"`.
 - **A link** moves with its module and is never defined in both places: the app's `src/links/<name>.ts` is `export { default } from "@medusa-platform/medusa-core/links/<name>"`. **Middlewares** stay in the app's `src/api/middlewares.ts` and import the core's validators.
 - **A scheduled job** is a one-line file in the app's `src/jobs`: `export { default, config } from "@medusa-platform/medusa-core/jobs/<name>"`.
+- **A search index** is a one-line file in the app's `src/search`: `export { default } from "@medusa-platform/medusa-core/search/<name>"`. Medusa imports every file there, and the import runs the core's `defineSearchIndex`.
 - **A subscriber** is switched on in an app by a one-line file in its `src/subscribers`: `export { default, config } from "@medusa-platform/medusa-core/subscribers/<name>"`.
 
 ## Build and test
