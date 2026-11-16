@@ -57,3 +57,10 @@ export const PostAdminBookingProvider = z
   })
   .partial()
 export type PostAdminBookingProviderType = z.infer<typeof PostAdminBookingProvider>
+
+// Partner money (TASKS P3-33).
+export const PostAdminCommissionSettle = z.object({ action: z.enum(["keep", "cancel"]) })
+export type PostAdminCommissionSettleType = z.infer<typeof PostAdminCommissionSettle>
+
+export const PostAdminPayoutPay = z.object({ reference: z.string().trim().min(1).max(200) })
+export type PostAdminPayoutPayType = z.infer<typeof PostAdminPayoutPay>

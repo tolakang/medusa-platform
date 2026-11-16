@@ -375,7 +375,10 @@ In **booking-backend** and **booking-worker** → **Environment**, set (the work
 ```
 PROVIDER_CORS=https://<portal host>
 PROVIDER_PORTAL_URL=https://<portal host>
+BOOKING_DEFAULT_COMMISSION_RATE=10
+BOOKING_PAYOUT_DAY=1
 ```
+`BOOKING_DEFAULT_COMMISSION_RATE` is the shop's cut of a partner booking when the partner has no rate of their own; `BOOKING_PAYOUT_DAY` is the day of the month the worker makes last month's partner payouts (TASKS P3-33).
 and add `,https://<portal host>` to the end of `AUTH_CORS` on the backend. **Save**, then **Deploy** the backend and the worker.
 
 ### E. Deploy and check

@@ -1,4 +1,6 @@
 import { model } from "@medusajs/framework/utils"
+import { BookingCommission } from "./booking-commission"
+import { BookingPayout } from "./booking-payout"
 import { BookingResource } from "./booking-resource"
 
 // A provider: one person who signs in to serve bookings (actor type
@@ -34,6 +36,8 @@ export const BookingProvider = model
     // default. Staff earn no commission.
     commission_rate: model.float().nullable(),
     resources: model.hasMany(() => BookingResource, { mappedBy: "provider" }),
+    commissions: model.hasMany(() => BookingCommission, { mappedBy: "provider" }),
+    payouts: model.hasMany(() => BookingPayout, { mappedBy: "provider" }),
   })
   .indexes([
     { on: ["email"], unique: true },
