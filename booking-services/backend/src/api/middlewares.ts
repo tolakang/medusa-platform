@@ -15,10 +15,14 @@ import {
 import { extendBookingHoldsBeforePayment } from './booking-payment'
 import { PostBookingCancel, PostBookingCart } from './store/booking/validators'
 import {
+  PostAdminBookingProvider,
   PostAdminBookingResource,
   PostAdminBookingResourceUpdate,
+  PostAdminBookingStaffInvite,
   PostAdminWalkIn,
 } from './admin/booking/validators'
+import { providerCors, requireProvider } from './provider-auth'
+import { PostProviderAccept, PostProviderCreate, PostProviderMe } from './providers/validators'
 import { enforceUploadLimits } from '@medusa-platform/medusa-core/api/upload-limits'
 import {
   AUTH_LIMITS,
@@ -91,6 +95,62 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/booking/bookings',
       middlewares: [validateAndTransformBody(PostAdminWalkIn)],
+    },
+    {
+      // Providers (TASKS P3-31): staff invitations, approval, suspension and
+      // partner rates. /admin is admin-only.
+      method: ['POST'],
+      matcher: '/admin/booking/providers',
+      middlewares: [validateAndTransformBody(PostAdminBookingStaffInvite)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/providers/:id',
+      middlewares: [validateAndTransformBody(PostAdminBookingProvider)],
+    },
+    {
+      // Provider portal routes (TASKS P3-31): PROVIDER_CORS, then a signed-in
+      // active provider on every /providers route (provider-auth.ts); partner
+      // sign-up and staff accept take a registration token.
+      matcher: '/providers*',
+      middlewares: [providerCors, requireProvider],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers',
+      middlewares: [limitPerIp('provider_create', AUTH_LIMITS.signup, 60), validateAndTransformBody(PostProviderCreate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/accept',
+      middlewares: [limitPerIp('provider_accept', AUTH_LIMITS.signup, 60), validateAndTransformBody(PostProviderAccept)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me',
+      middlewares: [validateAndTransformBody(PostProviderMe)],
+    },
+    {
+      // Provider sign-up and sign-in: the same per-IP limits and password rule
+      // as customers.
+      method: ['POST'],
+      matcher: '/auth/provider/emailpass/register',
+      middlewares: [limitPerIp('provider_signup', AUTH_LIMITS.signup, 60), requireStrongPassword],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/provider/emailpass',
+      middlewares: [limitPerIp('provider_login', AUTH_LIMITS.login, 60)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/provider/emailpass/update',
+      middlewares: [requireStrongPassword],
+    },
+    {
+      method: ['POST'],
+      matcher: '/auth/provider/emailpass/reset-password',
+      middlewares: [limitPerIp('provider_password_reset', AUTH_LIMITS.password_reset, 60)],
     },
     {
       // A signed-in customer cancels their booking (TASKS P3-10).

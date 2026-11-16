@@ -37,3 +37,23 @@ export const PostAdminWalkIn = z.object({
   notes: z.string().max(500).nullish(),
 })
 export type PostAdminWalkInType = z.infer<typeof PostAdminWalkIn>
+
+// Providers (TASKS P3-31): invite a staff member for a staff resource (or a
+// new one), then approve, suspend or reactivate providers and set a partner's
+// commission rate.
+export const PostAdminBookingStaffInvite = z.object({
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email(),
+  resource_id: z.string().min(1).optional(),
+  timezone: z.string().min(1).optional(),
+})
+export type PostAdminBookingStaffInviteType = z.infer<typeof PostAdminBookingStaffInvite>
+
+export const PostAdminBookingProvider = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    status: z.enum(["active", "suspended"]),
+    commission_rate: z.number().min(0).max(100).nullable(),
+  })
+  .partial()
+export type PostAdminBookingProviderType = z.infer<typeof PostAdminBookingProvider>

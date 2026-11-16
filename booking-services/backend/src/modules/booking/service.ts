@@ -8,6 +8,7 @@ import {
   MedusaService,
 } from "@medusajs/framework/utils"
 import { Booking } from "./models/booking"
+import { BookingProvider } from "./models/booking-provider"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
 import { candidateSlots, fitsWeeklyHours, isValidTimeZone, peakOverlap } from "./utils/slot"
@@ -104,8 +105,17 @@ export function slotUnavailableMessage(reason: SlotUnavailableReason): string {
   return REASON_MESSAGES[reason]
 }
 
+// A partner's resources take bookings only while the partner is approved
+// (TASKS P3-31: an unapproved or suspended partner shows nothing in the
+// shop). Staff resources follow their own is_active, so inviting a stylist
+// never closes her calendar.
+export function providerServes(provider?: { role: string; status: string } | null): boolean {
+  return !provider || provider.role !== "partner" || provider.status === "active"
+}
+
 // TASKS P3-01 (data), P3-03 (isSlotAvailable, createHold).
 class BookingModuleService extends MedusaService({
+  BookingProvider,
   BookingResource,
   BookingSchedule,
   Booking,
@@ -412,12 +422,12 @@ class BookingModuleService extends MedusaService({
     }
     const resources = await this.listBookingResources(
       { id: input.resource_ids, is_active: true },
-      { relations: ["schedules"] },
+      { relations: ["schedules", "provider"] },
       sharedContext
     )
     const free: FreeSlot[] = []
     for (const resource of resources) {
-      if (!isValidTimeZone(resource.timezone)) {
+      if (!providerServes(resource.provider) || !isValidTimeZone(resource.timezone)) {
         continue
       }
       const slots = candidateSlots(
@@ -487,13 +497,13 @@ class BookingModuleService extends MedusaService({
 
     const [resource] = await this.listBookingResources(
       { id: input.resource_id },
-      { relations: ["schedules"] },
+      { relations: ["schedules", "provider"] },
       sharedContext
     )
     if (!resource) {
       return no("resource_not_found")
     }
-    if (!resource.is_active) {
+    if (!resource.is_active || !providerServes(resource.provider)) {
       return no("resource_inactive", resource.capacity)
     }
     if (!isValidTimeZone(resource.timezone)) {

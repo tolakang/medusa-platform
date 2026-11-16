@@ -1,5 +1,6 @@
 import { model } from "@medusajs/framework/utils"
 import { Booking } from "./booking"
+import { BookingProvider } from "./booking-provider"
 import { BookingSchedule } from "./booking-schedule"
 
 // Something that can be booked: a person, a room, a piece of equipment or a
@@ -17,6 +18,9 @@ export const BookingResource = model
     // are local to this zone; booking times are stored in UTC.
     timezone: model.text(),
     is_active: model.boolean().default(true),
+    // The provider who serves it (P3-31): a staff member's own calendar or a
+    // partner's resource. Null = the shop's own (admin only).
+    provider: model.belongsTo(() => BookingProvider, { mappedBy: "resources" }).nullable(),
     schedules: model.hasMany(() => BookingSchedule, {
       mappedBy: "resource",
     }),
