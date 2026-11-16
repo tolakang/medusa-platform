@@ -336,6 +336,23 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
   // last batch is ingested. Replaying the ingestion here is awaited, and
   // `consume` upserts, so it is safe to run over every product.
   const search = container.resolve(Modules.SEARCH)
+
+  // On a fresh database the index has no active version until a worker boots:
+  // the Search Module seeds indexes on application start in worker mode only
+  // (@medusajs/search SearchModuleService.onApplicationStart_), and this script
+  // usually runs in the server container (MEDUSA_WORKER_MODE=server). Ingesting
+  // then fails ("has no active version yet", TASKS F-098), so build the index
+  // from the database instead: reindex fills a new version and makes it active.
+  const productIndex = (await search.listIndexes()).find((index) => index.name === 'product')
+  if (productIndex?.status === 'pending') {
+    logger.info('Search index "product" has no active version yet; building it now.')
+    await search.reindex({ index: 'product' })
+    const after = (await search.listIndexes()).find((index) => index.name === 'product')
+    logger.info(`Search index "product" is ${after?.status ?? 'missing'}.`)
+    logger.info('Done. Open the store page to see the new products.')
+    return
+  }
+
   const { data: allProducts } = await query.graph({
     entity: 'product',
     fields: ['id'],
