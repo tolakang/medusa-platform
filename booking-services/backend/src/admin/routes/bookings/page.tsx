@@ -93,6 +93,14 @@ const BookingsPage = () => {
       }),
     onSuccess: refresh,
   })
+  // A walk-in or cancel result belongs to the resource and day it was made
+  // on: clear it when either changes (TASKS F-099).
+  const { reset: resetWalkIn } = createWalkIn
+  const { reset: resetCancel } = cancel
+  useEffect(() => {
+    resetWalkIn()
+    resetCancel()
+  }, [resourceId, date, resetWalkIn, resetCancel])
 
   if (loadingResources) {
     return <Container><Text>Loading…</Text></Container>
