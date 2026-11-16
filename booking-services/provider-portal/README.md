@@ -1,18 +1,16 @@
-# marketplace / vendor-portal
+# booking-services / provider-portal
 
-Vendor portal for the marketplace category (BUILD_PLAN §9.6, TASKS P6-09): vendors open a shop, add products, fulfil their orders and follow their payouts. A plain Next.js app (plan §7.2), copied from Reseller's seller portal (`reseller/seller-portal`) and changed for vendors.
+Provider portal for the booking-services category (BUILD_PLAN §9.3 "Providers", TASKS P3-32): the people who serve bookings sign in here. A plain Next.js app (plan §7.2), copied from Marketplace's vendor portal and changed for providers. One portal, two roles (P3-31):
 
-- **Sign-in and sign-up** (`/login`): a new vendor opens a shop here (register at `/auth/vendor/emailpass/register`, then `POST /vendors`, P6-03). The shop waits for the marketplace's approval; until then the pages show a notice and no data.
-- **Overview** (`/`): orders to fulfil and what's earned but not paid out yet.
-- **Products** (`/products`): the vendor's products with their status and **quantity in stock** (editable), and a form to add one (name, description, one price, SKU, "Track stock" and quantity; "send for review" or "keep as a draft"). The marketplace publishes it (P6-04, P6-07). Stock sits at the vendor's own location (P6-15, F-080); untick "Track stock" for made-to-order products.
-- **Orders** (`/orders`): the vendor's own orders (its child order of each checkout, P6-05) with items, delivery address, its payout per order, and **Mark fulfilled** (`POST /vendors/me/orders/:id/fulfillments`, which takes the reserved stock; P6-10).
-- **Payouts** (`/payouts`): monthly payouts and what's not paid out yet (`/vendors/me/payouts`, P6-06).
+- **Sign-in** (`/login`): staff set their password with the **invite code** the shop gave them (register, `POST /providers/accept`); partners **sign up** on their own (register, `POST /providers`) and wait for the shop's approval; both confirm their email first. **Forgot password** emails a link to `/reset-password`.
+- **Calendar** (`/`): one day at a time in the calendar's time zone, the bookings with customer, order and status, **Cancel** (the shop's refund rules apply), and a **walk-in** form.
+- **Hours and days off** (`/hours`, partners): weekly hours per calendar as text per weekday (`09:00-12:00, 13:00-17:00`), days off to add and remove.
+- **Services** (`/services`, partners): their own services with lengths and prices, shown or hidden in the shop, and a form to add one (listed under Appointments, booked on the partner's own hours).
+- **Profile** (`/profile`): name, phone, area, photo address and bio. Partners see their commission rate; staff never see money.
 
-**Email confirmation (review 2, A3):** a vendor confirms their sign-in email before they can sign in, and the marketplace can approve a shop only after that. Sign-up and sign-in ask the backend to email the link (`metadata: { actor: "vendor" }`, so it opens this portal's `/verify-account`, which needs no session). The backend builds the link from `VENDOR_PORTAL_URL` (or the first `VENDOR_CORS` origin).
+**Email links:** the backend builds the confirm-email and reset-password links from `PROVIDER_PORTAL_URL` (or the first `PROVIDER_CORS` origin), so set those on the backend to this app's public URL.
 
-**Per-IP limits:** set `SHOPPER_IP_SECRET` to the backend's value, so the backend counts sign-in and sign-up attempts per vendor's own IP.
-
-**Security:** the backend token is sealed in an httpOnly cookie (`vendor_session`, AES-256-GCM under `COOKIE_SECRET`, 8 hours); pages and server actions call the backend from this app's server only, so the browser never holds the token and the backend needs no CORS entry for this app. A refused token (401) signs the vendor out; a backend outage shows the error page.
+**Security:** as the vendor portal: the backend token is sealed in an httpOnly cookie (`provider_session`, AES-256-GCM under `COOKIE_SECRET`, 8 hours); pages and server actions call the backend from this app's server only, so the browser never holds the token. A refused token (401) signs the provider out; a backend outage shows the error page. Set `SHOPPER_IP_SECRET` to the backend's value so sign-in limits count each provider's own IP.
 
 ## Env
 
@@ -20,7 +18,7 @@ Vendor portal for the marketplace category (BUILD_PLAN §9.6, TASKS P6-09): vend
 
 ## Deploy (Dokploy)
 
-Build Path `/`, Docker File `marketplace/vendor-portal/Dockerfile`, Docker Context Path `marketplace/vendor-portal`, Watch Paths `marketplace/vendor-portal/**`, domain → port 3000. Order: `../README.md`.
+Build Path `/`, Docker File `booking-services/provider-portal/Dockerfile`, Docker Context Path `.` (repo root), Watch Paths `booking-services/provider-portal/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, domain → port 3000. Order and backend settings: `../README.md`.
 
 ## Verify
 
@@ -28,8 +26,8 @@ Build Path `/`, Docker File `marketplace/vendor-portal/Dockerfile`, Docker Conte
 pnpm install --frozen-lockfile
 pnpm build
 pnpm typecheck
-pnpm test        # format helpers and the sealed session cookie
-docker build -f Dockerfile -t marketplace-vendor-portal:check ../..   # context: the repo root
+pnpm test        # time zones, hours and lengths parsing, the sealed session cookie
+docker build -f Dockerfile -t booking-services-provider-portal:check ../..   # context: the repo root
 ```
 
-Or from the repo root: `scripts/verify.sh marketplace/vendor-portal --image`. The local stack has it as `vendor-portal` in `../docker-compose.local.yml`.
+Or from the repo root: `scripts/verify.sh booking-services/provider-portal --image`.

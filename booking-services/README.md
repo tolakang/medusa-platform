@@ -15,7 +15,10 @@ booking-services/
 │   ├── Dockerfile
 │   ├── docker-entrypoint.sh
 │   └── .env.example
-└── storefront/              customer storefront
+├── storefront/              customer storefront
+│   ├── Dockerfile
+│   └── .env.example
+└── provider-portal/         staff and partners (TASKS P3-32)
     ├── Dockerfile
     └── .env.example
 ```
@@ -29,12 +32,13 @@ booking-services/
 | `booking-services-backend` | Application (Dockerfile) | `/booking-services/backend` | 9000 → `api.example.com` | `backend/.env.example`, `MEDUSA_WORKER_MODE=server` |
 | `booking-services-worker` | Application (Dockerfile) | `/booking-services/backend` | none | same env + worker overrides |
 | `booking-services-storefront` | Application (Dockerfile) | `/booking-services/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
+| `booking-services-provider-portal` | Application (Dockerfile) | `/booking-services/provider-portal` | 3000 → `providers.example.com` | `provider-portal/.env.example`; the backend's `PROVIDER_CORS`, `PROVIDER_PORTAL_URL` and `AUTH_CORS` get its URL |
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `booking-services/<app>/Dockerfile` and **Docker Context Path** `.` (the repo root, since SC-1: the apps are in the root pnpm workspace; paths relative to the repo root, F-011), and **watch paths** `booking-services/<app>/**` plus the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, so a change to one app never redeploys another; a Medusa catalog change redeploys all of them. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
 ### Shared core and release branches (plan §4–§5)
 
-**Build from the repo root.** Booking services moved in its SC-1 PR (`docs/TASKS.md` → *Shared core*). For each app (`backend`, `storefront`) and the worker, in Dokploy:
+**Build from the repo root.** Booking services moved in its SC-1 PR (`docs/TASKS.md` → *Shared core*). For each app (`backend`, `storefront`, `provider-portal`) and the worker, in Dokploy:
 - **Repository:** `medusa-platform` (General → Provider: GitHub; Branch `main`). Projects created for the old `medusa-apps` repo get no changes from this repo until this is switched; if the repo isn't in the dropdown, give the Dokploy GitHub App access to it first (GitHub → Settings → Applications → Installed GitHub Apps → Configure → Repository access).
 - **Docker File:** `booking-services/<app>/Dockerfile` (unchanged).
 - **Docker Context Path:** `.` (the repo root) instead of `booking-services/<app>`.
@@ -68,6 +72,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 5. Deploy `booking-services-worker` (same Build Path, worker overrides).
 6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `booking-services-storefront`.
 7. Set the final domains in the backend CORS variables and redeploy the backend.
+8. Provider portal (P3-32): deploy `booking-services-provider-portal` (`COOKIE_SECRET`, `MEDUSA_BACKEND_URL`, `SHOPPER_IP_SECRET` = the backend's), then set the backend's `PROVIDER_CORS` and `PROVIDER_PORTAL_URL` to the portal's URL, add it to `AUTH_CORS`, and redeploy the backend and the worker (the worker sends the emails).
 
 After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
 
