@@ -10,6 +10,7 @@ packages:
   - pos/pos-app
   - booking-services/backend
   - booking-services/storefront
+  - booking-services/provider-portal
   - wholesale/backend
   - wholesale/storefront
   - reseller/backend
