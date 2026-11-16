@@ -105,6 +105,7 @@ S3, Resend, Telegram and PayWay are optional: every booking check works without 
    docker-entrypoint.sh medusa exec ./src/scripts/seed.js
    docker-entrypoint.sh medusa exec ./src/scripts/seed-booking-demo.js
    ```
+   - `<your-email>` becomes the admin login. Don't plan to use the same email for a shop account (Part H): an admin login blocks it.
    - The first seed adds the Cambodia region (USD), the Phnom Penh location and its delivery option.
    - The second adds one example per booking kind, each in its category: **Haircut** (Appointments) with the stylist **Sophea**, Monday to Saturday 09:00–12:00 and 13:00–17:00; **Table reservation** (Table reservations) by party size 2, 4 or 6, a $5 deposit, every day 11:00–14:00 and 17:00–22:00. It ends with `Booking demo: service "Table reservation" with Tables for 2 (4), Tables for 4 (3), Table for 6 (1) created.`
    - Don't run `seed-initial-data.js` here: it adds demo goods and a Europe region, which this shop doesn't have.
@@ -188,7 +189,9 @@ Don't deploy yet if `<shop host>` still belongs to another project: Part G moves
 
 ## Part H: The real test (20 min)
 
-1. **Account:** in the shop, **Account** → join with an email you can read → confirm it (with Resend: the link in the email; without: `booking-worker` → **Logs** → search `verify-account` → open that link) → sign in. A guest can book too, but only a signed-in customer can cancel online.
+1. **Account:** in the shop, **Account** → join with an email you can read, **not the admin email from Part D** (an admin login blocks a shop account with the same email: "An account with … already exists"; with Gmail, `you+spa@gmail.com` reaches the same inbox) → confirm it → sign in. A guest can book too, but only a signed-in customer can cancel online.
+   - **With Resend:** open the link in the email.
+   - **Without Resend:** `booking-worker` → **Logs** → search `auth-verify-email` (if nothing, the `booking-backend` logs). The line reads `Attempting to send a notification to: '<email>' … with template: 'auth-verify-email' and data: '{"url":"https://<shop host>/…/verify-account?…", …}'`; copy the `url` value (from `https://` to the closing `"`) and open it in the same browser.
 2. **Table (kind G):** home page → **Table reservations** → **Book** → **Party size** `4 people` → a **Day** at least two days ahead → a **Time** (e.g. 18:30) → **Book 18:30**. The cart shows the table, the day and time, $5.00, and **no shipping line**.
 3. **Checkout:** **Go to checkout** → your details (no address or delivery step) → **Continue to payment** → PayWay sandbox card (**Mastercard 5156 8399 3770 6777**, exp **01/30**, CVV **993**) or the manual payment → **Confirm booking**. The page says **"Your booking is confirmed."** Note the **order number**.
 4. **Haircut (kind A):** home page → **Appointments** → Haircut → **Book** → **Length** `30 min`, a weekday two days ahead, a time → book and pay the same way.
