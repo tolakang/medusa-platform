@@ -36,7 +36,8 @@ const OrderDetails = ({ order, showStatus, bookingStatuses }: OrderDetailsProps)
         </Text>
       ) : (
         <Text>
-          Thank you. We will contact you by phone about your delivery.
+          Thank you. We will contact you by phone about your{" "}
+          {isServiceOnlyCart(order) ? "booking" : "delivery"}.
         </Text>
       )}
       <Text className="mt-2">

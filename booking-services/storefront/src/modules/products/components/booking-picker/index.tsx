@@ -1,21 +1,22 @@
 "use client"
 
 import { addBookingToCart, listSlots, type Slot } from "@lib/data/booking"
-import { durationMinutes, formatSlotTime, localDate } from "@lib/util/booking"
+import { durationMinutes, formatSlotTime, localDate, orderedServices, serviceChoiceLabel } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text, clx } from "@modules/common/components/ui"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState, useTransition } from "react"
 
-// Book a service (TASKS P3-13): pick the length (a variant), a day and a free
+// Book a service (TASKS P3-13): pick the variant (a length, or a party size for
+// a table, P3-19), a day and a free
 // time, then the slot is held and added to the cart (POST /store/booking/cart,
 // hold for BOOKING_HOLD_MINUTES). Times are the resource's local time.
 export default function BookingPicker({ product }: { product: HttpTypes.StoreProduct }) {
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const services = useMemo(
-    () => (product.variants ?? []).filter((v) => durationMinutes(v) !== null),
+    () => orderedServices((product.variants ?? []).filter((v) => durationMinutes(v) !== null)),
     [product.variants]
   )
   const [variantId, setVariantId] = useState(services[0]?.id ?? "")
@@ -66,7 +67,7 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
     <div className="flex flex-col gap-y-4" data-testid="booking-picker">
       {services.length > 1 && (
         <div className="flex flex-col gap-y-2">
-          <Text className="txt-compact-small-plus">Length</Text>
+          <Text className="txt-compact-small-plus">{serviceChoiceLabel(product)}</Text>
           <div className="flex flex-wrap gap-2">
             {services.map((v) => (
               <button

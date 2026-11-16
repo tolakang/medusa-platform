@@ -1,5 +1,6 @@
 "use client"
 
+import { isServiceOnlyCart } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import React from "react"
 
@@ -12,6 +13,7 @@ type CartTotalsProps = {
     item_subtotal?: number | null
     shipping_subtotal?: number | null
     discount_subtotal?: number | null
+    items?: { requires_shipping?: boolean | null }[] | null
   }
 }
 
@@ -24,22 +26,26 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     shipping_subtotal,
     discount_subtotal,
   } = totals
+  // Only booked services: nothing is shipped, so no shipping line (TASKS P3-19).
+  const servicesOnly = isServiceOnlyCart(totals)
 
   return (
     <div>
       <div className="flex flex-col gap-y-2 txt-medium text-ui-fg-subtle ">
         <div className="flex items-center justify-between">
-          <span>Subtotal (excl. shipping and taxes)</span>
+          <span>{servicesOnly ? "Subtotal (excl. taxes)" : "Subtotal (excl. shipping and taxes)"}</span>
           <span data-testid="cart-subtotal" data-value={item_subtotal || 0}>
             {convertToLocale({ amount: item_subtotal ?? 0, currency_code })}
           </span>
         </div>
-        <div className="flex items-center justify-between">
-          <span>Shipping</span>
-          <span data-testid="cart-shipping" data-value={shipping_subtotal || 0}>
-            {convertToLocale({ amount: shipping_subtotal ?? 0, currency_code })}
-          </span>
-        </div>
+        {!servicesOnly && (
+          <div className="flex items-center justify-between">
+            <span>Shipping</span>
+            <span data-testid="cart-shipping" data-value={shipping_subtotal || 0}>
+              {convertToLocale({ amount: shipping_subtotal ?? 0, currency_code })}
+            </span>
+          </div>
+        )}
         {!!discount_subtotal && (
           <div className="flex items-center justify-between">
             <span>Discount</span>

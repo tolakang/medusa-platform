@@ -1,31 +1,20 @@
-import { Github } from "@medusajs/icons";
-import { Button, Heading } from "@modules/common/components/ui";
+import { SHOP_NAME } from "@lib/shop"
+import { Heading } from "@modules/common/components/ui"
+
+// Home page opening for the booking-only shop (TASKS P3-19, plan §9.3).
 const Hero = () => {
   return (
-    <div className="h-[75vh] w-full border-b border-ui-border-base relative bg-ui-bg-subtle">
-      <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center small:p-32 gap-6">
-        <span>
-          <Heading
-            level="h1"
-            className="text-3xl leading-10 text-ui-fg-base font-normal"
-          >
-            Ecommerce Starter Template
-          </Heading>
-          <Heading
-            level="h2"
-            className="text-3xl leading-10 text-ui-fg-subtle font-normal"
-          >
-            Powered by Medusa and Next.js
-          </Heading>
-        </span>
-        <a href="https://github.com/medusajs/dtc-starter" target="_blank">
-          <Button variant="secondary">
-            View on GitHub <Github />
-          </Button>
-        </a>
+    <div className="w-full border-b border-ui-border-base bg-ui-bg-subtle">
+      <div className="content-container flex flex-col items-center text-center gap-4 py-24 small:py-32">
+        <Heading level="h1" className="text-3xl leading-10 text-ui-fg-base font-normal">
+          {SHOP_NAME}
+        </Heading>
+        <Heading level="h2" className="text-xl leading-8 text-ui-fg-subtle font-normal">
+          Choose a service, pick a free time and book it online.
+        </Heading>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Hero;
+export default Hero

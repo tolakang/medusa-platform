@@ -8,6 +8,8 @@ import {
   isServiceOnlyCart,
   itemBooking,
   localDate,
+  orderedServices,
+  serviceChoiceLabel,
 } from "../booking.ts"
 
 // TASKS P3-13: the storefront's booking helpers.
@@ -61,5 +63,29 @@ describe("booking helpers", () => {
     assert.equal(bookingStatusLabel(["no_show"]), "No-show")
     assert.equal(bookingStatusLabel([]), "Booked")
     assert.equal(bookingStatusLabel(["confirmed"], "canceled"), "Cancelled")
+  })
+})
+
+describe("service choices (TASKS P3-19)", () => {
+  it("labels the choice with the product's own option", () => {
+    assert.equal(serviceChoiceLabel({ options: [{ title: "Party size" }] }), "Party size")
+    assert.equal(serviceChoiceLabel({ options: [{ title: "Length" }] }), "Length")
+    assert.equal(serviceChoiceLabel({ options: [] }), "Option")
+    assert.equal(serviceChoiceLabel({}), "Option")
+  })
+
+  it("orders party sizes, then lengths, then titles", () => {
+    const tables = [
+      { title: "2 people", metadata: { duration_minutes: 90, party_size: 2 } },
+      { title: "6 people", metadata: { duration_minutes: 90, party_size: 6 } },
+      { title: "4 people", metadata: { duration_minutes: 90, party_size: 4 } },
+    ]
+    assert.deepEqual(orderedServices(tables).map((v) => v.title), ["2 people", "4 people", "6 people"])
+    const cuts = [
+      { title: "60 min", metadata: { duration_minutes: 60 } },
+      { title: "30 min", metadata: { duration_minutes: 30 } },
+    ]
+    assert.deepEqual(orderedServices(cuts).map((v) => v.title), ["30 min", "60 min"])
+    assert.deepEqual(tables.map((v) => v.title), ["2 people", "6 people", "4 people"], "the input is not changed")
   })
 })

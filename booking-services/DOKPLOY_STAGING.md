@@ -216,17 +216,17 @@ PAYWAY_RSA_PUBLIC_KEY=<the RSA public key from ABA>
 3. **Check:** it prints that the user was created.
 
 ### B. Staging data
-In the same terminal, run the three seeds, **one after the other**:
+In the same terminal, run the two seeds, **one after the other**. This shop is booking-only (TASKS P3-19): no demo goods, no Europe region or warehouse, so `seed-initial-data.js` is **not** run.
 ```bash
-docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
 docker-entrypoint.sh medusa exec ./src/scripts/seed.js
 docker-entrypoint.sh medusa exec ./src/scripts/seed-booking-demo.js
 ```
-- The first adds the demo products and the European Warehouse.
-- The second adds the Cambodia region (USD), the **Phnom Penh** stock location and "Phnom Penh Delivery".
-- The third adds the service **Haircut** (30 min $8, 60 min $15) and the stylist **Sophea**, who works Monday to Saturday, 09:00–12:00 and 13:00–17:00 Phnom Penh time.
+- The first adds the Cambodia region (USD), the **Phnom Penh** stock location and "Phnom Penh Delivery".
+- The second adds one example per booking kind, each in its category:
+  - **Appointments:** the service **Haircut** (30 min $8, 60 min $15) and the stylist **Sophea**, Monday to Saturday, 09:00–12:00 and 13:00–17:00 Phnom Penh time;
+  - **Table reservations:** the service **Table reservation** (a $5 deposit, 90 minutes) by **party size** 2, 4 or 6, with **Tables for 2** (4 tables), **Tables for 4** (3) and **Table for 6** (1), every day 11:00–14:00 and 17:00–22:00.
 
-**Check:** all three finish without an error. The last one ends with `Booking demo: service "Haircut" and stylist Sophea (Asia/Phnom_Penh) created.`
+**Check:** both finish without an error. The last one ends with `Booking demo: service "Table reservation" with Tables for 2 (4), Tables for 4 (3), Table for 6 (1) created.` (A shop seeded before P3-19 already has the Haircut: running the second seed again adds only what is missing.)
 
 **Check the store currency:** Admin → **Settings** → **Store**. **Default currency** must be **USD** and **Default region** **Cambodia**. If not, click **Edit** and set them. The Haircut has a USD price only, so with EUR the shop can't price it (TASKS F-086).
 
@@ -239,7 +239,7 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed-booking-demo.js
 ### D. PayWay in the Cambodia region (only with PayWay)
 Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers**: add **payway** (`pp_payway_payway`) → **Save**. Without this the checkout shows no ABA PayWay option.
 
-**Check:** you can log in to the admin; **Products** shows **Haircut** and the demo products; the sidebar shows **Bookings**.
+**Check:** you can log in to the admin; **Products** shows exactly **Haircut** and **Table reservation**; **Products → Categories** shows **Appointments** and **Table reservations**; the sidebar shows **Bookings**.
 
 **Reply with:**
 - "Step 3 done";
@@ -303,13 +303,14 @@ NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://<api host>
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=<pk_… from step 3.C>
 NEXT_PUBLIC_BASE_URL=https://<shop host>
 NEXT_PUBLIC_DEFAULT_REGION=kh
+NEXT_PUBLIC_SHOP_NAME=<your shop's name>
 NEXT_PUBLIC_STRIPE_KEY=
 NEXT_PUBLIC_CAPTCHA_PROVIDER=
 NEXT_PUBLIC_CAPTCHA_SITE_KEY=
 S3_IMAGE_HOSTNAME=
 S3_IMAGE_PATHNAME=/**
 ```
-If you set up S3, put the **host part** of `S3_FILE_URL` in `S3_IMAGE_HOSTNAME`. A typo in any of these shows up later only as a 500 on every page (F-016), so check them twice.
+`NEXT_PUBLIC_SHOP_NAME` is shown in the header, footer and page titles (empty = "Book Online"). If you set up S3, put the **host part** of `S3_FILE_URL` in `S3_IMAGE_HOSTNAME`. A typo in any of these shows up later only as a 500 on every page (F-016), so check them twice.
 
 ### C. Environment Variables (runtime)
 ```
@@ -354,7 +355,7 @@ A booking belongs to the customer who is signed in when they book, so sign up **
 3. Sign in.
 
 ### B. A booking in the shop
-1. Still signed in: **Store** → **Haircut**.
+1. Still signed in: the home page lists **Appointments** and **Table reservations**. Under Appointments, **Haircut** → **Book**.
 2. Pick **Length** `30 min`, a **Day** at least two days ahead (Monday to Saturday), and a **Time** → book. The page says the time is held for you while you check out.
 3. Go to the cart → **Checkout**. A service needs no address or delivery: check **First name**, **Last name** and **Email**.
 4. Pay:
@@ -393,9 +394,10 @@ With your two hosts, the `pk_…` key and the order number, I check:
 |---|---|
 | `https://<api host>/health` | 200 `OK` |
 | `https://<api host>/app/` | 200 |
-| `/store/products` with your key | **Haircut** with two variants, `HAIRCUT-30` and `HAIRCUT-60` |
+| `/store/products` with your key | exactly **Haircut** (`HAIRCUT-30`, `HAIRCUT-60`) and **Table reservation** (`TABLE-2`, `TABLE-4`, `TABLE-6`), each in its kind's category |
+| `/store/booking/slots` for `TABLE-4`, any day | 90-minute times at 11:00, 12:30, 17:00, 18:30 and 20:00 Phnom Penh time, 3 tables free each |
 | `/store/booking/slots` for Haircut, the day of Step 6 | free times inside 09:00–12:00 and 13:00–17:00; the walk-in's time is taken, the cancelled time free again |
-| `https://<shop host>/kh` and `/kh/products/haircut` | render |
+| `https://<shop host>/kh`, `/kh/products/haircut` and `/kh/products/table-reservation` | render; the home page lists both kinds with **Book** buttons; no "Medusa Store" or shipping text |
 | CORS | API accepts the shop origin, refuses a foreign one |
 
 ---
