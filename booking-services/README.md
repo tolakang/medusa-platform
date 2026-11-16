@@ -81,6 +81,14 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 - The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §7.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
 
+## Providers (TASKS P3-31)
+
+People who serve bookings sign in as the actor `provider` (plan §9.3 "Providers", D13). One provider is one person.
+- **Staff:** the admin invites them on **Providers** for a staff calendar (an existing staff resource, or a new one) and gives them the **invite code**. They register with that email (`POST /auth/provider/emailpass/register`), accept with the code (`POST /providers/accept`), confirm their email and sign in. They see only their own calendar and no money.
+- **Partners:** sign up on their own (`POST /auth/provider/emailpass/register`, then `POST /providers`), confirm their email and wait. Until the admin **approves** them, they can only read `/providers/me`, and their calendars offer no times in the shop. The admin can **suspend** them (their sign-in stops at once) and set their **commission rate** (P3-33).
+- What a provider owns: their resources (`booking_resource.provider_id`) and their services (link `booking-provider-product`).
+- Env: `PROVIDER_CORS` and `PROVIDER_PORTAL_URL` (the portal's origin for `/providers/*` and its verify link), and the portal's origin in `AUTH_CORS`. The portal itself is P3-32.
+
 ## Independence rules
 
 - Shared backend code comes only from `packages/medusa-core` (plan §4–§5); this category's own code stays here, and its clients never use the core.
