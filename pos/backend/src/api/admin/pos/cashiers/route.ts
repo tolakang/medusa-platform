@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { inviteCode } from "../../../../lib/invite-code"
+import { inviteCode } from "@medusa-platform/medusa-core/lib/invite-code"
 import { POS_MODULE } from "../../../../modules/pos"
 import type PosModuleService from "../../../../modules/pos/service"
 import { createPosCashierWorkflow } from "../../../../workflows/pos-cashier"

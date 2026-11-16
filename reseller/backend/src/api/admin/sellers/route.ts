@@ -3,7 +3,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
-import { inviteCode } from "../../../lib/invite-code"
+import { inviteCode } from "@medusa-platform/medusa-core/lib/invite-code"
 import { createSellerWorkflow } from "../../../workflows/seller/create-seller"
 import type { PostAdminSellerType } from "./validators"
 

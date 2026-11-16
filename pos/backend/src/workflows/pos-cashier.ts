@@ -6,7 +6,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { setAuthAppMetadataStep } from "@medusajs/medusa/core-flows"
-import { inviteCodeMatches } from "../lib/invite-code"
+import { inviteCodeMatches } from "@medusa-platform/medusa-core/lib/invite-code"
 import { POS_MODULE } from "../modules/pos"
 import type PosModuleService from "../modules/pos/service"
 
