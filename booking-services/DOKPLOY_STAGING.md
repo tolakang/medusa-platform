@@ -353,7 +353,7 @@ A booking belongs to the customer who is signed in when they book, so sign up **
 1. Open `https://<shop host>/kh` → **Account** → join with an email you can read.
 2. Confirm the email:
    - **with Resend:** open the link in the email;
-   - **without Resend:** `booking-worker` → **Logs** → search `verify-account` → open the `https://<shop host>/…/verify-account?…` link from that line.
+   - **without Resend:** `booking-worker` → **Logs** → search `auth-verify-email` (if nothing, the `booking-backend` logs) → copy the `url` value, the `https://<shop host>/…/verify-account?…` link, from that line and open it. Use an email other than the admin's: an admin login blocks a shop account with the same email.
 3. Sign in.
 
 ### B. A booking in the shop
