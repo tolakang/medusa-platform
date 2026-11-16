@@ -21,9 +21,10 @@ Listing the package under `plugins` would switch every module, route, subscriber
 | Account security: account emails, password change and reset, CAPTCHA, per-IP rate limits, phone and contact checks, upload limit, auth guards | `src/lib/{auth-email,captcha,rate-limit,upload-limit-setting,phone,safe-equal}.ts`, `src/lib/resend/{account-email,emails}.ts`, `src/api/{auth-guards,upload-limits,contact-validation}.ts`, `src/api/admin/upload-limit`, `src/api/store/customers/me/password{,-reset}`, `src/subscribers/auth-*.ts`, `src/workflows/{change-password,send-auth-email}.ts` | the five (Booking keeps its own `contact-validation.ts`; Marketplace hooks the verification link) | SC-2 |
 | Housekeeping: unverified-account cleanup (job and workflow), storefront revalidate | `src/jobs/cleanup-unverified-accounts.ts`, `src/workflows/cleanup-unverified-accounts.ts`, `src/subscribers/storefront-revalidate.ts` | the five (not Wholesale) | SC-2 |
 | Search: the product search index (`product`) and its helpers | `src/search/product.ts`, `src/search/helpers/` | the five (Wholesale keeps its own index) | SC-2 (Revision 5) |
+| Seeds: Cambodia shop setup, starter data, demo products | `src/scripts/seed.ts`, `src/scripts/seed-initial-data.ts`, `src/scripts/seed-demo-products.ts` | the five (Booking adds its demo seed; Wholesale keeps its own) | SC-2 (Revision 5) |
 | Refund alert (staff Telegram on `payment.refunded`) | `src/subscribers/payment-refunded-alert.ts`, `src/workflows/notify-payment-refunded.ts`, `src/lib/refund-alert.ts` | the five with Telegram (not Wholesale) | owner, 2026-11-15 |
 
-Later features (seeds) move here one per PR (§5.2).
+That completes SC-2 (§5.2). A later feature moves the same way: one feature per PR, every app that uses it switching in the same PR.
 
 ## Rules
 
