@@ -10,7 +10,7 @@ import {
   linkSalesChannelsToApiKeyWorkflow,
 } from "@medusajs/medusa/core-flows"
 import seedInitialData from "../../src/scripts/seed-initial-data"
-import { resolveProductIds } from "../../src/search/helpers/resolve-product-ids"
+import { resolveProductIds } from "@medusa-platform/medusa-core/search/helpers/resolve-product-ids"
 
 // Runner + api client: docs/MEDUSA_SKILL.md §10. `/store/search` (Search Module,
 // default since 2.21.1, BUILD_PLAN §9.1) always narrows product results to
