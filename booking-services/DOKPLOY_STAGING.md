@@ -346,6 +346,50 @@ CLIENT_IP_HEADER=
 
 ---
 
+## Step 5b: Provider portal `booking-provider-portal` (TASKS P3-32, about 15 minutes)
+Staff and partners sign in here. Pick a host for it, e.g. `providers.<your domain>`, and point its DNS at the server like the others.
+
+### A. Create the app
+1. **Create Service** → **Application** → name `booking-provider-portal` → **Create**.
+2. **General:** Provider **GitHub**, `medusa-platform`, `main`; **Build Path `/`**, Trigger **On Push**.
+3. **Build Type: Dockerfile:** Docker File `booking-services/provider-portal/Dockerfile`, Docker Context Path `.`.
+4. **Watch Paths:** `booking-services/provider-portal/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`.
+
+### B. Environment Variables (runtime; no build arguments needed)
+```
+NODE_ENV=production
+PORT=3000
+MEDUSA_BACKEND_URL=https://<api host>
+COOKIE_SECRET=<a new random value: openssl rand -hex 32>
+SHOPPER_IP_SECRET=<E>
+CLIENT_IP_HEADER=
+```
+→ **Save**. `COOKIE_SECRET` is this portal's own, not the backend's.
+
+### C. Domain and Swarm settings
+1. **Domains** → **Add Domain**: `<portal host>`, Path `/`, **Container Port `3000`**, HTTPS on, Let's Encrypt.
+2. **Swarm Settings** → **Health Check**: box 1 `CMD-SHELL`, box 2 `node -e "fetch('http://localhost:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"`; Interval `30000000000`, Timeout `10000000000`, Start Period `60000000000`, Retries `3`. **Update Config:** as the backend.
+
+### D. Tell the backend about it
+In **booking-backend** and **booking-worker** → **Environment**, set (the worker sends the emails, so it needs them too):
+```
+PROVIDER_CORS=https://<portal host>
+PROVIDER_PORTAL_URL=https://<portal host>
+```
+and add `,https://<portal host>` to the end of `AUTH_CORS` on the backend. **Save**, then **Deploy** the backend and the worker.
+
+### E. Deploy and check
+1. **Deploy** `booking-provider-portal` (about 5 minutes).
+2. Admin → **Providers** → invite a staff member for **Sophea** with an email you can read → note the **invite code**.
+3. Open `https://<portal host>` → **I have an invite code** → that email, the code, a new password → **Set password**. It asks you to confirm the email: without Resend, `booking-worker` → **Logs** → search `auth-verify-email` → open the `url` from that line.
+4. Sign in: the **Calendar** shows Sophea's day; add a **walk-in** and cancel it.
+
+**Check:** sign-in works, the walk-in shows in the admin's **Bookings** for Sophea too.
+
+**Reply with:** `<portal host>`, and "Step 5b done" or what you see instead.
+
+---
+
 ## Step 6: Book a time, pay, cancel (about 15 minutes)
 
 ### A. A customer account

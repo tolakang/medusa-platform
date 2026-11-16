@@ -10,7 +10,7 @@ Each category folder is one kind of business; each business running it is one Do
 |---|---|---|---|
 | [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | on staging; production P1-08 open |
 | [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | on staging; exit passed |
-| [`booking-services/`](./booking-services) | Appointments, visits, trips, rentals, tickets, tables, event packages | `/booking-services/backend`, `/booking-services/storefront` (+ `provider-portal`, P3-32) | kind A built; booking-only shop P3-19 next |
+| [`booking-services/`](./booking-services) | Appointments, visits, trips, rentals, tickets, tables, event packages | `/booking-services/backend`, `/booking-services/storefront`, `/booking-services/provider-portal` | kinds A and G built, staging passed (P3-18); providers P3-31/P3-32 |
 | [`wholesale/`](./wholesale) | Companies buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | code done; staging P4-11 open |
 | [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | code done; staging P5-11 open |
 | [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | code done; staging P6-13 open |
