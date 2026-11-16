@@ -9,7 +9,10 @@ export default async function Footer() {
   const { collections } = await listCollections({
     fields: "*products",
   });
-  const productCategories = await listCategories();
+  // In the admin's category order, as the home page (TASKS P3-19).
+  const productCategories = (await listCategories())?.sort(
+    (a, b) => (a.rank ?? 0) - (b.rank ?? 0)
+  );
 
   return (
     <footer className="border-t border-ui-border-base w-full">
