@@ -1,3 +1,4 @@
+import { isServiceOnlyCart } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
@@ -38,10 +39,13 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
               <span>- {getAmount(order.gift_card_total)}</span>
             </div>
           )}
-          <div className="flex items-center justify-between">
-            <span>Shipping</span>
-            <span>{getAmount(order.shipping_total)}</span>
-          </div>
+          {/* Only booked services: nothing shipped (TASKS P3-19). */}
+          {!isServiceOnlyCart(order) && (
+            <div className="flex items-center justify-between">
+              <span>Shipping</span>
+              <span>{getAmount(order.shipping_total)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span>Taxes</span>
             <span>{getAmount(order.tax_total)}</span>

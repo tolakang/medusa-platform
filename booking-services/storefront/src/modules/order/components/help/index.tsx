@@ -2,7 +2,9 @@ import { Heading } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import React from "react"
 
-const Help = () => {
+// A booked service has no returns or exchanges, only a change or a
+// cancellation (TASKS P3-19).
+const Help = ({ servicesOnly = false }: { servicesOnly?: boolean }) => {
   return (
     <div className="mt-6">
       <Heading className="text-base-semi">Need help?</Heading>
@@ -13,7 +15,7 @@ const Help = () => {
           </li>
           <li>
             <LocalizedClientLink href="/contact">
-              Returns & Exchanges
+              {servicesOnly ? "Change or cancel a booking" : "Returns & Exchanges"}
             </LocalizedClientLink>
           </li>
         </ul>

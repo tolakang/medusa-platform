@@ -10,6 +10,7 @@ import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import TelegramUpdates from "@modules/order/components/telegram-updates"
 import { HttpTypes } from "@medusajs/types"
+import { isServiceOnlyCart } from "@lib/util/booking"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -35,7 +36,9 @@ export default async function OrderCompletedTemplate({
             className="flex flex-col gap-y-3 text-ui-fg-base text-3xl mb-4"
           >
             <span>Thank you!</span>
-            <span>Your order was placed successfully.</span>
+            <span>
+              {isServiceOnlyCart(order) ? "Your booking is confirmed." : "Your order was placed successfully."}
+            </span>
           </Heading>
           <OrderDetails order={order} />
           <TelegramUpdates order={order} />
@@ -46,7 +49,7 @@ export default async function OrderCompletedTemplate({
           <CartTotals totals={order} />
           <ShippingDetails order={order} />
           <PaymentDetails order={order} />
-          <Help />
+          <Help servicesOnly={isServiceOnlyCart(order)} />
         </div>
       </div>
     </div>

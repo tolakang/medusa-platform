@@ -32,6 +32,8 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
         (cart.shipping_methods?.length ?? 0) < 1)
 
   const paymentSession = cart.payment_collection?.payment_sessions?.[0]
+  // Booking wording when only services are booked (TASKS P3-19).
+  const label = isServiceOnlyCart(cart) ? "Confirm booking" : "Place order"
 
   switch (true) {
     case isStripeLike(paymentSession?.provider_id):
@@ -39,6 +41,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
         <StripePaymentButton
           notReady={notReady}
           cart={cart}
+          label={label}
           data-testid={dataTestId}
         />
       )
@@ -48,7 +51,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
       )
     case isManual(paymentSession?.provider_id):
       return (
-        <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
+        <ManualTestPaymentButton notReady={notReady} label={label} data-testid={dataTestId} />
       )
     default:
       return <Button disabled>Select a payment method</Button>
@@ -58,10 +61,12 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
 const StripePaymentButton = ({
   cart,
   notReady,
+  label,
   "data-testid": dataTestId,
 }: {
   cart: HttpTypes.StoreCart
   notReady: boolean
+  label: string
   "data-testid"?: string
 }) => {
   const [submitting, setSubmitting] = useState(false)
@@ -156,7 +161,7 @@ const StripePaymentButton = ({
         isLoading={submitting}
         data-testid={dataTestId}
       >
-        Place order
+        {label}
       </Button>
       <ErrorMessage
         error={errorMessage}
@@ -166,7 +171,7 @@ const StripePaymentButton = ({
   )
 }
 
-const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
+const ManualTestPaymentButton = ({ notReady, label }: { notReady: boolean; label: string }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -195,7 +200,7 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
         size="large"
         data-testid="submit-order-button"
       >
-        Place order
+        {label}
       </Button>
       <ErrorMessage
         error={errorMessage}

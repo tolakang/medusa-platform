@@ -17,6 +17,25 @@ export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }
 
+// What the customer chooses between a service's variants (TASKS P3-19): the
+// product's own option, e.g. "Length" for a haircut or "Party size" for a
+// table reservation.
+export function serviceChoiceLabel(product: { options?: { title?: string | null }[] | null }): string {
+  return product.options?.find((o) => o?.title)?.title ?? "Option"
+}
+
+// A service's variants in a stable order: by party size, then length, then
+// title (the Store API doesn't promise an order).
+export function orderedServices<V extends { title?: string | null; metadata?: Meta }>(variants: V[]): V[] {
+  const size = (v: V) => Number(v.metadata?.party_size) || 0
+  return [...variants].sort(
+    (a, b) =>
+      size(a) - size(b) ||
+      (durationMinutes(a) ?? 0) - (durationMinutes(b) ?? 0) ||
+      (a.title ?? "").localeCompare(b.title ?? "")
+  )
+}
+
 // Every item is a booked service (no item needs shipping): checkout has no
 // address or delivery step, only contact (backend F-048).
 // Works for a cart or an order (both have items with requires_shipping).

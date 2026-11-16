@@ -31,7 +31,8 @@ pnpm medusa user -e admin@example.com -p <password>
 # and PAYWAY_API_KEY are set; callback /hooks/payment/payway_payway; add it to the region in the admin.
 # Refunds (and cancelling a paid order) go through PayWay's Refund API with PAYWAY_RSA_PUBLIC_KEY.
 pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)
-pnpm seed:initial                           # optional demo data (EU regions, demo products, publishable key)
+pnpm seed:booking-demo                      # booking-only demo: one service per kind (Haircut, Table reservation) and their categories (TASKS P3-19)
+pnpm seed:initial                           # NOT for this shop: the starter's goods demo (EU region, demo products); kept for tests
 ```
 
 ## Verify (DEV_FLOW §5)
