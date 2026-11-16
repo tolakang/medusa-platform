@@ -59,14 +59,16 @@ medusaIntegrationTestRunner({
         })
         await auth.confirmAuthVerification({ code: code! })
       }
-      const register = async (email: string) =>
-        (await api.post("/auth/provider/emailpass/register", { email, password: "provider-pass-1" }, { headers: freshIp() }))
-          .data.token as string
-      const login = async (email: string) =>
-        bearer(
-          (await api.post("/auth/provider/emailpass", { email, password: "provider-pass-1" }, { headers: freshIp() })).data
-            .token as string
-        )
+      const register = async (email: string) => {
+        const res = await call(api.post("/auth/provider/emailpass/register", { email, password: "provider-pass-1" }, { headers: freshIp() }))
+        expect([email, res.status, res.data?.message]).toEqual([email, 200, undefined])
+        return res.data.token as string
+      }
+      const login = async (email: string) => {
+        const res = await call(api.post("/auth/provider/emailpass", { email, password: "provider-pass-1" }, { headers: freshIp() }))
+        expect([email, res.status, res.data?.message]).toEqual([email, 200, undefined])
+        return bearer(res.data.token as string)
+      }
       // An approved partner, signed in.
       const partner = async (email: string, name: string) => {
         const created = await api.post("/providers", { name }, bearer(await register(email)))
@@ -78,12 +80,12 @@ medusaIntegrationTestRunner({
       }
       // An accepted staff member for an existing calendar, signed in.
       const staff = async (email: string, name: string, resource_id: string) => {
-        const invited = await api.post("/admin/booking/providers", { name, email, resource_id }, admin)
-        await api.post(
-          "/providers/accept",
-          { invite_code: invited.data.provider.invite_code },
-          bearer(await register(email))
+        const invited = await call(api.post("/admin/booking/providers", { name, email, resource_id }, admin))
+        expect([invited.status, invited.data?.message]).toEqual([201, undefined])
+        const accepted = await call(
+          api.post("/providers/accept", { invite_code: invited.data.provider.invite_code }, bearer(await register(email)))
         )
+        expect([accepted.status, accepted.data?.message]).toEqual([200, undefined])
         await confirmEmail(email)
         return login(email)
       }
@@ -110,8 +112,9 @@ medusaIntegrationTestRunner({
           app_metadata: { user_id: user.id },
         })
         await container.resolve(Modules.AUTH).updateProvider("emailpass", { entity_id: email, password: "supersecret1" })
-        const { data } = await api.post("/auth/user/emailpass", { email, password: "supersecret1" })
-        admin = bearer(data.token)
+        const signedIn = await call(api.post("/auth/user/emailpass", { email, password: "supersecret1" }))
+        expect([signedIn.status, signedIn.data?.message]).toEqual([200, undefined])
+        admin = bearer(signedIn.data.token)
       })
 
       it("a partner gets a calendar, sets hours and days off, and adds a service customers can book", async () => {
@@ -228,7 +231,8 @@ medusaIntegrationTestRunner({
         const [sophea] = await booking().listBookingResources({ name: "Sophea" })
         const auth = await staff("sophea@spa.test", "Sophea", sophea.id)
 
-        const resources = await api.get("/providers/me/resources", auth)
+        const resources = await call(api.get("/providers/me/resources", auth))
+        expect([resources.status, resources.data?.message]).toEqual([200, undefined])
         expect(resources.data.resources.map((r: any) => r.id)).toEqual([sophea.id])
         expect(resources.data.resources[0].schedules.length).toBeGreaterThan(0)
 
@@ -237,22 +241,57 @@ medusaIntegrationTestRunner({
         )
         expect(made.status).toBe(201)
         // The admin's calendar shows the same booking.
-        const adminView = await api.get(`/admin/booking/bookings?from=${at("00:00")}&to=${at("23:00")}&resource_id=${sophea.id}`, admin)
+        const adminView = await call(api.get(`/admin/booking/bookings?from=${at("00:00")}&to=${at("23:00")}&resource_id=${sophea.id}`, admin))
+        expect([adminView.status, adminView.data?.message]).toEqual([200, undefined])
         expect(adminView.data.bookings.map((b: any) => b.id)).toEqual([made.data.booking.id])
         const cancelled = await call(api.post(`/providers/me/bookings/${made.data.booking.id}/cancel`, {}, auth))
         expect(cancelled.status).toBe(200)
         expect(cancelled.data).not.toHaveProperty("refunded_amount")
 
+        // One at a time: each request starts only when it is awaited.
         for (const refused of [
-          api.post(`/providers/me/resources/${sophea.id}`, { schedules: [] }, auth),
-          api.post(`/providers/me/resources/${sophea.id}/days-off`, { date: monday }, auth),
-          api.delete(`/providers/me/resources/${sophea.id}/days-off/${monday}`, auth),
-          api.post("/providers/me/services", { title: "My own", lengths: [{ minutes: 30, price: 1 }] }, auth),
+          () => api.post(`/providers/me/resources/${sophea.id}`, { schedules: [] }, auth),
+          () => api.post(`/providers/me/resources/${sophea.id}/days-off`, { date: monday }, auth),
+          () => api.delete(`/providers/me/resources/${sophea.id}/days-off/${monday}`, auth),
+          () => api.post("/providers/me/services", { title: "My own", lengths: [{ minutes: 30, price: 1 }] }, auth),
         ]) {
-          const res = await call(refused)
+          const res = await call(refused())
           expect(res.status).toBe(400)
           expect(res.data.message).toBe(PARTNERS_ONLY_MESSAGE)
         }
+      })
+
+      it("the shop shows an approved partner's public page with their published services only", async () => {
+        const dara = await partner("dara@clinic.test", "Dr. Dara")
+        await api.post("/providers/me", { bio: "General practice.", area: "Siem Reap", phone: "+855 12 345 678" }, dara.auth)
+        const shown = (await api.post("/providers/me/services", { title: "Consultation", lengths: [{ minutes: 30, price: 10 }] }, dara.auth)).data.service
+        const hidden = (await api.post("/providers/me/services", { title: "Home visit", lengths: [{ minutes: 60, price: 30 }] }, dara.auth)).data.service
+        await api.post(`/providers/me/services/${hidden.id}`, { status: "draft" }, dara.auth)
+
+        const page = await call(api.get(`/store/booking/providers/${dara.provider.handle}`, store))
+        expect(page.status).toBe(200)
+        expect(page.data.provider).toEqual({
+          handle: "dr-dara",
+          name: "Dr. Dara",
+          bio: "General practice.",
+          photo: null,
+          area: "Siem Reap",
+          services: [expect.objectContaining({ id: shown.id, title: "Consultation", handle: expect.any(String) })],
+        })
+        // Public data only: no email, phone, rate or status.
+        expect(JSON.stringify(page.data)).not.toMatch(/clinic\.test|345 678|commission|status/)
+        // A publishable key is required, as on every store route.
+        expect((await call(api.get(`/store/booking/providers/${dara.provider.handle}`))).status).toBe(400)
+
+        // Suspended, unknown, pending or staff: nothing.
+        await api.post(`/admin/booking/providers/${dara.provider.id}`, { status: "suspended" }, admin)
+        expect((await call(api.get(`/store/booking/providers/${dara.provider.handle}`, store))).status).toBe(404)
+        expect((await call(api.get("/store/booking/providers/nobody", store))).status).toBe(404)
+        await api.post("/providers", { name: "Waiting" }, bearer(await register("waiting@clinic.test")))
+        expect((await call(api.get("/store/booking/providers/waiting", store))).status).toBe(404)
+        const [sophea] = await booking().listBookingResources({ name: "Sophea" })
+        await staff("sophea@spa.test", "Sophea", sophea.id)
+        expect((await call(api.get("/store/booking/providers/sophea", store))).status).toBe(404)
       })
 
       it("a provider's password reset link opens the portal", async () => {

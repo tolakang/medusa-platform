@@ -53,7 +53,7 @@ export default async function BookingKinds({ region }: { region: HttpTypes.Store
   )
 }
 
-function ServiceCard({ product }: { product: HttpTypes.StoreProduct }) {
+export function ServiceCard({ product }: { product: HttpTypes.StoreProduct }) {
   const { cheapestPrice } = getProductPrice({ product })
   // "From" only when the choices cost different amounts (a haircut by length,
   // not a table whose deposit is the same for every party size).
