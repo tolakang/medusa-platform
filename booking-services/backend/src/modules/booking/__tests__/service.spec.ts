@@ -2,6 +2,7 @@ import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { BOOKING_MODULE } from ".."
 import { Booking } from "../models/booking"
 import { BookingResource } from "../models/booking-resource"
+import { BookingDayOff } from "../models/booking-day-off"
 import { BookingProvider } from "../models/booking-provider"
 import { BookingSchedule } from "../models/booking-schedule"
 import BookingModuleService from "../service"
@@ -12,7 +13,7 @@ jest.setTimeout(60 * 1000)
 // booking (BUILD_PLAN §9.3).
 moduleIntegrationTestRunner<BookingModuleService>({
   moduleName: BOOKING_MODULE,
-  moduleModels: [BookingProvider, BookingResource, BookingSchedule, Booking],
+  moduleModels: [BookingDayOff, BookingProvider, BookingResource, BookingSchedule, Booking],
   resolve: "./src/modules/booking",
   testSuite: ({ service }) => {
     type ResourceType = "staff" | "room" | "equipment" | "venue"

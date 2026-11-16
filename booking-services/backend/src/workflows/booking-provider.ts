@@ -237,11 +237,22 @@ const createPartnerStep = createStep(
       bio: input.bio ?? null,
       area: input.area ?? null,
     })
-    return new StepResponse(provider, provider.id)
+    // Their own calendar (P3-32): no hours yet, and it offers no times until
+    // the partner is approved (providerServes).
+    const resource = await booking.createBookingResources({
+      name,
+      type: "staff",
+      capacity: 1,
+      timezone: defaultTimezone(),
+      provider_id: provider.id,
+    })
+    return new StepResponse(provider, { providerId: provider.id, resourceId: resource.id })
   },
-  async (id, { container }) => {
-    if (id) {
-      await service(container).deleteBookingProviders(id)
+  async (created, { container }) => {
+    if (created) {
+      const booking = service(container)
+      await booking.deleteBookingResources(created.resourceId)
+      await booking.deleteBookingProviders(created.providerId)
     }
   }
 )

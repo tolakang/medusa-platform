@@ -8,10 +8,11 @@ import {
   MedusaService,
 } from "@medusajs/framework/utils"
 import { Booking } from "./models/booking"
+import { BookingDayOff } from "./models/booking-day-off"
 import { BookingProvider } from "./models/booking-provider"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
-import { candidateSlots, fitsWeeklyHours, isValidTimeZone, peakOverlap } from "./utils/slot"
+import { candidateSlots, fitsWeeklyHours, isValidTimeZone, peakOverlap, toLocalTime } from "./utils/slot"
 
 export type BookingModuleOptions = {
   // Minutes a pending hold blocks its slot (BOOKING_HOLD_MINUTES, plan §9.3).
@@ -115,6 +116,7 @@ export function providerServes(provider?: { role: string; status: string } | nul
 
 // TASKS P3-01 (data), P3-03 (isSlotAvailable, createHold).
 class BookingModuleService extends MedusaService({
+  BookingDayOff,
   BookingProvider,
   BookingResource,
   BookingSchedule,
@@ -422,12 +424,16 @@ class BookingModuleService extends MedusaService({
     }
     const resources = await this.listBookingResources(
       { id: input.resource_ids, is_active: true },
-      { relations: ["schedules", "provider"] },
+      { relations: ["schedules", "provider", "days_off"] },
       sharedContext
     )
     const free: FreeSlot[] = []
     for (const resource of resources) {
       if (!providerServes(resource.provider) || !isValidTimeZone(resource.timezone)) {
+        continue
+      }
+      // A day off (P3-32) offers no times.
+      if ((resource.days_off ?? []).some((d) => d.date === input.date)) {
         continue
       }
       const slots = candidateSlots(
@@ -497,7 +503,7 @@ class BookingModuleService extends MedusaService({
 
     const [resource] = await this.listBookingResources(
       { id: input.resource_id },
-      { relations: ["schedules", "provider"] },
+      { relations: ["schedules", "provider", "days_off"] },
       sharedContext
     )
     if (!resource) {
@@ -511,6 +517,11 @@ class BookingModuleService extends MedusaService({
       return no("outside_hours", resource.capacity)
     }
     if (!fitsWeeklyHours(starts, ends, resource.timezone, resource.schedules ?? [])) {
+      return no("outside_hours", resource.capacity)
+    }
+    // A day off (P3-32), by the local day the booking starts on.
+    const localDay = toLocalTime(starts, resource.timezone).date
+    if ((resource.days_off ?? []).some((d) => d.date === localDay)) {
       return no("outside_hours", resource.capacity)
     }
 

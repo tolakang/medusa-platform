@@ -1,5 +1,6 @@
 import { model } from "@medusajs/framework/utils"
 import { Booking } from "./booking"
+import { BookingDayOff } from "./booking-day-off"
 import { BookingProvider } from "./booking-provider"
 import { BookingSchedule } from "./booking-schedule"
 
@@ -27,9 +28,12 @@ export const BookingResource = model
     bookings: model.hasMany(() => Booking, {
       mappedBy: "resource",
     }),
+    days_off: model.hasMany(() => BookingDayOff, {
+      mappedBy: "resource",
+    }),
   })
   // Weekly hours belong to the resource; bookings are kept as history.
-  .cascades({ delete: ["schedules"] })
+  .cascades({ delete: ["schedules", "days_off"] })
   .checks([
     {
       name: "booking_resource_capacity_positive",

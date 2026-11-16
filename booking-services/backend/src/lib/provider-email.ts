@@ -11,7 +11,7 @@ export const PROVIDER_EMAIL_NOT_VERIFIED_MESSAGE =
 
 // PROVIDER_PORTAL_URL, or the first PROVIDER_CORS origin.
 export function providerPortalLink(
-  page: "verify-account",
+  page: "verify-account" | "reset-password",
   params: Record<string, string>,
   env: NodeJS.ProcessEnv = process.env
 ): string | null {
