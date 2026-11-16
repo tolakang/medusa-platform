@@ -2,6 +2,8 @@
 
 A click-by-click setup of the Booking services category on a Dokploy **staging** project, written like the POS runbook (`../pos/DOKPLOY_STAGING.md`), which passed on 2026-11-14. You don't need any other runbook. Do the steps **in order**. Each step ends with **Check** (what you should see) and **Reply with** (what to send so I can verify from here). Field names are Dokploy's own, verified on the Ecommerce and POS staging (findings F-011, F-012, F-016, F-017, F-019, F-020, F-021, F-086).
 
+> **Quick start:** to set up a new Booking staging from zero on `medusa-platform`, follow [STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md) (Parts A–H); this runbook is the full reference behind it.
+
 **Never paste secret values** in chat: keys, passwords, connection URLs, tokens.
 
 When you're done you have one Dokploy project, `booking-staging`, with **5 services**:
