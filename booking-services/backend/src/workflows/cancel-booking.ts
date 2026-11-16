@@ -8,6 +8,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { refundPaymentWorkflow } from "@medusajs/medusa/core-flows"
+import { providerCommissionOnCancelWorkflow } from "./provider-commission"
 import { cancelDecision } from "../lib/booking-cancel-policy"
 import { bookingIdOf } from "../lib/booking-cart-rules"
 import { BOOKING_MODULE } from "../modules/booking"
@@ -186,6 +187,15 @@ export const cancelBookingWorkflow = createWorkflow(
         created_by: input.created_by,
       }))
       refundPaymentWorkflow.runAsStep({ input: refundInput })
+    })
+
+    // A partner booking's commission: cancelled with a refund, kept without
+    // one (TASKS P3-33).
+    providerCommissionOnCancelWorkflow.runAsStep({
+      input: transform({ plan }, ({ plan }) => ({
+        booking_id: plan.booking_id,
+        refunded_amount: plan.refund?.amount ?? 0,
+      })),
     })
 
     const result = transform({ booking, plan }, ({ booking, plan }) => ({

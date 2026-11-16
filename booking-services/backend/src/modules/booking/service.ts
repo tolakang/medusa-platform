@@ -8,7 +8,9 @@ import {
   MedusaService,
 } from "@medusajs/framework/utils"
 import { Booking } from "./models/booking"
+import { BookingCommission } from "./models/booking-commission"
 import { BookingDayOff } from "./models/booking-day-off"
+import { BookingPayout } from "./models/booking-payout"
 import { BookingProvider } from "./models/booking-provider"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
@@ -116,7 +118,9 @@ export function providerServes(provider?: { role: string; status: string } | nul
 
 // TASKS P3-01 (data), P3-03 (isSlotAvailable, createHold).
 class BookingModuleService extends MedusaService({
+  BookingCommission,
   BookingDayOff,
+  BookingPayout,
   BookingProvider,
   BookingResource,
   BookingSchedule,

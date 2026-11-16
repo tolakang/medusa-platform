@@ -19,6 +19,8 @@ import {
   PostAdminBookingResource,
   PostAdminBookingResourceUpdate,
   PostAdminBookingStaffInvite,
+  PostAdminCommissionSettle,
+  PostAdminPayoutPay,
   PostAdminWalkIn,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
@@ -116,6 +118,17 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/booking/providers/:id',
       middlewares: [validateAndTransformBody(PostAdminBookingProvider)],
+    },
+    {
+      // Partner money (TASKS P3-33): settle a held commission, mark a payout paid.
+      method: ['POST'],
+      matcher: '/admin/booking/commissions/:id/settle',
+      middlewares: [validateAndTransformBody(PostAdminCommissionSettle)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/payouts/:id/pay',
+      middlewares: [validateAndTransformBody(PostAdminPayoutPay)],
     },
     {
       // Provider portal routes (TASKS P3-31): PROVIDER_CORS, then a signed-in
