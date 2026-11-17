@@ -19,6 +19,10 @@ export const BookingResource = model
     // are local to this zone; booking times are stored in UTC.
     timezone: model.text(),
     is_active: model.boolean().default(true),
+    // Booked by whole days (a rental, kind E, TASKS P3-22): no weekly hours;
+    // a booking runs from local midnight to local midnight, and capacity is
+    // how many of the item the shop has.
+    whole_days: model.boolean().default(false),
     // The provider who serves it (P3-31): a staff member's own calendar or a
     // partner's resource. Null = the shop's own (admin only).
     provider: model.belongsTo(() => BookingProvider, { mappedBy: "resources" }).nullable(),

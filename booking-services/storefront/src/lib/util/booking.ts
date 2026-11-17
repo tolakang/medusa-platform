@@ -45,6 +45,18 @@ export function zonePrice<T extends { from_zone_id: string; to_zone_id: string }
   return rows.find((r) => (r.from_zone_id === a && r.to_zone_id === b) || (r.from_zone_id === b && r.to_zone_id === a)) ?? null
 }
 
+// A rental by dates (kind E, TASKS P3-22): product metadata.booking_kind "E"
+// and metadata.rental_unit "day" (start to end inclusive) or "night"
+// (check-in to check-out).
+export type RentalUnit = "day" | "night"
+export function rentalUnit(product: { metadata?: Meta } | null | undefined): RentalUnit | null {
+  if (product?.metadata?.booking_kind !== "E") {
+    return null
+  }
+  const unit = product.metadata?.rental_unit
+  return unit === "day" || unit === "night" ? unit : null
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }
@@ -88,6 +100,8 @@ export type ItemBooking = {
   // A trip (kind C, TASKS P3-21): drop-off and what was priced.
   dropoff: string | null
   trip: string | null
+  // A rental (kind E, P3-22): shown by its dates (in `trip`), not by times.
+  wholeDays: boolean
 }
 
 export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemBooking | null {
@@ -103,6 +117,7 @@ export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemB
     address: typeof m.booking_address === "string" ? m.booking_address : null,
     dropoff: typeof m.booking_dropoff_address === "string" ? m.booking_dropoff_address : null,
     trip: typeof m.booking_trip === "string" ? m.booking_trip : null,
+    wholeDays: m.booking_whole_days === true,
   }
 }
 

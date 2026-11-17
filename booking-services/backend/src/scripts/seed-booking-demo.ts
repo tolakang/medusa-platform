@@ -47,6 +47,12 @@ export const BOOKING_KIND_CATEGORIES = [
     description: "Moving, transfers and a driver for the day: from your pickup to your drop-off.",
   },
   {
+    kind: "E",
+    name: "Rentals",
+    handle: "rentals",
+    description: "Rent by the day or the night: tents, costumes, vehicles and rooms.",
+  },
+  {
     kind: "G",
     name: "Table reservations",
     handle: "table-reservations",
@@ -322,6 +328,86 @@ export default async function seedBookingDemo({ container }: { container: Medusa
       })
     }
     logger.info(`Booking demo: service "${product.title}" (by zones: ${zoneNames.join(", ")}) created.`)
+  }
+
+  // ---- E. Rental by dates (TASKS P3-22) -----------------------------------
+  // The variant's price is per day or night (product metadata.rental_unit);
+  // each size is an item (a resource booked by whole days) whose capacity is
+  // how many of it the shop has.
+  const RENTALS = [
+    {
+      handle: "wedding-tent",
+      title: "Wedding tent",
+      description: "A tent with tables and chairs, set up at your place. Rented by the day, from the start date to the end date.",
+      unit: "day",
+      option: "Tent size",
+      sizes: [
+        { title: "20 guests", sku: "TENT-20", price: 35, count: 3 },
+        { title: "50 guests", sku: "TENT-50", price: 60, count: 2 },
+      ],
+    },
+    {
+      handle: "guesthouse-room",
+      title: "Guesthouse room",
+      description: "A quiet room in our guesthouse. Priced per night, from check-in to check-out.",
+      unit: "night",
+      option: "Room",
+      sizes: [
+        { title: "Double room", sku: "ROOM-DOUBLE", price: 25, count: 4 },
+        { title: "Family room", sku: "ROOM-FAMILY", price: 40, count: 2 },
+      ],
+    },
+  ]
+  for (const r of RENTALS) {
+    if (await exists(r.handle)) {
+      logger.info(`Booking demo: "${r.handle}" already exists; skipped.`)
+      continue
+    }
+    const {
+      result: [option],
+    } = await createProductOptionsWorkflow(container).run({
+      input: { product_options: [{ title: r.option, values: r.sizes.map((x) => x.title) }] },
+    })
+    const {
+      result: [product],
+    } = await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: r.title,
+            handle: r.handle,
+            description: r.description,
+            status: ProductStatus.PUBLISHED,
+            metadata: { booking_kind: "E", rental_unit: r.unit },
+            options: [{ id: option.id }],
+            sales_channels: [{ id: salesChannelId }],
+            category_ids: [categoryIds.E],
+            variants: r.sizes.map((x) => ({
+              title: x.title,
+              sku: x.sku,
+              manage_inventory: false,
+              options: { [r.option]: x.title },
+              // The storefront reads a service by its length; a day or a night.
+              metadata: { duration_minutes: 1440 },
+              prices: [{ amount: x.price, currency_code: "usd" }],
+            })),
+          },
+        ],
+      },
+    })
+    for (const x of r.sizes) {
+      await createBookingResourceWorkflow(container).run({
+        input: {
+          name: `${r.title}: ${x.title}`,
+          type: "equipment",
+          capacity: x.count,
+          timezone: defaultTimezone(),
+          whole_days: true,
+          variant_ids: [product.variants.find((v) => v.title === x.title)!.id],
+        },
+      })
+    }
+    logger.info(`Booking demo: rental "${r.title}" (per ${r.unit}) created.`)
   }
 
   // ---- G. Table reservation: a time and a party size ----------------------

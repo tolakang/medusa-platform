@@ -25,8 +25,11 @@ export const PostBookingCart = z.object({
   cart_id: z.string().min(1),
   variant_id: z.string().min(1),
   resource_id: z.string().min(1),
-  starts_at: instant,
-  ends_at: instant,
+  // Times for every kind but a rental, which sends its dates (P3-22).
+  starts_at: instant.optional(),
+  ends_at: instant.optional(),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
   notes: z.string().max(500).nullish(),
   // A visit at the customer's place (kind B, P3-20).
   address: z.string().max(300).nullish(),

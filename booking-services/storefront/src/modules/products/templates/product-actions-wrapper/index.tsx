@@ -1,7 +1,8 @@
 import { listProducts } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
-import { isServiceProduct } from "@lib/util/booking"
+import { isServiceProduct, rentalUnit } from "@lib/util/booking"
 import BookingPicker from "@modules/products/components/booking-picker"
+import RentalPicker from "@modules/products/components/rental-picker"
 import ProductActions from "@modules/products/components/product-actions"
 
 /**
@@ -24,6 +25,10 @@ export default async function ProductActionsWrapper({
   }
 
   // A bookable service gets the slot picker instead of "Add to cart" (P3-13).
+  // A rental picks dates, not a time (TASKS P3-22).
+  if (rentalUnit(product)) {
+    return <RentalPicker product={product} />
+  }
   if (isServiceProduct(product)) {
     return <BookingPicker product={product} />
   }

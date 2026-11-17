@@ -158,3 +158,55 @@ export async function listTripZones(variantId: string): Promise<TripZones> {
     .fetch<TripZones>("/store/booking/zones", { query: { variant_id: variantId }, cache: "no-store" })
     .catch(() => ({ zones: [], prices: [] }))
 }
+
+// A rental's availability for its dates (TASKS P3-22).
+export type RentalAvailability = {
+  unit: "day" | "night"
+  units: number
+  items: { resource_id: string; resource_name: string; remaining: number }[]
+}
+
+export async function rentalAvailability(
+  variantId: string,
+  startDate: string,
+  endDate: string
+): Promise<{ data?: RentalAvailability; error?: string }> {
+  return sdk.client
+    .fetch<RentalAvailability>("/store/booking/rentals", {
+      query: { variant_id: variantId, start_date: startDate, end_date: endDate },
+      cache: "no-store",
+    })
+    .then((data) => ({ data }))
+    .catch((e) => ({ error: e?.message ?? "Could not check these dates." }))
+}
+
+// Holds a rental for its dates and adds it to the cart (P3-22).
+export async function addRentalToCart(input: {
+  countryCode: string
+  variantId: string
+  resourceId: string
+  startDate: string
+  endDate: string
+}): Promise<{ error?: string }> {
+  const cart = await getOrSetCart(input.countryCode)
+  if (!cart) {
+    return { error: "Could not open your cart." }
+  }
+  try {
+    await sdk.client.fetch("/store/booking/cart", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: {
+        cart_id: cart.id,
+        variant_id: input.variantId,
+        resource_id: input.resourceId,
+        start_date: input.startDate,
+        end_date: input.endDate,
+      },
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "These dates can't be booked." }
+  }
+  revalidateTag(await getCacheTag("carts"), { expire: 0 })
+  return {}
+}
