@@ -21,11 +21,75 @@ import { sdk } from "../../lib/sdk"
 // resource, in the resource's own time zone, with walk-in booking and
 // cancellation. Reads GET /admin/booking/resources and
 // GET /admin/booking/bookings; writes POST /admin/booking/bookings (walk-in)
-// and POST /admin/booking/bookings/:id/cancel (policy and refund, P3-08).
+// and POST /admin/booking/bookings/:id/cancel (policy and refund, P3-08),
+// and POST /admin/booking/bookings/:id/move (assign or move, P3-28).
 
 type Resource = { id: string; name: string; type: string; capacity: number; timezone: string; is_active: boolean }
 
 const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
+
+// Assign a booking to another calendar or move it to another time (TASKS
+// P3-28). The time is in the chosen calendar's zone; the length stays.
+const MoveForm = ({
+  booking,
+  resources,
+  current,
+  onDone,
+  onClose,
+}: {
+  booking: CalendarBooking
+  resources: Resource[]
+  current: Resource
+  onDone: () => void
+  onClose: () => void
+}) => {
+  const local = new Intl.DateTimeFormat("en-CA", {
+    timeZone: current.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(booking.starts_at))
+  const part = (t: string) => local.find((p) => p.type === t)?.value ?? ""
+  const [to, setTo] = useState(current.id)
+  const [day, setDay] = useState(`${part("year")}-${part("month")}-${part("day")}`)
+  const [time, setTime] = useState(`${part("hour")}:${part("minute")}`)
+  const target = resources.find((r) => r.id === to) ?? current
+  const move = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch(`/admin/booking/bookings/${booking.id}/move`, {
+        method: "POST",
+        body: {
+          ...(to !== current.id ? { resource_id: to } : {}),
+          starts_at: walkInTimes(day, time, 1, target.timezone).starts_at,
+        },
+      }),
+    onSuccess: onDone,
+  })
+  return (
+    <div className="mt-2 flex flex-col gap-2" data-testid="move-form">
+      <Select value={to} onValueChange={setTo}>
+        <Select.Trigger><Select.Value /></Select.Trigger>
+        <Select.Content>
+          {resources.map((r) => (
+            <Select.Item key={r.id} value={r.id}>{r.name}</Select.Item>
+          ))}
+        </Select.Content>
+      </Select>
+      <div className="flex gap-2">
+        <Input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+        <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+      </div>
+      <div className="flex gap-2">
+        <Button size="small" isLoading={move.isPending} onClick={() => move.mutate()}>Move</Button>
+        <Button size="small" variant="secondary" onClick={onClose}>Close</Button>
+      </div>
+      {move.error && <Text size="xsmall" className="text-ui-fg-error">{errorText(move.error)}</Text>}
+    </div>
+  )
+}
 
 const BookingsPage = () => {
   const queryClient = useQueryClient()
@@ -35,6 +99,7 @@ const BookingsPage = () => {
   const [walkIn, setWalkIn] = useState({ time: "09:00", minutes: "60", notes: "" })
   // Two-step cancel in the page (no browser dialog): Cancel → Yes, cancel.
   const [confirming, setConfirming] = useState<string | null>(null)
+  const [moving, setMoving] = useState<string | null>(null)
 
   const { data: resourcesData, isLoading: loadingResources } = useQuery({
     queryKey: ["booking-resources"],
@@ -203,6 +268,23 @@ const BookingsPage = () => {
                     >
                       Cancel
                     </Button>
+                  )}
+                  {(b.status === "confirmed" || b.status === "pending") && confirming !== b.id && moving !== b.id && (
+                    <Button size="small" variant="transparent" className="mt-1 ml-3 px-0" onClick={() => setMoving(b.id)}>
+                      Move
+                    </Button>
+                  )}
+                  {moving === b.id && (
+                    <MoveForm
+                      booking={b}
+                      resources={resources}
+                      current={resource!}
+                      onClose={() => setMoving(null)}
+                      onDone={() => {
+                        setMoving(null)
+                        refresh()
+                      }}
+                    />
                   )}
                   {confirming === b.id && (
                     <div className="mt-1 flex flex-wrap items-center gap-2">

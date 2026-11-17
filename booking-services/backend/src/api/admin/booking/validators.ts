@@ -95,3 +95,12 @@ export const PostAdminQuote = z.object({
   valid_days: z.number().int().min(1).max(60).optional(),
 })
 export type PostAdminQuoteType = z.infer<typeof PostAdminQuote>
+
+// Assign or move a booking (TASKS P3-28).
+export const PostAdminBookingMove = z
+  .object({
+    resource_id: z.string().min(1).optional(),
+    starts_at: z.string().datetime({ offset: true }).optional(),
+  })
+  .refine((v) => v.resource_id || v.starts_at, { message: "Give a calendar or a start." })
+export type PostAdminBookingMoveType = z.infer<typeof PostAdminBookingMove>

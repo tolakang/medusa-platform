@@ -13,7 +13,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment, setDepositBeforePayment } from './booking-payment'
-import { PostBookingCancel, PostBookingCart, PostQuoteAccept, PostQuoteRequest } from './store/booking/validators'
+import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostQuoteRequest } from './store/booking/validators'
 import {
   PostAdminBookingProvider,
   PostAdminBookingResource,
@@ -25,6 +25,7 @@ import {
   PostAdminZone,
   PostAdminZonePrice,
   PostAdminQuote,
+  PostAdminBookingMove,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
 import {
@@ -220,6 +221,17 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/booking/cancel',
       middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingCancel)],
+    },
+    {
+      // Move a booking (TASKS P3-28): the customer reschedules, staff assign.
+      method: ['POST'],
+      matcher: '/store/booking/move',
+      middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingMove)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/bookings/:id/move',
+      middlewares: [validateAndTransformBody(PostAdminBookingMove)],
     },
     {
       // Quotes (TASKS P3-27): a signed-in customer asks, accepts, declines.

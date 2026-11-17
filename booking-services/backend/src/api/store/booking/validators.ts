@@ -58,3 +58,12 @@ export const PostQuoteRequest = z.object({
 export type PostQuoteRequestType = z.infer<typeof PostQuoteRequest>
 export const PostQuoteAccept = z.object({ cart_id: z.string().min(1) })
 export type PostQuoteAcceptType = z.infer<typeof PostQuoteAccept>
+
+// Move a booking (TASKS P3-28).
+export const PostBookingMove = z.object({
+  booking_id: z.string().min(1),
+  resource_id: z.string().min(1),
+  starts_at: instant,
+  ends_at: instant,
+})
+export type PostBookingMoveType = z.infer<typeof PostBookingMove>
