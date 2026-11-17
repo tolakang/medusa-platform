@@ -7,6 +7,8 @@ import { BookingDayOff } from "../models/booking-day-off"
 import { BookingPayout } from "../models/booking-payout"
 import { BookingProvider } from "../models/booking-provider"
 import { BookingSchedule } from "../models/booking-schedule"
+import { BookingZone } from "../models/booking-zone"
+import { BookingZonePrice } from "../models/booking-zone-price"
 import BookingModuleService from "../service"
 
 jest.setTimeout(60 * 1000)
@@ -15,7 +17,7 @@ jest.setTimeout(60 * 1000)
 // booking (BUILD_PLAN §9.3).
 moduleIntegrationTestRunner<BookingModuleService>({
   moduleName: BOOKING_MODULE,
-  moduleModels: [BookingCommission, BookingDayOff, BookingPayout, BookingProvider, BookingResource, BookingSchedule, Booking],
+  moduleModels: [BookingCommission, BookingDayOff, BookingPayout, BookingProvider, BookingResource, BookingSchedule, BookingZone, BookingZonePrice, Booking],
   resolve: "./src/modules/booking",
   testSuite: ({ service }) => {
     type ResourceType = "staff" | "room" | "equipment" | "venue"

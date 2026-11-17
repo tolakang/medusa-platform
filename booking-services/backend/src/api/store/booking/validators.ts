@@ -30,5 +30,10 @@ export const PostBookingCart = z.object({
   notes: z.string().max(500).nullish(),
   // A visit at the customer's place (kind B, P3-20).
   address: z.string().max(300).nullish(),
+  // A trip (kind C, P3-21): drop-off, and hours or the two zones.
+  dropoff_address: z.string().max(300).nullish(),
+  hours: z.number().int().min(1).max(24).nullish(),
+  from_zone_id: z.string().min(1).nullish(),
+  to_zone_id: z.string().min(1).nullish(),
 })
 export type PostBookingCartType = z.infer<typeof PostBookingCart>

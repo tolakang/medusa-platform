@@ -1,4 +1,4 @@
-import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MathBN, MedusaError, QueryContext } from "@medusajs/framework/utils"
 import {
   createStep,
   createWorkflow,
@@ -9,6 +9,7 @@ import {
 import { addToCartWorkflow } from "@medusajs/medusa/core-flows"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
+import { hoursPrice, tripPricing, validHours, zonePriceBetween } from "../lib/trip-pricing"
 
 // TASKS P3-04 (BUILD_PLAN §9.3): put a booked time slot in a cart. The hold
 // and the line item are created together: if adding the line item fails, the
@@ -24,8 +25,13 @@ export type AddBookingToCartInput = {
   starts_at: string | Date
   ends_at: string | Date
   notes?: string | null
-  // For a visit at the customer's place (kind B, P3-20).
+  // For a visit at the customer's place (kind B, P3-20); a trip's pickup.
   address?: string | null
+  // A trip (kind C, P3-21): drop-off, and hours or the two zones.
+  dropoff_address?: string | null
+  hours?: number | null
+  from_zone_id?: string | null
+  to_zone_id?: string | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -39,6 +45,9 @@ export const BOOKING_ITEM_METADATA = {
   timezone: "booking_timezone",
   // A visit's address (kind B, P3-20), shown with the item.
   address: "booking_address",
+  // A trip (kind C, P3-21): drop-off and what was priced ("3 hours", "Town → Airport").
+  dropoff_address: "booking_dropoff_address",
+  trip: "booking_trip",
 } as const
 
 // A service done at the customer's place: its product has
@@ -50,6 +59,10 @@ export const isVisitService = (product?: { metadata?: Record<string, unknown> | 
 export const VISIT_ADDRESS_MIN = 5
 export const VISIT_ADDRESS_MESSAGE = "Tell us the address for the visit."
 export const VISIT_PROBLEM_MESSAGE = "Tell us what needs doing."
+export const TRIP_ADDRESSES_MESSAGE = "Tell us the pickup and the drop-off address."
+export const TRIP_HOURS_MESSAGE = "Choose how many hours you need the vehicle."
+export const TRIP_ZONES_MESSAGE = "There is no price for a trip between these two areas with this vehicle."
+export const TRIP_LENGTH_MESSAGE = "This time doesn't match the trip's length. Choose the time again."
 
 type Prepared = {
   cart_id: string
@@ -64,6 +77,10 @@ type Prepared = {
   ends_at: string
   notes: string | null
   address: string | null
+  dropoff_address: string | null
+  // A trip's price, set by the backend (kind C, P3-21); null = the variant's.
+  unit_price: number | null
+  trip_label: string | null
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -77,7 +94,7 @@ const prepareBookingStep = createStep(
       data: [cart],
     } = await query.graph({
       entity: "cart",
-      fields: ["id", "customer_id", "completed_at"],
+      fields: ["id", "customer_id", "completed_at", "region_id", "currency_code"],
       filters: { id: input.cart_id },
     })
     if (!cart) {
@@ -127,10 +144,66 @@ const prepareBookingStep = createStep(
       throw new MedusaError(MedusaError.Types.INVALID_DATA, VISIT_PROBLEM_MESSAGE)
     }
 
+    // A trip (kind C, TASKS P3-21): both addresses, and the price and length
+    // from its pricing mode, never from the request.
+    const trip = tripPricing(variant?.product)
+    const pickup = trip ? (input.address ?? "").trim() : ""
+    const dropoff = trip ? (input.dropoff_address ?? "").trim() : ""
+    let unit_price: number | null = null
+    let trip_label: string | null = null
+    let trip_minutes: number | null = null
+    if (trip) {
+      if (pickup.length < VISIT_ADDRESS_MIN || dropoff.length < VISIT_ADDRESS_MIN) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, TRIP_ADDRESSES_MESSAGE)
+      }
+      const { data: priced } = (await query.graph({
+        entity: "product_variant",
+        fields: ["id", "metadata", "calculated_price.calculated_amount"],
+        filters: { id: input.variant_id },
+        context: { calculated_price: QueryContext({ region_id: cart.region_id, currency_code: cart.currency_code }) },
+      })) as unknown as { data: { metadata?: Record<string, unknown> | null; calculated_price?: { calculated_amount?: number | null } }[] }
+      const vehicle = priced[0]
+      if (trip === "hours") {
+        const hours = validHours(input.hours, vehicle)
+        const hourly = vehicle?.calculated_price?.calculated_amount
+        if (hours === null || hourly == null) {
+          throw new MedusaError(MedusaError.Types.INVALID_DATA, TRIP_HOURS_MESSAGE)
+        }
+        unit_price = hoursPrice(hourly, hours)
+        trip_minutes = hours * 60
+        trip_label = hours === 1 ? "1 hour" : `${hours} hours`
+      } else {
+        const booking = container.resolve<BookingModuleService>(BOOKING_MODULE)
+        const rows = await booking.listBookingZonePrices(
+          { variant_id: input.variant_id },
+          { relations: ["from_zone", "to_zone"] }
+        )
+        const row = zonePriceBetween(
+          rows.filter((r) => r.currency_code === cart.currency_code) as unknown as (typeof rows[number] & {
+            from_zone_id: string
+            to_zone_id: string
+          })[],
+          input.from_zone_id ?? "",
+          input.to_zone_id ?? ""
+        )
+        if (!row) {
+          throw new MedusaError(MedusaError.Types.INVALID_DATA, TRIP_ZONES_MESSAGE)
+        }
+        const name = (id: string | null | undefined) =>
+          [row.from_zone, row.to_zone].find((z) => z?.id === id)?.name ?? ""
+        unit_price = MathBN.convert(row.amount, 2).toNumber()
+        trip_minutes = row.minutes
+        trip_label = `${name(input.from_zone_id)} → ${name(input.to_zone_id)}`
+      }
+    }
+
     const starts_at = new Date(input.starts_at)
     const ends_at = new Date(input.ends_at)
     if (Number.isNaN(starts_at.getTime()) || Number.isNaN(ends_at.getTime())) {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, "The booking times are not valid dates.")
+    }
+    if (trip_minutes !== null && ends_at.getTime() - starts_at.getTime() !== trip_minutes * 60_000) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, TRIP_LENGTH_MESSAGE)
     }
 
     const prepared: Prepared = {
@@ -143,7 +216,10 @@ const prepareBookingStep = createStep(
       starts_at: starts_at.toISOString(),
       ends_at: ends_at.toISOString(),
       notes: notes || null,
-      address: address || null,
+      address: (trip ? pickup : address) || null,
+      dropoff_address: dropoff || null,
+      unit_price,
+      trip_label,
     }
     return new StepResponse(prepared)
   }
@@ -162,6 +238,7 @@ const createBookingHoldStep = createStep(
       customer_id: input.customer_id,
       notes: input.notes,
       address: input.address,
+      dropoff_address: input.dropoff_address,
     })
     return new StepResponse(hold, hold.id)
   },
@@ -221,6 +298,8 @@ export const addBookingToCartWorkflow = createWorkflow(
         {
           variant_id: prepared.variant_id,
           quantity: 1,
+          // A trip's price from its pricing mode (P3-21); kept by Medusa as a custom price.
+          ...(prepared.unit_price !== null ? { unit_price: prepared.unit_price } : {}),
           metadata: {
             [BOOKING_ITEM_METADATA.booking_id]: hold.id,
             [BOOKING_ITEM_METADATA.resource_id]: prepared.resource_id,
@@ -229,6 +308,8 @@ export const addBookingToCartWorkflow = createWorkflow(
             [BOOKING_ITEM_METADATA.resource_name]: prepared.resource_name,
             [BOOKING_ITEM_METADATA.timezone]: prepared.timezone,
             ...(prepared.address ? { [BOOKING_ITEM_METADATA.address]: prepared.address } : {}),
+            ...(prepared.dropoff_address ? { [BOOKING_ITEM_METADATA.dropoff_address]: prepared.dropoff_address } : {}),
+            ...(prepared.trip_label ? { [BOOKING_ITEM_METADATA.trip]: prepared.trip_label } : {}),
           },
         },
       ],

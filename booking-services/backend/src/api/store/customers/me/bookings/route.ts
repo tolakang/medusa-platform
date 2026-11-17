@@ -16,6 +16,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "ends_at",
       "notes",
       "address",
+      "dropoff_address",
       "hold_expires_at",
       "resource.name",
       "resource.timezone",

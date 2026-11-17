@@ -22,6 +22,8 @@ import {
   PostAdminCommissionSettle,
   PostAdminPayoutPay,
   PostAdminWalkIn,
+  PostAdminZone,
+  PostAdminZonePrice,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
 import {
@@ -118,6 +120,17 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/booking/providers/:id',
       middlewares: [validateAndTransformBody(PostAdminBookingProvider)],
+    },
+    {
+      // Trip zones and their prices (TASKS P3-21).
+      method: ['POST'],
+      matcher: '/admin/booking/zones',
+      middlewares: [validateAndTransformBody(PostAdminZone)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/zone-prices',
+      middlewares: [validateAndTransformBody(PostAdminZonePrice)],
     },
     {
       // Partner money (TASKS P3-33): settle a held commission, mark a payout paid.

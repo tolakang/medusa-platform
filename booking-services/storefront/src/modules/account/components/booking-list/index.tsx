@@ -68,7 +68,7 @@ export default function BookingList({
             </Text>
             {b.address && (
               <Text className="txt-small text-ui-fg-subtle" data-testid="booking-address">
-                At: {b.address}
+                {b.dropoff_address ? `From: ${b.address} · To: ${b.dropoff_address}` : `At: ${b.address}`}
               </Text>
             )}
           </div>

@@ -6,6 +6,8 @@ import {
   createProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { createBookingResourceWorkflow, defaultTimezone } from "../workflows/booking-resource"
+import { BOOKING_MODULE } from "../modules/booking"
+import type BookingModuleService from "../modules/booking/service"
 
 // Booking-only demo data (TASKS P3-12, P3-19; plan §9.3 "Booking-only shop"):
 // one example per booking kind, each in its own product category, so the
@@ -37,6 +39,12 @@ export const BOOKING_KIND_CATEGORIES = [
     name: "Visits at your place",
     handle: "home-visits",
     description: "We come to you: repairs, cleaning and installation.",
+  },
+  {
+    kind: "C",
+    name: "Trips",
+    handle: "trips",
+    description: "Moving, transfers and a driver for the day: from your pickup to your drop-off.",
   },
   {
     kind: "G",
@@ -184,6 +192,136 @@ export default async function seedBookingDemo({ container }: { container: Medusa
       },
     })
     logger.info(`Booking demo: service "${product.title}" and technician ${technician.name} created.`)
+  }
+
+  // ---- C. Trip A → B: pickup, drop-off, a vehicle size (TASKS P3-21) -----
+  // Two pricing modes (plan D12): a moving truck by the hour (variant price =
+  // per hour, metadata.min_hours) and an airport transfer by zones (a price
+  // table between areas). Vehicles are resources whose capacity is how many
+  // of that size the shop has. Every day 06:00-22:00.
+  const tripHours = [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, start_time: "06:00", end_time: "22:00" }))
+  if (await exists("moving-truck")) {
+    logger.info('Booking demo: "moving-truck" already exists; skipped.')
+  } else {
+    const TRUCKS = [
+      { title: "Small truck", sku: "TRUCK-S", hourly: 15, min: 2, fleet: 2, name: "Small trucks" },
+      { title: "Large truck", sku: "TRUCK-L", hourly: 25, min: 3, fleet: 1, name: "Large truck" },
+    ]
+    const {
+      result: [size],
+    } = await createProductOptionsWorkflow(container).run({
+      input: { product_options: [{ title: "Truck size", values: TRUCKS.map((t) => t.title) }] },
+    })
+    const {
+      result: [product],
+    } = await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Moving truck",
+            handle: "moving-truck",
+            description: "A truck with a driver and two helpers to move your home or office. Priced by the hour.",
+            status: ProductStatus.PUBLISHED,
+            metadata: { booking_kind: "C", trip_pricing: "hours" },
+            options: [{ id: size.id }],
+            sales_channels: [{ id: salesChannelId }],
+            category_ids: [categoryIds.C],
+            variants: TRUCKS.map((t) => ({
+              title: t.title,
+              sku: t.sku,
+              manage_inventory: false,
+              options: { "Truck size": t.title },
+              // The slot length the picker starts from; the customer picks the hours.
+              metadata: { duration_minutes: t.min * 60, min_hours: t.min },
+              prices: [{ amount: t.hourly, currency_code: "usd" }],
+            })),
+          },
+        ],
+      },
+    })
+    for (const t of TRUCKS) {
+      await createBookingResourceWorkflow(container).run({
+        input: {
+          name: t.name,
+          type: "equipment",
+          capacity: t.fleet,
+          timezone: defaultTimezone(),
+          schedules: tripHours,
+          variant_ids: [product.variants.find((v) => v.title === t.title)!.id],
+        },
+      })
+    }
+    logger.info(`Booking demo: service "${product.title}" (by the hour) created.`)
+  }
+
+  if (await exists("airport-transfer")) {
+    logger.info('Booking demo: "airport-transfer" already exists; skipped.')
+  } else {
+    const CARS = [
+      { title: "Car (up to 3)", sku: "TRANSFER-CAR", fleet: 3, name: "Cars", factor: 1 },
+      { title: "Van (up to 10)", sku: "TRANSFER-VAN", fleet: 1, name: "Van", factor: 2 },
+    ]
+    const {
+      result: [vehicle],
+    } = await createProductOptionsWorkflow(container).run({
+      input: { product_options: [{ title: "Vehicle", values: CARS.map((c) => c.title) }] },
+    })
+    const {
+      result: [product],
+    } = await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Airport transfer",
+            handle: "airport-transfer",
+            description: "A driver takes you between the airport, town and the temples. The price is set by the two areas.",
+            status: ProductStatus.PUBLISHED,
+            metadata: { booking_kind: "C", trip_pricing: "zones" },
+            options: [{ id: vehicle.id }],
+            sales_channels: [{ id: salesChannelId }],
+            category_ids: [categoryIds.C],
+            variants: CARS.map((c) => ({
+              title: c.title,
+              sku: c.sku,
+              manage_inventory: false,
+              options: { Vehicle: c.title },
+              metadata: { duration_minutes: 60 },
+              // Shown as "from"; the zone table sets the real price.
+              prices: [{ amount: 12 * c.factor, currency_code: "usd" }],
+            })),
+          },
+        ],
+      },
+    })
+    const booking = container.resolve<BookingModuleService>(BOOKING_MODULE)
+    const zoneNames = ["Siem Reap town", "Airport", "Angkor temples"]
+    const zones = new Map<string, string>()
+    for (const [rank, name] of zoneNames.entries()) {
+      const [found] = await booking.listBookingZones({ name })
+      zones.set(name, (found ?? (await booking.createBookingZones({ name, rank }))).id)
+    }
+    const TRIPS = [
+      { from: "Siem Reap town", to: "Airport", amount: 12, minutes: 60 },
+      { from: "Siem Reap town", to: "Angkor temples", amount: 10, minutes: 60 },
+      { from: "Airport", to: "Angkor temples", amount: 18, minutes: 90 },
+    ]
+    for (const c of CARS) {
+      const variant = product.variants.find((v) => v.title === c.title)!
+      await booking.createBookingZonePrices(
+        TRIPS.map((t) => ({
+          variant_id: variant.id,
+          from_zone_id: zones.get(t.from)!,
+          to_zone_id: zones.get(t.to)!,
+          amount: t.amount * c.factor,
+          currency_code: "usd",
+          minutes: t.minutes,
+        }))
+      )
+      await createBookingResourceWorkflow(container).run({
+        input: { name: c.name, type: "equipment", capacity: c.fleet, timezone: defaultTimezone(), schedules: tripHours, variant_ids: [variant.id] },
+      })
+    }
+    logger.info(`Booking demo: service "${product.title}" (by zones: ${zoneNames.join(", ")}) created.`)
   }
 
   // ---- G. Table reservation: a time and a party size ----------------------

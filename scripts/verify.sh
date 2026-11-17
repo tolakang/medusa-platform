@@ -72,7 +72,12 @@ for D in $DEPLOYABLES; do
   case "$D" in
     */backend)
       step "$D" "tests: unit, modules, http (real Postgres)"
-      (cd "$D" && pnpm test:unit && pnpm test:integration:modules && pnpm test:integration:http)
+      # HTTP tests in VERIFY_HTTP_SHARDS halves (default 2), each a fresh Node
+      # process: one process for every spec ran out of heap on the CI runner
+      # (Booking, P3-21). Jest 29 --shard splits the spec files.
+      SHARDS="${VERIFY_HTTP_SHARDS:-2}"
+      (cd "$D" && pnpm test:unit && pnpm test:integration:modules \
+        && for i in $(seq 1 "$SHARDS"); do pnpm test:integration:http --shard="$i/$SHARDS" || exit 1; done)
       ;;
     *)
       # Clients with their own unit tests (e.g. pos/pos-app, TASKS P2-10).
