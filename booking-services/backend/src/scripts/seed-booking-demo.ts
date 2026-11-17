@@ -3,9 +3,12 @@ import { ContainerRegistrationKeys, MedusaError, ProductStatus } from "@medusajs
 import {
   createProductCategoriesWorkflow,
   createProductOptionsWorkflow,
+  createInventoryLevelsWorkflow,
   createProductsWorkflow,
+  updateInventoryItemsWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { createBookingResourceWorkflow, defaultTimezone } from "../workflows/booking-resource"
+import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
@@ -57,6 +60,12 @@ export const BOOKING_KIND_CATEGORIES = [
     name: "Rentals",
     handle: "rentals",
     description: "Rent by the day or the night: tents, costumes, vehicles and rooms.",
+  },
+  {
+    kind: "F",
+    name: "Events",
+    handle: "events",
+    description: "Shows and workshops on set dates. Choose a section and how many tickets.",
   },
   {
     kind: "G",
@@ -507,6 +516,90 @@ export default async function seedBookingDemo({ container }: { container: Medusa
       })
     }
     logger.info(`Booking demo: rental "${r.title}" (per ${r.unit}) created.`)
+  }
+
+  // ---- F. Event tickets by section (TASKS P3-24) --------------------------
+  // As Medusa's Ticket Booking recipe, by section (owner, 2026-11-17): each
+  // date and section is a variant whose inventory item holds that section's
+  // seats (shipping off), so Medusa itself stops overselling; tickets with
+  // codes are issued when the order is placed.
+  if (await exists("apsara-dance-show")) {
+    logger.info('Booking demo: "apsara-dance-show" already exists; skipped.')
+  } else {
+    // The next two Saturdays at least a week away, 19:00 in the shop's zone.
+    const saturdays = [0, 7].map((plus) => {
+      const d = new Date(Date.now() + 7 * 86_400_000)
+      d.setUTCDate(d.getUTCDate() + ((6 - d.getUTCDay() + 7) % 7) + plus)
+      return d.toISOString().slice(0, 10)
+    })
+    const label = (date: string) =>
+      new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) + " 19:00"
+    const SECTIONS = [
+      { title: "Standard", price: 15, seats: 60 },
+      { title: "VIP", price: 30, seats: 20 },
+    ]
+    const {
+      data: [location],
+    } = await query.graph({ entity: "stock_location", fields: ["id"] })
+    if (!location) {
+      throw new MedusaError(MedusaError.Types.NOT_FOUND, "No stock location. Run `pnpm seed` first.")
+    }
+    const options = await createProductOptionsWorkflow(container).run({
+      input: {
+        product_options: [
+          { title: "Show date", values: saturdays.map(label) },
+          { title: "Section", values: SECTIONS.map((x) => x.title) },
+        ],
+      },
+    })
+    const [dateOption, sectionOption] = options.result
+    const {
+      result: [product],
+    } = await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Apsara dance show",
+            handle: "apsara-dance-show",
+            description: "Classical Khmer dance with live music, about 90 minutes. Pick a date, a section and how many tickets.",
+            status: ProductStatus.PUBLISHED,
+            metadata: { booking_kind: "F" },
+            options: [{ id: dateOption.id }, { id: sectionOption.id }],
+            sales_channels: [{ id: salesChannelId }],
+            category_ids: [categoryIds.F],
+            variants: saturdays.flatMap((date) =>
+              SECTIONS.map((x) => ({
+                title: `${label(date)} · ${x.title}`,
+                sku: `APSARA-${date}-${x.title.toUpperCase()}`,
+                manage_inventory: true,
+                options: { "Show date": label(date), Section: x.title },
+                metadata: { event_starts_at: zonedTimeToUtc(date, "19:00", defaultTimezone()).toISOString() },
+                prices: [{ amount: x.price, currency_code: "usd" }],
+              }))
+            ),
+          },
+        ],
+      },
+    })
+    const { data: variants } = await query.graph({
+      entity: "product_variant",
+      fields: ["id", "title", "inventory_items.inventory_item_id"],
+      filters: { product_id: product.id },
+    })
+    const items = variants.map((v) => ({
+      id: (v.inventory_items ?? [])[0]!.inventory_item_id as string,
+      seats: SECTIONS.find((x) => v.title.endsWith(x.title))!.seats,
+    }))
+    // A ticket isn't shipped.
+    await updateInventoryItemsWorkflow(container).run({
+      input: { updates: items.map((i) => ({ id: i.id, requires_shipping: false })) },
+    })
+    await createInventoryLevelsWorkflow(container).run({
+      input: {
+        inventory_levels: items.map((i) => ({ inventory_item_id: i.id, location_id: location.id, stocked_quantity: i.seats })),
+      },
+    })
+    logger.info(`Booking demo: event "${product.title}" on ${saturdays.join(", ")} created.`)
   }
 
   // ---- G. Table reservation: a time and a party size ----------------------

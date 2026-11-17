@@ -44,7 +44,7 @@ medusaIntegrationTestRunner({
 
       it("sells only the booking services, one per kind, each in its kind's category", async () => {
         const { data: products } = await api.get("/store/products?fields=handle,categories.handle", store)
-        expect(products.products.map((p: { handle: string }) => p.handle).sort()).toEqual(["air-conditioner-service", "airport-transfer", "angkor-sunrise-tour", "bus-siem-reap-phnom-penh", "guesthouse-room", "haircut", "moving-truck", "table-reservation", "wedding-tent"])
+        expect(products.products.map((p: { handle: string }) => p.handle).sort()).toEqual(["air-conditioner-service", "airport-transfer", "angkor-sunrise-tour", "apsara-dance-show", "bus-siem-reap-phnom-penh", "guesthouse-room", "haircut", "moving-truck", "table-reservation", "wedding-tent"])
 
         // As the storefront reads them: the kinds by rank, then each kind's
         // services through /store/products?category_id=.
@@ -61,9 +61,10 @@ medusaIntegrationTestRunner({
           ["trips", expect.arrayContaining(["airport-transfer", "moving-truck"])],
           ["departures", expect.arrayContaining(["angkor-sunrise-tour", "bus-siem-reap-phnom-penh"])],
           ["rentals", expect.arrayContaining(["guesthouse-room", "wedding-tent"])],
+          ["events", ["apsara-dance-show"]],
           ["table-reservations", ["table-reservation"]],
         ])
-        expect(BOOKING_KIND_CATEGORIES.map((c) => c.kind)).toEqual(["A", "B", "C", "D", "E", "G"])
+        expect(BOOKING_KIND_CATEGORIES.map((c) => c.kind)).toEqual(["A", "B", "C", "D", "E", "F", "G"])
       })
 
       it("a visit at your place needs the address and the problem, and the calendar shows them (P3-20)", async () => {
@@ -136,7 +137,7 @@ medusaIntegrationTestRunner({
         const { data: locations } = await query.graph({ entity: "stock_location", fields: ["name"] })
         expect(locations.map((l) => l.name)).not.toContain("European Warehouse")
         const { data: categories } = await query.graph({ entity: "product_category", fields: ["handle"] })
-        expect(categories.map((c) => c.handle).sort()).toEqual(["appointments", "departures", "home-visits", "rentals", "table-reservations", "trips"])
+        expect(categories.map((c) => c.handle).sort()).toEqual(["appointments", "departures", "events", "home-visits", "rentals", "table-reservations", "trips"])
       })
 
       it("books a table by party size: one table of that size per booking", async () => {
@@ -186,7 +187,7 @@ medusaIntegrationTestRunner({
         const before = await count()
         await seedBookingDemo({ container })
         expect(await count()).toEqual(before)
-        expect(before).toEqual({ products: 9, categories: 6, variants: 17 })
+        expect(before).toEqual({ products: 10, categories: 7, variants: 21 })
       })
     })
   },

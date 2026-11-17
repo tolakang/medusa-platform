@@ -1,5 +1,5 @@
 // This app's email templates for the shared Resend provider (./index.ts): its
-// booking reminder, then the core's order and account emails (BUILD_PLAN.md §4.2).
+// booking reminder and event tickets, then the core's order and account emails (BUILD_PLAN.md §4.2).
 import { renderCoreEmail } from "@medusa-platform/medusa-core/lib/resend/emails"
 import type { RenderedEmail } from "@medusa-platform/medusa-core/lib/resend/service"
 import {
@@ -7,6 +7,7 @@ import {
   bookingReminderEmail,
   type BookingReminderData,
 } from "../../lib/booking-reminder"
+import { EVENT_TICKETS_TEMPLATE, eventTicketsEmail, type EventTicketsData } from "../../lib/event-tickets"
 
 export function renderEmail(
   template: string | null | undefined,
@@ -15,6 +16,10 @@ export function renderEmail(
   // 24-hour booking reminder (TASKS P3-09).
   if (template === BOOKING_REMINDER_TEMPLATE && (data as BookingReminderData | null)?.booking) {
     return bookingReminderEmail(data as BookingReminderData)
+  }
+  // Event tickets with their codes (TASKS P3-24).
+  if (template === EVENT_TICKETS_TEMPLATE && (data as EventTicketsData | null)?.tickets?.length) {
+    return eventTicketsEmail(data as EventTicketsData)
   }
   return renderCoreEmail(template, data)
 }

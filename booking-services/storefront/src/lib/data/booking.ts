@@ -214,3 +214,13 @@ export async function addRentalToCart(input: {
   revalidateTag(await getCacheTag("carts"), { expire: 0 })
   return {}
 }
+
+// An order's event tickets with their codes (TASKS P3-24).
+export type EventTicket = { code: string; event_title: string; label: string; status: "valid" | "used" }
+
+export async function listOrderTickets(orderId: string): Promise<EventTicket[]> {
+  return sdk.client
+    .fetch<{ tickets: EventTicket[] }>("/store/booking/tickets", { query: { order_id: orderId }, cache: "no-store" })
+    .then((r) => r.tickets)
+    .catch(() => [])
+}

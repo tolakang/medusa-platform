@@ -6,7 +6,7 @@ import Refresh from "@modules/common/icons/refresh"
 
 import Accordion from "./accordion"
 import { HttpTypes } from "@medusajs/types"
-import { isServiceProduct } from "@lib/util/booking"
+import { isEventProduct, isServiceProduct } from "@lib/util/booking"
 
 type ProductTabsProps = {
   product: HttpTypes.StoreProduct
@@ -15,7 +15,8 @@ type ProductTabsProps = {
 const ProductTabs = ({ product }: ProductTabsProps) => {
   // A booked service has no material, weight or shipping to describe
   // (TASKS P3-19, booking-only shop).
-  if (isServiceProduct(product)) {
+  // Nor an event ticket (P3-24).
+  if (isServiceProduct(product) || isEventProduct(product)) {
     return null
   }
   const tabs = [

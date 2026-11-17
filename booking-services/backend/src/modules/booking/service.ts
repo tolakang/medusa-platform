@@ -14,6 +14,7 @@ import { BookingPayout } from "./models/booking-payout"
 import { BookingProvider } from "./models/booking-provider"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
+import { BookingTicket } from "./models/booking-ticket"
 import { BookingZone } from "./models/booking-zone"
 import { BookingZonePrice } from "./models/booking-zone-price"
 import { candidateSlots, fitsWeeklyHours, isValidTimeZone, peakOverlap, toLocalTime } from "./utils/slot"
@@ -134,6 +135,7 @@ class BookingModuleService extends MedusaService({
   BookingProvider,
   BookingResource,
   BookingSchedule,
+  BookingTicket,
   BookingZone,
   BookingZonePrice,
   Booking,
