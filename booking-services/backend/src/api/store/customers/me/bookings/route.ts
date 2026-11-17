@@ -19,10 +19,14 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "dropoff_address",
       "seats",
       "hold_expires_at",
+      "resource.id",
       "resource.name",
       "resource.timezone",
       "order.id",
       "order.display_id",
+      // The service, for rescheduling (P3-28): the order line of this booking.
+      "order.items.variant_id",
+      "order.items.metadata",
     ],
     filters: { customer_id: req.auth_context.actor_id },
     pagination: { order: { starts_at: "DESC" }, take: 100 },
@@ -31,6 +35,13 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   res.json({
     bookings: data
       .filter((b) => !(b.status === "pending" && b.hold_expires_at && new Date(b.hold_expires_at).getTime() <= now))
-      .map(({ hold_expires_at: _hold, ...b }) => ({ ...b, order: b.order ?? null })),
+      .map(({ hold_expires_at: _hold, order, ...b }) => {
+        const item = (order?.items ?? []).find((i) => (i?.metadata as Record<string, unknown> | null)?.booking_id === b.id)
+        return {
+          ...b,
+          variant_id: item?.variant_id ?? null,
+          order: order ? { id: order.id, display_id: order.display_id } : null,
+        }
+      }),
   })
 }

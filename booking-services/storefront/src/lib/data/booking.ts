@@ -29,8 +29,10 @@ export type MyBooking = {
   address?: string | null
   dropoff_address?: string | null
   seats?: number
-  resource: { name: string; timezone: string } | null
+  resource: { id?: string; name: string; timezone: string } | null
   order: { id: string; display_id: number | null } | null
+  // The service booked, for changing the time (P3-28).
+  variant_id?: string | null
 }
 
 export async function listSlots(
@@ -318,6 +320,20 @@ export async function declineQuote(quoteId: string): Promise<{ error?: string }>
     await sdk.client.fetch(`/store/booking/quotes/${quoteId}/decline`, { method: "POST", headers: await getAuthHeaders() })
   } catch (e) {
     return { error: (e as { message?: string })?.message ?? "Could not decline this quote." }
+  }
+  return {}
+}
+
+// Move a booking to another free time (TASKS P3-28).
+export async function moveMyBooking(bookingId: string, slot: Slot): Promise<{ error?: string }> {
+  try {
+    await sdk.client.fetch("/store/booking/move", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: { booking_id: bookingId, resource_id: slot.resource_id, starts_at: slot.starts_at, ends_at: slot.ends_at },
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "This booking can't be moved." }
   }
   return {}
 }

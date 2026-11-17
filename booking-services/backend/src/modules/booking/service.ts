@@ -49,6 +49,8 @@ export type SlotRequest = {
   allow_started?: boolean
   // Places the booking needs at once (seats on a departure, P3-23); default 1.
   seats?: number
+  // A booking being moved doesn't count against its new time (P3-28).
+  ignore_booking_id?: string
 }
 
 export type SlotUnavailableReason =
@@ -181,6 +183,57 @@ class BookingModuleService extends MedusaService({
     @MedusaContext() sharedContext: Context<EntityManager> = {}
   ): Promise<boolean> {
     return (await this.checkSlot_(input, sharedContext)).available
+  }
+
+  // Moves a booking to another time and/or resource (TASKS P3-28), with the
+  // same lock and check as a new hold; the booking doesn't count against
+  // itself. The 24-hour reminder is sent again for the new time.
+  @InjectManager()
+  async moveBooking(
+    input: { id: string; resource_id: string; starts_at: Date; ends_at: Date; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ) {
+    await this.moveBooking_(input, sharedContext)
+    return await this.retrieveBooking(input.id, {}, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async moveBooking_(
+    input: { id: string; resource_id: string; starts_at: Date; ends_at: Date; now?: Date },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<void> {
+    await sharedContext.transactionManager!.execute(
+      "SELECT id FROM booking_resource WHERE id = ? AND deleted_at IS NULL FOR UPDATE",
+      [input.resource_id]
+    )
+    const [booking] = await this.listBookings({ id: input.id }, { select: ["id", "seats"] }, sharedContext)
+    if (!booking) {
+      throw new MedusaError(MedusaError.Types.NOT_FOUND, `Booking ${input.id} was not found.`)
+    }
+    const check = await this.checkSlot_(
+      {
+        resource_id: input.resource_id,
+        starts_at: input.starts_at,
+        ends_at: input.ends_at,
+        now: input.now,
+        seats: booking.seats ?? 1,
+        ignore_booking_id: booking.id,
+      },
+      sharedContext
+    )
+    if (!check.available) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, slotUnavailableMessage(check.reason))
+    }
+    await this.updateBookings(
+      {
+        id: booking.id,
+        resource_id: input.resource_id,
+        starts_at: input.starts_at,
+        ends_at: input.ends_at,
+        reminder_sent_at: null,
+      },
+      sharedContext
+    )
   }
 
   // Creates a `pending` booking that holds the slot for holdMinutes. The
@@ -574,6 +627,7 @@ class BookingModuleService extends MedusaService({
     const taking = overlapping.filter(
       (b) =>
         !(input.ignore_cart_id && b.cart_id === input.ignore_cart_id) &&
+        !(input.ignore_booking_id && b.id === input.ignore_booking_id) &&
         !(
           b.status === "pending" &&
           b.hold_expires_at &&
