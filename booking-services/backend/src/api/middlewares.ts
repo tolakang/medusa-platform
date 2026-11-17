@@ -13,7 +13,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment, setDepositBeforePayment } from './booking-payment'
-import { PostBookingCancel, PostBookingCart } from './store/booking/validators'
+import { PostBookingCancel, PostBookingCart, PostQuoteAccept, PostQuoteRequest } from './store/booking/validators'
 import {
   PostAdminBookingProvider,
   PostAdminBookingResource,
@@ -24,6 +24,7 @@ import {
   PostAdminWalkIn,
   PostAdminZone,
   PostAdminZonePrice,
+  PostAdminQuote,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
 import {
@@ -219,6 +220,27 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/booking/cancel',
       middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingCancel)],
+    },
+    {
+      // Quotes (TASKS P3-27): a signed-in customer asks, accepts, declines.
+      method: ['GET', 'POST'],
+      matcher: '/store/booking/quotes*',
+      middlewares: [authenticate('customer', ['session', 'bearer'])],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/booking/quotes',
+      middlewares: [validateAndTransformBody(PostQuoteRequest)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/booking/quotes/:id/accept',
+      middlewares: [validateAndTransformBody(PostQuoteAccept)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/quotes/:id',
+      middlewares: [validateAndTransformBody(PostAdminQuote)],
     },
     {
       // Hold a time and add it to the cart (TASKS P3-10, F-047).

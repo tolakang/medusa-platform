@@ -146,7 +146,7 @@ medusaIntegrationTestRunner({
         ])
         const { data: categories } = await api.get("/store/product-categories?handle=appointments&fields=id", store)
         const listed = await api.get(`/store/products?category_id[]=${categories.product_categories[0].id}&fields=handle,title`, store)
-        expect(listed.data.products.map((p: { title: string }) => p.title).sort()).toEqual(["Consultation", "Haircut"])
+        expect(listed.data.products.map((p: { title: string }) => p.title).sort()).toEqual(["Consultation", "Full house move", "Haircut"])
 
         // Its times are the partner's own hours: 09:00-12:00 = three hours.
         const hour = service.variants[1].id
@@ -181,7 +181,7 @@ medusaIntegrationTestRunner({
         expect(updated.data.service.variants.find((v: any) => v.id === hour).prices[0].amount).toBe(20)
         await api.post(`/providers/me/services/${service.id}`, { status: "draft" }, dara.auth)
         const hidden = await api.get(`/store/products?category_id[]=${categories.product_categories[0].id}&fields=title`, store)
-        expect(hidden.data.products.map((p: { title: string }) => p.title)).toEqual(["Haircut"])
+        expect(hidden.data.products.map((p: { title: string }) => p.title).sort()).toEqual(["Full house move", "Haircut"])
       })
 
       it("a provider sees and serves only their own calendars, bookings and services", async () => {

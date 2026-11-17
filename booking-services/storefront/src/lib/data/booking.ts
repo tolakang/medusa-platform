@@ -239,3 +239,85 @@ export async function listExtras(handles: string[], countryCode: string): Promis
     .then(({ response }) => response.products)
     .catch(() => [])
 }
+
+// Quotes (TASKS P3-27).
+export type MyQuote = {
+  id: string
+  service: string | null
+  details: string
+  address: string | null
+  dropoff_address: string | null
+  wished_starts_at: string
+  status: "requested" | "quoted" | "accepted" | "declined" | "expired"
+  amount: number | null
+  currency_code: string | null
+  starts_at: string | null
+  ends_at: string | null
+  reply: string | null
+  valid_until: string | null
+}
+
+export async function listMyQuotes(): Promise<MyQuote[] | null> {
+  const headers = await getAuthHeaders()
+  if (!("authorization" in headers)) {
+    return null
+  }
+  return sdk.client
+    .fetch<{ quotes: MyQuote[] }>("/store/booking/quotes", { headers, cache: "no-store" })
+    .then((r) => r.quotes)
+    .catch(medusaError)
+}
+
+export async function requestQuote(input: {
+  variantId: string
+  details: string
+  wishedStartsAt: string
+  address?: string
+  dropoffAddress?: string
+}): Promise<{ error?: string }> {
+  try {
+    await sdk.client.fetch("/store/booking/quotes", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: {
+        variant_id: input.variantId,
+        details: input.details,
+        wished_starts_at: input.wishedStartsAt,
+        ...(input.address ? { address: input.address } : {}),
+        ...(input.dropoffAddress ? { dropoff_address: input.dropoffAddress } : {}),
+      },
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not send your request." }
+  }
+  return {}
+}
+
+// Book an accepted quote into the cart, then go to the cart.
+export async function acceptQuote(countryCode: string, quoteId: string): Promise<{ error?: string }> {
+  const cart = await getOrSetCart(countryCode)
+  if (!cart) {
+    return { error: "Could not open your cart." }
+  }
+  const headers = await getAuthHeaders()
+  try {
+    if (!cart.customer_id) {
+      // The quote is the customer's: the cart must be theirs too.
+      await sdk.store.cart.transferCart(cart.id, {}, headers)
+    }
+    await sdk.client.fetch(`/store/booking/quotes/${quoteId}/accept`, { method: "POST", headers, body: { cart_id: cart.id } })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "This quote can't be booked." }
+  }
+  revalidateTag(await getCacheTag("carts"), { expire: 0 })
+  redirect(`/${countryCode}/cart`)
+}
+
+export async function declineQuote(quoteId: string): Promise<{ error?: string }> {
+  try {
+    await sdk.client.fetch(`/store/booking/quotes/${quoteId}/decline`, { method: "POST", headers: await getAuthHeaders() })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not decline this quote." }
+  }
+  return {}
+}

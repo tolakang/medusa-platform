@@ -3,6 +3,7 @@ import { confirmOrderBookingsWorkflow } from "../workflows/confirm-order-booking
 import { recordProviderCommissionsWorkflow } from "../workflows/provider-commission"
 import { issueEventTicketsWorkflow } from "../workflows/issue-event-tickets"
 import { createBookingBalanceWorkflow } from "../workflows/booking-deposits"
+import { acceptPaidQuotesWorkflow } from "../workflows/booking-quotes"
 
 // TASKS P3-07: confirm an order's bookings and link them to it; then record
 // the shop's commission on each partner booking (P3-33). The order
@@ -17,6 +18,8 @@ export default async function bookingOrderPlacedHandler({
   await issueEventTicketsWorkflow(container).run({ input: { order_id: data.id } })
   // The balance after a deposit, to pay at the shop or venue (P3-26).
   await createBookingBalanceWorkflow(container).run({ input: { order_id: data.id } })
+  // A booked quote is accepted (P3-27).
+  await acceptPaidQuotesWorkflow(container).run({ input: { order_id: data.id } })
 }
 
 export const config: SubscriberConfig = { event: "order.placed" }

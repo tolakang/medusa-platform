@@ -11,6 +11,7 @@ import { Booking } from "./models/booking"
 import { BookingCommission } from "./models/booking-commission"
 import { BookingDayOff } from "./models/booking-day-off"
 import { BookingPayout } from "./models/booking-payout"
+import { BookingQuote } from "./models/booking-quote"
 import { BookingProvider } from "./models/booking-provider"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
@@ -132,6 +133,7 @@ class BookingModuleService extends MedusaService({
   BookingCommission,
   BookingDayOff,
   BookingPayout,
+  BookingQuote,
   BookingProvider,
   BookingResource,
   BookingSchedule,

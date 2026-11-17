@@ -734,6 +734,59 @@ export default async function seedBookingDemo({ container }: { container: Medusa
       `Booking demo: service "${product.title}" with ${SIZES.map((s) => `${s.name} (${s.tables})`).join(", ")} created.`
     )
   }
+
+  // ---- Quote first (TASKS P3-27): priced on request ------------------------
+  // metadata.quote_only: the customer describes the job and staff send a
+  // price, a crew and a time; the accepted quote is booked at that price. The
+  // variant price is 0 and the storefront shows "Price on quote".
+  if (await exists("full-house-move")) {
+    logger.info('Booking demo: "full-house-move" already exists; skipped.')
+  } else {
+    const {
+      result: [move],
+    } = await createProductOptionsWorkflow(container).run({
+      input: { product_options: [{ title: "Move", values: ["Full house move"] }] },
+    })
+    const {
+      result: [product],
+    } = await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Full house move",
+            handle: "full-house-move",
+            description:
+              "A crew packs, carries and moves your whole home. Every move is different: tell us what you have and where, and we send you a price and a time.",
+            status: ProductStatus.PUBLISHED,
+            metadata: { quote_only: true },
+            options: [{ id: move.id }],
+            sales_channels: [{ id: salesChannelId }],
+            category_ids: [categoryIds.A],
+            variants: [
+              {
+                title: "Full house move",
+                sku: "MOVE-FULL",
+                manage_inventory: false,
+                options: { Move: "Full house move" },
+                metadata: { duration_minutes: 240 },
+                prices: [{ amount: 0, currency_code: "usd" }],
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const { result: crew } = await createBookingResourceWorkflow(container).run({
+      input: {
+        name: "Moving crew",
+        type: "staff",
+        timezone: defaultTimezone(),
+        schedules: [1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, start_time: "07:00", end_time: "18:00" })),
+        variant_ids: product.variants.map((v) => v.id),
+      },
+    })
+    logger.info(`Booking demo: quote-only service "${product.title}" and ${crew.name} created.`)
+  }
 }
 
 // The kind categories, created when missing (by handle). Returns their ids.
