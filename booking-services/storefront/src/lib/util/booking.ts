@@ -57,6 +57,16 @@ export function rentalUnit(product: { metadata?: Meta } | null | undefined): Ren
   return unit === "day" || unit === "night" ? unit : null
 }
 
+// A scheduled departure (kind D, TASKS P3-23): product metadata.booking_kind
+// "D"; a booking takes several seats, up to metadata.max_seats (default 10).
+export function isDepartureService(product: { metadata?: Meta } | null | undefined): boolean {
+  return product?.metadata?.booking_kind === "D"
+}
+export function maxSeats(product: { metadata?: Meta } | null | undefined): number {
+  const n = Number(product?.metadata?.max_seats)
+  return Number.isInteger(n) && n >= 1 && n <= 100 ? n : 10
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }
@@ -102,6 +112,8 @@ export type ItemBooking = {
   trip: string | null
   // A rental (kind E, P3-22): shown by its dates (in `trip`), not by times.
   wholeDays: boolean
+  // Seats on a departure (kind D, P3-23); 1 for everything else.
+  seats: number
 }
 
 export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemBooking | null {
@@ -118,6 +130,7 @@ export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemB
     dropoff: typeof m.booking_dropoff_address === "string" ? m.booking_dropoff_address : null,
     trip: typeof m.booking_trip === "string" ? m.booking_trip : null,
     wholeDays: m.booking_whole_days === true,
+    seats: Number.isInteger(Number(m.booking_seats)) && Number(m.booking_seats) > 1 ? Number(m.booking_seats) : 1,
   }
 }
 

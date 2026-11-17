@@ -71,9 +71,10 @@ export function fitsWeeklyHours(
   )
 }
 
-export type Interval = { starts_at: Date; ends_at: Date }
+// weight: how many places the interval takes (a booking's seats, P3-23; default 1).
+export type Interval = { starts_at: Date; ends_at: Date; weight?: number }
 
-// Largest number of the given bookings that overlap at one moment inside
+// Largest number of places (seats) the given bookings take at one moment inside
 // [from, to). Touching intervals (one ends when the next starts) don't
 // overlap. This is what a capacity limit is about: with capacity 2, bookings
 // 10:00-11:00 and 11:00-12:00 still leave room for 10:00-12:00.
@@ -83,7 +84,8 @@ export function peakOverlap(intervals: Interval[], from: Date, to: Date): number
     const s = Math.max(i.starts_at.getTime(), from.getTime())
     const e = Math.min(i.ends_at.getTime(), to.getTime())
     if (s < e) {
-      events.push([s, 1], [e, -1])
+      const w = i.weight ?? 1
+      events.push([s, w], [e, -w])
     }
   }
   // Ends before starts at the same instant, so touching intervals don't add up.

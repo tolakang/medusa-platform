@@ -6,7 +6,9 @@ import {
   formatSlotTime,
   bookingStatusLabel,
   isServiceOnlyCart,
+  isDepartureService,
   isVisitService,
+  maxSeats,
   rentalUnit,
   itemBooking,
   localDate,
@@ -45,7 +47,7 @@ describe("booking helpers", () => {
           booking_timezone: PP,
         },
       }),
-      { starts_at: "2026-11-09T03:00:00.000Z", ends_at: "2026-11-09T04:00:00.000Z", resource: "Sophea", timezone: PP, address: null, dropoff: null, trip: null, wholeDays: false }
+      { starts_at: "2026-11-09T03:00:00.000Z", ends_at: "2026-11-09T04:00:00.000Z", resource: "Sophea", timezone: PP, address: null, dropoff: null, trip: null, wholeDays: false, seats: 1 }
     )
     // A visit at the customer's place carries its address (P3-20).
     assert.equal(
@@ -55,6 +57,14 @@ describe("booking helpers", () => {
     assert.equal(isVisitService({ metadata: { booking_kind: "B" } }), true)
     assert.equal(isVisitService({ metadata: { booking_kind: "A" } }), false)
     assert.equal(isVisitService({ metadata: null }), false)
+    // Departures (P3-23).
+    assert.equal(isDepartureService({ metadata: { booking_kind: "D" } }), true)
+    assert.equal(maxSeats({ metadata: { max_seats: 8 } }), 8)
+    assert.equal(maxSeats({ metadata: null }), 10)
+    assert.equal(
+      itemBooking({ metadata: { booking_id: "b", booking_starts_at: "2026-11-09T03:00:00.000Z", booking_seats: 3 } })?.seats,
+      3
+    )
     // Rentals by dates (P3-22).
     assert.equal(rentalUnit({ metadata: { booking_kind: "E", rental_unit: "night" } }), "night")
     assert.equal(rentalUnit({ metadata: { booking_kind: "E" } }), null)

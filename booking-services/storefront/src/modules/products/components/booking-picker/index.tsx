@@ -4,9 +4,11 @@ import { addBookingToCart, listSlots, listTripZones, type Slot, type TripZones }
 import {
   durationMinutes,
   formatSlotTime,
+  isDepartureService,
   isVisitService,
   localDate,
   MAX_TRIP_HOURS,
+  maxSeats,
   minHours,
   orderedServices,
   serviceChoiceLabel,
@@ -56,6 +58,10 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
   const tripMinutes = trip === "hours" ? hours * 60 : trip === "zones" ? zoneRow?.minutes ?? null : undefined
   const tripReady =
     !trip || (address.trim().length >= 5 && dropoff.trim().length >= 5 && (trip === "hours" || !!zoneRow))
+  // A scheduled departure (kind D, P3-23): how many seats, never more than
+  // the departure has left.
+  const departure = isDepartureService(product)
+  const [seats, setSeats] = useState(1)
   const visitReady = trip ? tripReady : !visit || (address.trim().length >= 5 && problem.trim().length > 0)
 
   useEffect(() => {
@@ -94,6 +100,7 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
               ...(trip === "hours" ? { hours } : { fromZoneId: fromZone, toZoneId: toZone }),
             }
           : {}),
+        ...(departure ? { seats } : {}),
       })
       if (result.error) {
         setError(result.error)
@@ -211,6 +218,29 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
           )}
         </div>
       )}
+      {departure && (
+        <label className="flex flex-col gap-y-2">
+          <Text className="txt-compact-small-plus">Seats</Text>
+          <select
+            value={seats}
+            onChange={(e) => {
+              setSeats(Number(e.target.value))
+              setChosen(null)
+            }}
+            className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+            data-testid="booking-seats"
+          >
+            {Array.from({ length: maxSeats(product) }, (_, i) => i + 1).map((n) => (
+              <option key={n} value={n}>
+                {n} {n === 1 ? "seat" : "seats"}
+                {variant?.calculated_price?.calculated_amount != null
+                  ? ` · ${convertToLocale({ amount: variant.calculated_price.calculated_amount * n, currency_code: variant.calculated_price.currency_code ?? "usd" })}`
+                  : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <div className="flex flex-col gap-y-2">
         <Text className="txt-compact-small-plus">Day</Text>
         <input
@@ -229,7 +259,7 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
           <Text className="txt-small text-ui-fg-subtle">No free times on this day. Try another day.</Text>
         )}
         <div className="grid grid-cols-3 gap-2">
-          {slots.map((s) => (
+          {slots.filter((s) => !departure || s.remaining >= seats).map((s) => (
             <button
               key={`${s.resource_id}-${s.starts_at}`}
               type="button"
@@ -241,7 +271,11 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
               data-testid="booking-slot"
             >
               <span className="block txt-small-plus">{formatSlotTime(s.starts_at, s.timezone)}</span>
-              {s.resource_name && <span className="block text-ui-fg-subtle txt-xsmall">{s.resource_name}</span>}
+              {departure ? (
+                <span className="block text-ui-fg-subtle txt-xsmall">{s.remaining} seats left</span>
+              ) : (
+                s.resource_name && <span className="block text-ui-fg-subtle txt-xsmall">{s.resource_name}</span>
+              )}
             </button>
           ))}
         </div>

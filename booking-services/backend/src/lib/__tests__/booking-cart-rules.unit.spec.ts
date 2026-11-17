@@ -1,6 +1,7 @@
 import {
   bookingIdOf,
   bookingItemMismatch,
+  BOOKING_QUANTITY_MESSAGE,
   bookingItemUpdateProblem,
   holdState,
   type BookingRow,
@@ -92,11 +93,16 @@ describe("bookingItemUpdateProblem", () => {
     expect(bookingItemUpdateProblem(null, { metadata: { booking_id: "book_9" } })).toBeNull()
   })
 
-  it("keeps a booking item at quantity 1", () => {
+  it("keeps a booking item at the places it was booked for", () => {
     expect(bookingItemUpdateProblem(meta, { quantity: 1 })).toBeNull()
     expect(bookingItemUpdateProblem(meta, { quantity: "1" })).toBeNull()
-    expect(bookingItemUpdateProblem(meta, { quantity: 2 })).toMatch(/one place/)
-    expect(bookingItemUpdateProblem(meta, { quantity: 0 })).toMatch(/one place/)
+    expect(bookingItemUpdateProblem(meta, { quantity: 2 })).toBe(BOOKING_QUANTITY_MESSAGE)
+    expect(bookingItemUpdateProblem(meta, { quantity: 0 })).toBe(BOOKING_QUANTITY_MESSAGE)
+    // Seats on a departure (P3-23): the quantity stays the seats booked.
+    const seats = { ...meta, booking_seats: 3 }
+    expect(bookingItemUpdateProblem(seats, { quantity: 3 })).toBeNull()
+    expect(bookingItemUpdateProblem(seats, { quantity: 4 })).toBe(BOOKING_QUANTITY_MESSAGE)
+    expect(bookingItemUpdateProblem(seats, { metadata: { ...seats, booking_seats: 5 } })).toMatch(/can't be changed/)
   })
 
   it("refuses changes to the booking metadata, allows the same values", () => {

@@ -45,6 +45,8 @@ export type SlotRequest = {
   // Admin walk-ins (P3-11) may start now or a little earlier; the booking
   // must still end in the future.
   allow_started?: boolean
+  // Places the booking needs at once (seats on a departure, P3-23); default 1.
+  seats?: number
 }
 
 export type SlotUnavailableReason =
@@ -95,6 +97,8 @@ export type CreateHoldInput = {
   address?: string | null
   // A trip's drop-off (kind C, P3-21).
   dropoff_address?: string | null
+  // Seats on a departure (kind D, P3-23); default 1.
+  seats?: number
   now?: Date
   // Admin walk-in (P3-11): created `confirmed` with no hold, and may start
   // up to now (see SlotRequest.allow_started).
@@ -205,6 +209,7 @@ class BookingModuleService extends MedusaService({
         ends_at: input.ends_at,
         now,
         allow_started: input.walk_in,
+        seats: input.seats ?? 1,
       },
       sharedContext
     )
@@ -228,6 +233,7 @@ class BookingModuleService extends MedusaService({
         notes: input.notes ?? null,
         address: input.address ?? null,
         dropoff_address: input.dropoff_address ?? null,
+        seats: input.seats ?? 1,
       },
       sharedContext
     )
@@ -277,6 +283,7 @@ class BookingModuleService extends MedusaService({
           ends_at: new Date(hold.ends_at),
           ignore_cart_id: input.cart_id,
           now,
+          seats: hold.seats ?? 1,
         },
         sharedContext
       )
@@ -342,6 +349,7 @@ class BookingModuleService extends MedusaService({
             ignore_cart_id: b.cart_id ?? undefined,
             now,
             allow_started: true,
+            seats: b.seats ?? 1,
           },
           sharedContext
         )
@@ -468,7 +476,7 @@ class BookingModuleService extends MedusaService({
           starts_at: { $lt: to },
           ends_at: { $gt: from },
         },
-        { select: ["id", "starts_at", "ends_at", "status", "hold_expires_at"] },
+        { select: ["id", "starts_at", "ends_at", "status", "hold_expires_at", "seats"] },
         sharedContext
       )
       const taking = bookings
@@ -480,7 +488,7 @@ class BookingModuleService extends MedusaService({
               new Date(b.hold_expires_at).getTime() <= now.getTime()
             )
         )
-        .map((b) => ({ starts_at: new Date(b.starts_at), ends_at: new Date(b.ends_at) }))
+        .map((b) => ({ starts_at: new Date(b.starts_at), ends_at: new Date(b.ends_at), weight: b.seats ?? 1 }))
       for (const slot of slots) {
         const remaining = resource.capacity - peakOverlap(taking, slot.starts_at, slot.ends_at)
         if (remaining > 0) {
@@ -556,7 +564,7 @@ class BookingModuleService extends MedusaService({
         starts_at: { $lt: ends },
         ends_at: { $gt: starts },
       },
-      { select: ["id", "starts_at", "ends_at", "status", "hold_expires_at", "cart_id"] },
+      { select: ["id", "starts_at", "ends_at", "status", "hold_expires_at", "cart_id", "seats"] },
       sharedContext
     )
     const taking = overlapping.filter(
@@ -569,12 +577,13 @@ class BookingModuleService extends MedusaService({
         )
     )
     const used = peakOverlap(
-      taking.map((b) => ({ starts_at: new Date(b.starts_at), ends_at: new Date(b.ends_at) })),
+      taking.map((b) => ({ starts_at: new Date(b.starts_at), ends_at: new Date(b.ends_at), weight: b.seats ?? 1 })),
       starts,
       ends
     )
     const remaining = Math.max(resource.capacity - used, 0)
-    return remaining > 0
+    // Room for every seat asked for at once (P3-23).
+    return remaining >= Math.max(input.seats ?? 1, 1)
       ? { available: true, capacity: resource.capacity, remaining }
       : no("full", resource.capacity, 0)
   }

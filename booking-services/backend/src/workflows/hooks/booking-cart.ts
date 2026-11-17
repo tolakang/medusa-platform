@@ -6,7 +6,9 @@ import {
   updateLineItemInCartWorkflow,
 } from "@medusajs/medusa/core-flows"
 import {
+  BOOKING_QUANTITY_MESSAGE,
   bookingIdOf,
+  bookingSeatsOf,
   bookingItemMismatch,
   bookingItemUpdateProblem,
   holdState,
@@ -80,8 +82,8 @@ async function assertBookingItems(
     if (item.variant_id && services.has(item.variant_id) && !bookingIdOf(item.metadata)) {
       refuse("Please choose a time to book this service.")
     }
-    if (bookingIdOf(item.metadata) && item.quantity !== undefined && Number(item.quantity) !== 1) {
-      refuse("A booking is for one place. Book another time to add more.")
+    if (bookingIdOf(item.metadata) && item.quantity !== undefined && Number(item.quantity) !== bookingSeatsOf(item.metadata)) {
+      refuse(BOOKING_QUANTITY_MESSAGE)
     }
   }
   if (new Set(bookingIds).size !== bookingIds.length) {

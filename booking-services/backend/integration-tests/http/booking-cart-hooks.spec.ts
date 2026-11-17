@@ -9,6 +9,7 @@ import seed from "../../src/scripts/seed"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
+import { BOOKING_QUANTITY_MESSAGE } from "../../src/lib/booking-cart-rules"
 
 // TASKS P3-05 (BUILD_PLAN §9.3): the cart hooks through the real store API.
 // addToCart.validate: a service needs a held time, and the item must match
@@ -227,7 +228,7 @@ medusaIntegrationTestRunner({
                 },
               })
             ).message
-          ).toMatch(/one place/)
+          ).toBe(BOOKING_QUANTITY_MESSAGE)
 
           expect(await items(mine.id)).toHaveLength(0)
           expect(await items(theirs.id)).toHaveLength(1)
@@ -247,7 +248,7 @@ medusaIntegrationTestRunner({
           )
           expect(refused).toEqual({
             status: 400,
-            message: "A booking is for one place. Book another time to add more.",
+            message: BOOKING_QUANTITY_MESSAGE,
           })
           await api.post(`/store/carts/${cart.id}/line-items/${plainItem.id}`, { quantity: 3 }, store)
 

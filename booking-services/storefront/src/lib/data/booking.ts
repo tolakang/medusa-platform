@@ -27,6 +27,7 @@ export type MyBooking = {
   notes: string | null
   address?: string | null
   dropoff_address?: string | null
+  seats?: number
   resource: { name: string; timezone: string } | null
   order: { id: string; display_id: number | null } | null
 }
@@ -59,6 +60,8 @@ export async function addBookingToCart(input: {
   hours?: number
   fromZoneId?: string
   toZoneId?: string
+  // Seats on a departure (kind D, TASKS P3-23).
+  seats?: number
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -79,6 +82,7 @@ export async function addBookingToCart(input: {
         ...(input.dropoffAddress ? { dropoff_address: input.dropoffAddress } : {}),
         ...(input.hours ? { hours: input.hours } : {}),
         ...(input.fromZoneId ? { from_zone_id: input.fromZoneId, to_zone_id: input.toZoneId } : {}),
+        ...(input.seats && input.seats > 1 ? { seats: input.seats } : {}),
       },
     })
   } catch (e) {
