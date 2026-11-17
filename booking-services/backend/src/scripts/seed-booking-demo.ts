@@ -651,6 +651,21 @@ export default async function seedBookingDemo({ container }: { container: Medusa
   }
   logger.info(`Booking demo: extras ${extraHandles} offered with the moving truck.`)
 
+  // ---- Deposits (TASKS P3-26): pay part now, the rest at the shop ---------
+  const DEPOSITS: Record<string, number> = { "moving-truck": 30, "wedding-tent": 50 }
+  for (const [handle, percent] of Object.entries(DEPOSITS)) {
+    const {
+      data: [product],
+    } = await query.graph({ entity: "product", fields: ["id", "metadata"], filters: { handle } })
+    const meta = (product?.metadata ?? {}) as Record<string, unknown>
+    if (product && meta.deposit_percent !== percent) {
+      await updateProductsWorkflow(container).run({
+        input: { selector: { id: product.id }, update: { metadata: { ...meta, deposit_percent: percent } } },
+      })
+    }
+  }
+  logger.info("Booking demo: deposits 30% on the moving truck, 50% on the wedding tent.")
+
   // ---- G. Table reservation: a time and a party size ----------------------
   // As an appointment (kind A) whose variants are party sizes: each size is
   // offered by its own table resource, whose capacity is the number of such

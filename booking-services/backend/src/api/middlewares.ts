@@ -12,7 +12,7 @@ import {
   requireContactBeforePayment,
   validatePhoneFields,
 } from './contact-validation'
-import { extendBookingHoldsBeforePayment } from './booking-payment'
+import { extendBookingHoldsBeforePayment, setDepositBeforePayment } from './booking-payment'
 import { PostBookingCancel, PostBookingCart } from './store/booking/validators'
 import {
   PostAdminBookingProvider,
@@ -91,7 +91,8 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/payment-collections/:id/payment-sessions',
       // Then renew the cart's booking holds for the payment (TASKS P3-06).
-      middlewares: [requireContactBeforePayment, extendBookingHoldsBeforePayment],
+      // Then set the deposit as the amount due now (TASKS P3-26).
+      middlewares: [requireContactBeforePayment, extendBookingHoldsBeforePayment, setDepositBeforePayment],
     },
     {
       // Admin booking setup and calendar (TASKS P3-11); /admin is admin-only.

@@ -4,6 +4,7 @@ import { addBookingToCart, listExtras, listSlots, listTripZones, type Slot, type
 import {
   durationMinutes,
   formatSlotTime,
+  depositPercent,
   isDepartureService,
   isVisitService,
   localDate,
@@ -381,6 +382,11 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
               : "Add the address and the job"
             : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}`}
       </Button>
+      {depositPercent(product) !== null && (
+        <Text className="txt-small text-ui-fg-subtle" data-testid="booking-deposit">
+          Pay a {depositPercent(product)}% deposit now; the rest at the venue.
+        </Text>
+      )}
       <Text className="txt-xsmall text-ui-fg-subtle">The time is held for you while you check out.</Text>
     </div>
   )

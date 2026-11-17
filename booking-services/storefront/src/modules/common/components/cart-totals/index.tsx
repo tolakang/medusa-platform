@@ -1,6 +1,6 @@
 "use client"
 
-import { isServiceOnlyCart } from "@lib/util/booking"
+import { depositSplit, isServiceOnlyCart } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import React from "react"
 
@@ -28,6 +28,12 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   } = totals
   // Only booked services: nothing is shipped, so no shipping line (TASKS P3-19).
   const servicesOnly = isServiceOnlyCart(totals)
+  // Deposit services (P3-26): what is paid now and what is left for the venue.
+  const split = depositSplit((totals as { items?: never[] }).items)
+  // On an order: its balance payment collection, once staff mark it paid.
+  const balance = (totals as { payment_collections?: { status?: string; metadata?: Record<string, unknown> | null }[] })
+    .payment_collections?.find((c) => c?.metadata?.booking_balance)
+  const balancePaid = balance ? balance.status === "completed" : undefined
 
   return (
     <div>
@@ -80,6 +86,18 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           {convertToLocale({ amount: total ?? 0, currency_code })}
         </span>
       </div>
+      {split && (
+        <div className="flex flex-col gap-y-1 txt-small text-ui-fg-subtle" data-testid="deposit-split">
+          <div className="flex items-center justify-between">
+            <span>{balancePaid === undefined ? "Pay now (deposit)" : "Paid (deposit)"}</span>
+            <span>{convertToLocale({ amount: split.now, currency_code })}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>{balancePaid ? "Balance paid" : "Balance at the venue"}</span>
+            <span>{convertToLocale({ amount: split.later, currency_code })}</span>
+          </div>
+        </div>
+      )}
       <div className="h-px w-full border-b border-gray-200 mt-4" />
     </div>
   )

@@ -90,6 +90,26 @@ export function extraFor(item: { metadata?: Meta } | null | undefined): string |
   return typeof id === "string" && id ? id : null
 }
 
+// Deposits (TASKS P3-26): a service's product metadata.deposit_percent (1-99)
+// is paid at checkout, the rest at the shop or venue.
+export function depositPercent(product: { metadata?: Meta } | null | undefined): number | null {
+  const n = Number(product?.metadata?.deposit_percent)
+  return Number.isFinite(n) && n >= 1 && n <= 99 ? n : null
+}
+
+/** What is paid now and left for later, as the backend computes it. */
+export function depositSplit(
+  items: { total?: number | null; product?: { metadata?: Meta } | null }[] | null | undefined
+): { now: number; later: number } | null {
+  const lines = (items ?? []).map((i) => ({ total: Number(i.total ?? 0), percent: depositPercent(i.product) }))
+  if (!lines.some((l) => l.percent !== null)) {
+    return null
+  }
+  const now = Math.round(lines.reduce((s, l) => s + (l.percent === null ? l.total : (l.total * l.percent) / 100), 0) * 100) / 100
+  const total = Math.round(lines.reduce((s, l) => s + l.total, 0) * 100) / 100
+  return { now, later: Math.round((total - now) * 100) / 100 }
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }
