@@ -12,6 +12,7 @@ import type BookingModuleService from "../modules/booking/service"
 import { hoursPrice, tripPricing, validHours, zonePriceBetween } from "../lib/trip-pricing"
 import { rentalLabel, rentalPrice, rentalSpan, rentalUnit, rentalUnits } from "../lib/rental-pricing"
 import { isDepartureService, validSeats } from "../lib/departure"
+import { EXTRA_FOR_KEY, EXTRA_NOT_OFFERED_MESSAGE, isExtraProduct, MAX_EXTRA_QUANTITY, offeredExtras } from "../lib/booking-extras"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
 // TASKS P3-04 (BUILD_PLAN §9.3): put a booked time slot in a cart. The hold
@@ -41,6 +42,8 @@ export type AddBookingToCartInput = {
   end_date?: string | null
   // A scheduled departure (kind D, P3-23): how many seats.
   seats?: number | null
+  // Extras with this booking (P3-25): variants of extras the service offers.
+  extras?: { variant_id: string; quantity: number }[] | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -100,6 +103,8 @@ type Prepared = {
   whole_days: boolean
   // Places held and the line's quantity (seats on a departure, P3-23).
   seats: number
+  // Extras checked against what the service offers (P3-25).
+  extras: { variant_id: string; quantity: number }[]
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -218,6 +223,29 @@ const prepareBookingStep = createStep(
 
     // A rental (kind E, TASKS P3-22): whole local days of an item booked by
     // days; the dates set the times, the count and the price.
+    // Extras (TASKS P3-25): only those the service offers, 1 to 20 each.
+    const extras = (input.extras ?? []).filter((e) => e && e.quantity > 0)
+    if (extras.length) {
+      const offered = new Set(offeredExtras(variant?.product))
+      const { data: extraVariants } = await query.graph({
+        entity: "product_variant",
+        fields: ["id", "product.handle", "product.metadata"],
+        filters: { id: extras.map((e) => e.variant_id) },
+      })
+      for (const e of extras) {
+        const v = extraVariants.find((x) => x.id === e.variant_id)
+        if (
+          !v ||
+          !isExtraProduct(v.product) ||
+          !offered.has(v.product?.handle ?? "") ||
+          !Number.isInteger(e.quantity) ||
+          e.quantity > MAX_EXTRA_QUANTITY
+        ) {
+          throw new MedusaError(MedusaError.Types.INVALID_DATA, EXTRA_NOT_OFFERED_MESSAGE)
+        }
+      }
+    }
+
     // A scheduled departure (kind D, TASKS P3-23): several seats in one
     // booking, at most the product's metadata.max_seats (default 10).
     const departure = isDepartureService(variant?.product)
@@ -281,6 +309,7 @@ const prepareBookingStep = createStep(
       trip_label,
       whole_days: !!rental,
       seats,
+      extras: extras.map((e) => ({ variant_id: e.variant_id, quantity: e.quantity })),
     }
     return new StepResponse(prepared)
   }
@@ -377,6 +406,12 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.seats > 1 ? { [BOOKING_ITEM_METADATA.seats]: prepared.seats } : {}),
           },
         },
+        // Its extras, each tied to this booking (P3-25).
+        ...prepared.extras.map((e) => ({
+          variant_id: e.variant_id,
+          quantity: e.quantity,
+          metadata: { [EXTRA_FOR_KEY]: hold.id },
+        })),
       ],
     }))
     addToCartWorkflow.runAsStep({ input: cartInput })

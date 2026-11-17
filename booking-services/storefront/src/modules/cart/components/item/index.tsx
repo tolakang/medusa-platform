@@ -7,7 +7,7 @@ import CartItemSelect from "@modules/cart/components/cart-item-select"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
-import { formatBookingRange, itemBooking } from "@lib/util/booking"
+import { extraFor, formatBookingRange, itemBooking } from "@lib/util/booking"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -72,6 +72,11 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {extraFor(item) && (
+          <Text className="txt-small text-ui-fg-subtle" data-testid="product-extra">
+            Extra with your booking
+          </Text>
+        )}
         {booked && (
           <Text className="txt-small text-ui-fg-subtle" data-testid="product-booking">
             {booked.wholeDays ? booked.resource ?? "" : formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}

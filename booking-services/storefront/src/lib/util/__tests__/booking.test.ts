@@ -8,6 +8,9 @@ import {
   isServiceOnlyCart,
   isDepartureService,
   isEventProduct,
+  isExtraProduct,
+  extraFor,
+  offeredExtras,
   isVisitService,
   maxSeats,
   rentalUnit,
@@ -58,6 +61,11 @@ describe("booking helpers", () => {
     assert.equal(isVisitService({ metadata: { booking_kind: "B" } }), true)
     assert.equal(isVisitService({ metadata: { booking_kind: "A" } }), false)
     assert.equal(isVisitService({ metadata: null }), false)
+    // Extras (P3-25).
+    assert.equal(isExtraProduct({ metadata: { booking_extra: true } }), true)
+    assert.deepEqual(offeredExtras({ metadata: { extras: "packing-boxes, extra-helper" } }), ["packing-boxes", "extra-helper"])
+    assert.equal(extraFor({ metadata: { booking_extra_for: "book_1" } }), "book_1")
+    assert.equal(extraFor({ metadata: {} }), null)
     // Events (P3-24).
     assert.equal(isEventProduct({ metadata: { booking_kind: "F" } }), true)
     assert.equal(isEventProduct({ metadata: { booking_kind: "E" } }), false)

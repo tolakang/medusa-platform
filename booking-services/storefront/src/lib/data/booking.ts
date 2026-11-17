@@ -1,6 +1,7 @@
 "use server"
 
 import { sdk } from "@lib/config"
+import { HttpTypes } from "@medusajs/types"
 import medusaError from "@lib/util/medusa-error"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
@@ -62,6 +63,8 @@ export async function addBookingToCart(input: {
   toZoneId?: string
   // Seats on a departure (kind D, TASKS P3-23).
   seats?: number
+  // Extras with the booking (TASKS P3-25).
+  extras?: { variant_id: string; quantity: number }[]
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -83,6 +86,7 @@ export async function addBookingToCart(input: {
         ...(input.hours ? { hours: input.hours } : {}),
         ...(input.fromZoneId ? { from_zone_id: input.fromZoneId, to_zone_id: input.toZoneId } : {}),
         ...(input.seats && input.seats > 1 ? { seats: input.seats } : {}),
+        ...(input.extras?.length ? { extras: input.extras } : {}),
       },
     })
   } catch (e) {
@@ -222,5 +226,16 @@ export async function listOrderTickets(orderId: string): Promise<EventTicket[]> 
   return sdk.client
     .fetch<{ tickets: EventTicket[] }>("/store/booking/tickets", { query: { order_id: orderId }, cache: "no-store" })
     .then((r) => r.tickets)
+    .catch(() => [])
+}
+
+// The extras a service offers (TASKS P3-25), with prices in the region.
+export async function listExtras(handles: string[], countryCode: string): Promise<HttpTypes.StoreProduct[]> {
+  if (!handles.length) {
+    return []
+  }
+  const { listProducts } = await import("./products")
+  return listProducts({ countryCode, queryParams: { handle: handles, limit: handles.length } as never })
+    .then(({ response }) => response.products)
     .catch(() => [])
 }

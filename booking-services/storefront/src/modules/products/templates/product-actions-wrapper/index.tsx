@@ -1,6 +1,6 @@
 import { listProducts } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
-import { isEventProduct, isServiceProduct, rentalUnit } from "@lib/util/booking"
+import { isEventProduct, isExtraProduct, isServiceProduct, rentalUnit } from "@lib/util/booking"
 import BookingPicker from "@modules/products/components/booking-picker"
 import RentalPicker from "@modules/products/components/rental-picker"
 import TicketPicker from "@modules/products/components/ticket-picker"
@@ -26,6 +26,10 @@ export default async function ProductActionsWrapper({
   }
 
   // A bookable service gets the slot picker instead of "Add to cart" (P3-13).
+  // An extra is added with a booking (TASKS P3-25), not on its own.
+  if (isExtraProduct(product)) {
+    return <p className="txt-small text-ui-fg-subtle">This is an extra: add it when you book the service it goes with.</p>
+  }
   // Event tickets by section (TASKS P3-24).
   if (isEventProduct(product)) {
     return <TicketPicker product={product} />

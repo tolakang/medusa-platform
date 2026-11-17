@@ -1,4 +1,4 @@
-import { deleteLineItem } from "@lib/data/cart"
+import { deleteBookingLine } from "@lib/data/cart"
 import { Spinner, Trash } from "@medusajs/icons"
 import { clx } from "@modules/common/components/ui"
 import { useState } from "react"
@@ -16,7 +16,8 @@ const DeleteButton = ({
 
   const handleDelete = async (id: string) => {
     setIsDeleting(true)
-    await deleteLineItem(id).catch((_err) => {
+    // A booking goes with its extras (P3-25); any other line alone.
+    await deleteBookingLine(id).catch((_err) => {
       setIsDeleting(false)
     })
   }

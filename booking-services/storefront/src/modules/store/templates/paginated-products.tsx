@@ -76,7 +76,8 @@ export default async function PaginatedProducts({
         className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
         data-testid="products-list"
       >
-        {products.map((p) => {
+        {/* Extras are added with a booking, not on their own (P3-25). */}
+        {products.filter((p) => p.metadata?.booking_extra !== true).map((p) => {
           return (
             <li key={p.id}>
               <ProductPreview product={p} region={region} />

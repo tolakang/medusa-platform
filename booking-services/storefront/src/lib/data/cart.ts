@@ -199,6 +199,24 @@ export async function updateLineItem({
     .catch(medusaError)
 }
 
+// A booking line goes with its extras (TASKS P3-25: an extra can't be
+// checked out without its booking).
+export async function deleteBookingLine(lineId: string) {
+  const cartId = await getCartId()
+  if (!cartId) {
+    throw new Error("Missing cart ID when deleting line item")
+  }
+  const headers = { ...(await getAuthHeaders()) }
+  const { cart } = await sdk.store.cart.retrieve(cartId, { fields: "items.id,items.metadata" }, headers)
+  const line = cart.items?.find((i) => i.id === lineId)
+  const bookingId = line?.metadata?.booking_id
+  const extras = (cart.items ?? []).filter((i) => bookingId && i.metadata?.booking_extra_for === bookingId)
+  for (const extra of extras) {
+    await sdk.store.cart.deleteLineItem(cartId, extra.id, {}, headers)
+  }
+  await deleteLineItem(lineId)
+}
+
 export async function deleteLineItem(lineId: string) {
   if (!lineId) {
     throw new Error("Missing lineItem ID when deleting line item")
