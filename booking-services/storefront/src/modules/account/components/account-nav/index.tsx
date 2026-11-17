@@ -103,6 +103,19 @@ const AccountNav = ({
                 </li>
                 <li>
                   <LocalizedClientLink
+                    href="/account/quotes"
+                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                    data-testid="quotes-link"
+                  >
+                    <div className="flex items-center gap-x-2">
+                      <span aria-hidden>✎</span>
+                      <span>Quotes</span>
+                    </div>
+                    <ChevronDown className="transform -rotate-90" />
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
                     href="/account/bookings"
                     className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
                     data-testid="bookings-link"
@@ -183,6 +196,15 @@ const AccountNav = ({
                   data-testid="wishlist-link"
                 >
                   Wishlist
+                </AccountNavLink>
+              </li>
+              <li>
+                <AccountNavLink
+                  href="/account/quotes"
+                  route={route!}
+                  data-testid="quotes-link"
+                >
+                  Quotes
                 </AccountNavLink>
               </li>
               <li>

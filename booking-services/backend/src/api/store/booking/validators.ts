@@ -34,6 +34,8 @@ export const PostBookingCart = z.object({
   seats: z.number().int().min(1).max(100).nullish(),
   // Extras with the booking (P3-25).
   extras: z.array(z.object({ variant_id: z.string().min(1), quantity: z.number().int().min(1).max(20) })).max(10).nullish(),
+  // An accepted quote (P3-27).
+  quote_id: z.string().min(1).nullish(),
   notes: z.string().max(500).nullish(),
   // A visit at the customer's place (kind B, P3-20).
   address: z.string().max(300).nullish(),
@@ -44,3 +46,15 @@ export const PostBookingCart = z.object({
   to_zone_id: z.string().min(1).nullish(),
 })
 export type PostBookingCartType = z.infer<typeof PostBookingCart>
+
+// Quotes (TASKS P3-27).
+export const PostQuoteRequest = z.object({
+  variant_id: z.string().min(1),
+  details: z.string().trim().min(5).max(2000),
+  wished_starts_at: instant,
+  address: z.string().max(300).nullish(),
+  dropoff_address: z.string().max(300).nullish(),
+})
+export type PostQuoteRequestType = z.infer<typeof PostQuoteRequest>
+export const PostQuoteAccept = z.object({ cart_id: z.string().min(1) })
+export type PostQuoteAcceptType = z.infer<typeof PostQuoteAccept>

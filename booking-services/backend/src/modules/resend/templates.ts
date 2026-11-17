@@ -9,6 +9,7 @@ import {
 } from "../../lib/booking-reminder"
 import { EVENT_TICKETS_TEMPLATE, eventTicketsEmail, type EventTicketsData } from "../../lib/event-tickets"
 import { BALANCE_TEMPLATE, balanceReminderEmail, type BalanceReminderData } from "../../lib/deposits"
+import { QUOTE_TEMPLATE, quoteEmail, type QuoteEmailData } from "../../lib/quotes"
 import { escapeHtml } from "@medusa-platform/medusa-core/lib/order-notification"
 
 export function renderEmail(
@@ -26,6 +27,10 @@ export function renderEmail(
   // A balance still to pay after a deposit (TASKS P3-26).
   if (template === BALANCE_TEMPLATE && (data as BalanceReminderData | null)?.due_at) {
     return balanceReminderEmail(data as BalanceReminderData, escapeHtml)
+  }
+  // A priced quote (TASKS P3-27).
+  if (template === QUOTE_TEMPLATE && typeof (data as QuoteEmailData | null)?.amount === "number") {
+    return quoteEmail(data as QuoteEmailData, escapeHtml)
   }
   return renderCoreEmail(template, data)
 }

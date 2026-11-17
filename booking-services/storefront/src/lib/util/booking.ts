@@ -236,3 +236,8 @@ export function bookingStatusLabel(statuses: string[], orderStatus?: string | nu
   }
   return Array.from(counts.entries()).map(([s, n]) => `${n} ${label(s).toLowerCase()}`).join(", ")
 }
+
+// Quote first (TASKS P3-27): priced on request, booked from an accepted quote.
+export function isQuoteOnly(product: HttpTypes.StoreProduct): boolean {
+  return (product.metadata as Record<string, unknown> | null)?.quote_only === true
+}

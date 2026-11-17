@@ -83,3 +83,15 @@ export const PostAdminZonePrice = z.object({
   currency_code: z.string().regex(/^[a-z]{3}$/),
 })
 export type PostAdminZonePriceType = z.infer<typeof PostAdminZonePrice>
+
+// Quotes (TASKS P3-27).
+export const PostAdminQuote = z.object({
+  amount: z.number().min(0).max(1_000_000),
+  currency_code: z.string().regex(/^[a-z]{3}$/),
+  resource_id: z.string().min(1),
+  starts_at: z.string().datetime({ offset: true }),
+  duration_minutes: z.number().int().min(15).max(24 * 60 * 14),
+  reply: z.string().max(2000).nullish(),
+  valid_days: z.number().int().min(1).max(60).optional(),
+})
+export type PostAdminQuoteType = z.infer<typeof PostAdminQuote>

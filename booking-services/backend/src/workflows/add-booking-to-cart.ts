@@ -12,6 +12,7 @@ import type BookingModuleService from "../modules/booking/service"
 import { hoursPrice, tripPricing, validHours, zonePriceBetween } from "../lib/trip-pricing"
 import { rentalLabel, rentalPrice, rentalSpan, rentalUnit, rentalUnits } from "../lib/rental-pricing"
 import { isDepartureService, validSeats } from "../lib/departure"
+import { isQuoteOnly, QUOTE_NOT_YOURS_MESSAGE, QUOTE_ONLY_MESSAGE, quoteBookable } from "../lib/quotes"
 import { EXTRA_FOR_KEY, EXTRA_NOT_OFFERED_MESSAGE, isExtraProduct, MAX_EXTRA_QUANTITY, offeredExtras } from "../lib/booking-extras"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
@@ -44,6 +45,8 @@ export type AddBookingToCartInput = {
   seats?: number | null
   // Extras with this booking (P3-25): variants of extras the service offers.
   extras?: { variant_id: string; quantity: number }[] | null
+  // An accepted quote (P3-27): its price, calendar and time are booked.
+  quote_id?: string | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -64,6 +67,8 @@ export const BOOKING_ITEM_METADATA = {
   whole_days: "booking_whole_days",
   // Seats on a departure (kind D, P3-23).
   seats: "booking_seats",
+  // The quote it books (P3-27).
+  quote_id: "booking_quote_id",
 } as const
 
 // A service done at the customer's place: its product has
@@ -105,6 +110,7 @@ type Prepared = {
   seats: number
   // Extras checked against what the service offers (P3-25).
   extras: { variant_id: string; quantity: number }[]
+  quote_id: string | null
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -221,6 +227,30 @@ const prepareBookingStep = createStep(
       }
     }
 
+    // Quote first (TASKS P3-27): a quote-only service is booked only from
+    // the customer's priced, open quote, at its price, calendar and time.
+    let quoteTimes: { starts_at: string; ends_at: string } | null = null
+    let quoteId: string | null = null
+    if (isQuoteOnly(variant?.product) || input.quote_id) {
+      if (!input.quote_id) {
+        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, QUOTE_ONLY_MESSAGE)
+      }
+      const [quote] = await container.resolve<BookingModuleService>(BOOKING_MODULE).listBookingQuotes({ id: input.quote_id })
+      if (!quote || !cart.customer_id || quote.customer_id !== cart.customer_id || quote.variant_id !== input.variant_id) {
+        throw new MedusaError(MedusaError.Types.NOT_FOUND, QUOTE_NOT_YOURS_MESSAGE)
+      }
+      const problem = quoteBookable(quote)
+      if (problem) {
+        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, problem)
+      }
+      if (quote.resource_id !== resource.id) {
+        throw new MedusaError(MedusaError.Types.NOT_FOUND, QUOTE_NOT_YOURS_MESSAGE)
+      }
+      quoteTimes = { starts_at: new Date(quote.starts_at!).toISOString(), ends_at: new Date(quote.ends_at!).toISOString() }
+      unit_price = MathBN.convert(quote.amount!, 2).toNumber()
+      quoteId = quote.id
+    }
+
     // A rental (kind E, TASKS P3-22): whole local days of an item booked by
     // days; the dates set the times, the count and the price.
     // Extras (TASKS P3-25): only those the service offers, 1 to 20 each.
@@ -284,8 +314,8 @@ const prepareBookingStep = createStep(
       trip_label = `${rentalLabel(rental, units)}: ${input.start_date} to ${input.end_date}`
     }
 
-    const starts_at = new Date(rentalTimes?.starts_at ?? input.starts_at ?? "")
-    const ends_at = new Date(rentalTimes?.ends_at ?? input.ends_at ?? "")
+    const starts_at = new Date(quoteTimes?.starts_at ?? rentalTimes?.starts_at ?? input.starts_at ?? "")
+    const ends_at = new Date(quoteTimes?.ends_at ?? rentalTimes?.ends_at ?? input.ends_at ?? "")
     if (Number.isNaN(starts_at.getTime()) || Number.isNaN(ends_at.getTime())) {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, "The booking times are not valid dates.")
     }
@@ -310,6 +340,7 @@ const prepareBookingStep = createStep(
       whole_days: !!rental,
       seats,
       extras: extras.map((e) => ({ variant_id: e.variant_id, quantity: e.quantity })),
+      quote_id: quoteId,
     }
     return new StepResponse(prepared)
   }
@@ -404,6 +435,7 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.trip_label ? { [BOOKING_ITEM_METADATA.trip]: prepared.trip_label } : {}),
             ...(prepared.whole_days ? { [BOOKING_ITEM_METADATA.whole_days]: true } : {}),
             ...(prepared.seats > 1 ? { [BOOKING_ITEM_METADATA.seats]: prepared.seats } : {}),
+            ...(prepared.quote_id ? { [BOOKING_ITEM_METADATA.quote_id]: prepared.quote_id } : {}),
           },
         },
         // Its extras, each tied to this booking (P3-25).
