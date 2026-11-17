@@ -226,6 +226,7 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed-booking-demo.js
 - The first adds the Cambodia region (USD), the **Phnom Penh** stock location and "Phnom Penh Delivery".
 - The second adds one example per booking kind, each in its category:
   - **Appointments:** the service **Haircut** (30 min $8, 60 min $15) and the stylist **Sophea**, Monday to Saturday, 09:00–12:00 and 13:00–17:00 Phnom Penh time;
+  - **Visits at your place** (P3-20): the service **Air conditioner service** (Cleaning 60 min $15, Repair visit 90 min $20) with the technician **Vannak**, Monday to Saturday, 08:00–12:00 and 13:00–17:00; booking it asks for the address and what needs doing;
   - **Table reservations:** the service **Table reservation** (a $5 deposit, 90 minutes) by **party size** 2, 4 or 6, with **Tables for 2** (4 tables), **Tables for 4** (3) and **Table for 6** (1), every day 11:00–14:00 and 17:00–22:00.
 
 **Check:** both finish without an error. The last one ends with `Booking demo: service "Table reservation" with Tables for 2 (4), Tables for 4 (3), Table for 6 (1) created.` (A shop seeded before P3-19 already has the Haircut: running the second seed again adds only what is missing.)
@@ -241,7 +242,7 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed-booking-demo.js
 ### D. PayWay in the Cambodia region (only with PayWay)
 Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers**: add **payway** (`pp_payway_payway`) → **Save**. Without this the checkout shows no ABA PayWay option.
 
-**Check:** you can log in to the admin; **Products** shows exactly **Haircut** and **Table reservation**; **Products → Categories** shows **Appointments** and **Table reservations**; the sidebar shows **Bookings**.
+**Check:** you can log in to the admin; **Products** shows exactly **Haircut**, **Air conditioner service** and **Table reservation**; **Products → Categories** shows **Appointments**, **Visits at your place** and **Table reservations**; the sidebar shows **Bookings**.
 
 **Reply with:**
 - "Step 3 done";
@@ -404,7 +405,7 @@ A booking belongs to the customer who is signed in when they book, so sign up **
 3. Sign in.
 
 ### B. A booking in the shop
-1. Still signed in: the home page lists **Appointments** and **Table reservations**. Under Appointments, **Haircut** → **Book**.
+1. Still signed in: the home page lists **Appointments**, **Visits at your place** and **Table reservations**. Under Appointments, **Haircut** → **Book**.
 2. Pick **Length** `30 min`, a **Day** at least two days ahead (Monday to Saturday), and a **Time** → book. The page says the time is held for you while you check out.
 3. Go to the cart → **Checkout**. A service needs no address or delivery: check **First name**, **Last name** and **Email**.
 4. Pay:

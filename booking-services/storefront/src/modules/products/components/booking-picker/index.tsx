@@ -1,7 +1,14 @@
 "use client"
 
 import { addBookingToCart, listSlots, type Slot } from "@lib/data/booking"
-import { durationMinutes, formatSlotTime, localDate, orderedServices, serviceChoiceLabel } from "@lib/util/booking"
+import {
+  durationMinutes,
+  formatSlotTime,
+  isVisitService,
+  localDate,
+  orderedServices,
+  serviceChoiceLabel,
+} from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text, clx } from "@modules/common/components/ui"
@@ -26,6 +33,11 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
   const [error, setError] = useState<string | null>(null)
   const [loading, startLoading] = useTransition()
   const [booking, startBooking] = useTransition()
+  // A visit at the customer's place (kind B, P3-20): where and what.
+  const visit = isVisitService(product)
+  const [address, setAddress] = useState("")
+  const [problem, setProblem] = useState("")
+  const visitReady = !visit || (address.trim().length >= 5 && problem.trim().length > 0)
 
   useEffect(() => {
     if (!variantId || !date) {
@@ -41,11 +53,16 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
   }, [variantId, date])
 
   const book = () => {
-    if (!chosen) {
+    if (!chosen || !visitReady) {
       return
     }
     startBooking(async () => {
-      const result = await addBookingToCart({ countryCode, variantId, slot: chosen })
+      const result = await addBookingToCart({
+        countryCode,
+        variantId,
+        slot: chosen,
+        ...(visit ? { address: address.trim(), notes: problem.trim() } : {}),
+      })
       if (result.error) {
         setError(result.error)
         // Someone else may have taken it: refresh the times.
@@ -121,13 +138,45 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
           ))}
         </div>
       </div>
+      {visit && (
+        <>
+          <label className="flex flex-col gap-y-2">
+            <Text className="txt-compact-small-plus">Address for the visit</Text>
+            <textarea
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              rows={2}
+              maxLength={300}
+              placeholder="House or building, street, commune, district, province"
+              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              data-testid="booking-address"
+            />
+          </label>
+          <label className="flex flex-col gap-y-2">
+            <Text className="txt-compact-small-plus">What needs doing?</Text>
+            <textarea
+              value={problem}
+              onChange={(e) => setProblem(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Describe the problem or the job"
+              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              data-testid="booking-problem"
+            />
+          </label>
+        </>
+      )}
       {error && (
         <Text className="txt-small text-ui-fg-error" data-testid="booking-error">
           {error}
         </Text>
       )}
-      <Button onClick={book} disabled={!chosen || booking} isLoading={booking} className="w-full h-10" data-testid="booking-submit">
-        {chosen ? `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}` : "Choose a time"}
+      <Button onClick={book} disabled={!chosen || !visitReady || booking} isLoading={booking} className="w-full h-10" data-testid="booking-submit">
+        {!chosen
+          ? "Choose a time"
+          : !visitReady
+            ? "Add the address and the job"
+            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}`}
       </Button>
       <Text className="txt-xsmall text-ui-fg-subtle">The time is held for you while you check out.</Text>
     </div>

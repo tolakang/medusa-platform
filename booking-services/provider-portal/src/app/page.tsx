@@ -11,6 +11,8 @@ type Booking = {
   starts_at: string
   ends_at: string
   notes: string | null
+  // Where a visit at the customer's place is (kind B, P3-20).
+  address: string | null
   customer: { email: string | null; first_name: string | null; last_name: string | null } | null
   order: { id: string; display_id: number | null } | null
 }
@@ -92,6 +94,7 @@ export default async function CalendarPage({
                       {b.order?.display_id ? ` · Order #${b.order.display_id}` : ""}
                       {b.notes ? ` · ${b.notes}` : ""}
                     </p>
+                    {b.address && <p className="text-sm">Visit at: {b.address}</p>}
                   </div>
                   {(b.status === "confirmed" || b.status === "pending") && <CancelButton bookingId={b.id} />}
                 </li>

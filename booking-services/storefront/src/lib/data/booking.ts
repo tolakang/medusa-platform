@@ -25,6 +25,7 @@ export type MyBooking = {
   starts_at: string
   ends_at: string
   notes: string | null
+  address?: string | null
   resource: { name: string; timezone: string } | null
   order: { id: string; display_id: number | null } | null
 }
@@ -44,6 +45,9 @@ export async function addBookingToCart(input: {
   countryCode: string
   variantId: string
   slot: Slot
+  // A visit at the customer's place (kind B, TASKS P3-20).
+  address?: string
+  notes?: string
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -59,6 +63,8 @@ export async function addBookingToCart(input: {
         resource_id: input.slot.resource_id,
         starts_at: input.slot.starts_at,
         ends_at: input.slot.ends_at,
+        ...(input.address ? { address: input.address } : {}),
+        ...(input.notes ? { notes: input.notes } : {}),
       },
     })
   } catch (e) {

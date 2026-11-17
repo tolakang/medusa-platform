@@ -185,6 +185,7 @@ const BookingsPage = () => {
                   {b.order?.display_id != null && (
                     <Text size="xsmall" className="text-ui-fg-subtle">Order #{b.order.display_id}</Text>
                   )}
+                  {b.address && <Text size="xsmall" className="text-ui-fg-subtle">Visit at: {b.address}</Text>}
                   {b.notes && <Text size="xsmall" className="text-ui-fg-subtle">{b.notes}</Text>}
                   {(b.status === "confirmed" || b.status === "pending") && confirming !== b.id && (
                     <Button

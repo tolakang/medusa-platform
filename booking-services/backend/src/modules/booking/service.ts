@@ -89,6 +89,8 @@ export type CreateHoldInput = {
   customer_id?: string | null
   line_item_id?: string | null
   notes?: string | null
+  // Where a visit at the customer's place is (kind B, P3-20).
+  address?: string | null
   now?: Date
   // Admin walk-in (P3-11): created `confirmed` with no hold, and may start
   // up to now (see SlotRequest.allow_started).
@@ -218,6 +220,7 @@ class BookingModuleService extends MedusaService({
         customer_id: input.customer_id ?? null,
         line_item_id: input.line_item_id ?? null,
         notes: input.notes ?? null,
+        address: input.address ?? null,
       },
       sharedContext
     )

@@ -6,6 +6,7 @@ import {
   formatSlotTime,
   bookingStatusLabel,
   isServiceOnlyCart,
+  isVisitService,
   itemBooking,
   localDate,
   orderedServices,
@@ -43,8 +44,16 @@ describe("booking helpers", () => {
           booking_timezone: PP,
         },
       }),
-      { starts_at: "2026-11-09T03:00:00.000Z", ends_at: "2026-11-09T04:00:00.000Z", resource: "Sophea", timezone: PP }
+      { starts_at: "2026-11-09T03:00:00.000Z", ends_at: "2026-11-09T04:00:00.000Z", resource: "Sophea", timezone: PP, address: null }
     )
+    // A visit at the customer's place carries its address (P3-20).
+    assert.equal(
+      itemBooking({ metadata: { booking_id: "book_2", booking_starts_at: "2026-11-09T03:00:00.000Z", booking_address: "#12, St 310" } })?.address,
+      "#12, St 310"
+    )
+    assert.equal(isVisitService({ metadata: { booking_kind: "B" } }), true)
+    assert.equal(isVisitService({ metadata: { booking_kind: "A" } }), false)
+    assert.equal(isVisitService({ metadata: null }), false)
     assert.equal(itemBooking({ metadata: { note: "x" } }), null)
     assert.equal(itemBooking(null), null)
   })

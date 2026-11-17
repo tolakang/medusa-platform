@@ -1562,6 +1562,22 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "reminder_sent_at": {
           "name": "reminder_sent_at",
           "type": "timestamptz",

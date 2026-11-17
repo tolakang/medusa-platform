@@ -28,5 +28,7 @@ export const PostBookingCart = z.object({
   starts_at: instant,
   ends_at: instant,
   notes: z.string().max(500).nullish(),
+  // A visit at the customer's place (kind B, P3-20).
+  address: z.string().max(300).nullish(),
 })
 export type PostBookingCartType = z.infer<typeof PostBookingCart>

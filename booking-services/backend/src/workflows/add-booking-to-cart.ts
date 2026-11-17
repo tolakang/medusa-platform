@@ -24,6 +24,8 @@ export type AddBookingToCartInput = {
   starts_at: string | Date
   ends_at: string | Date
   notes?: string | null
+  // For a visit at the customer's place (kind B, P3-20).
+  address?: string | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -35,7 +37,19 @@ export const BOOKING_ITEM_METADATA = {
   // For display in the cart, checkout and order (storefront, P3-13).
   resource_name: "booking_resource_name",
   timezone: "booking_timezone",
+  // A visit's address (kind B, P3-20), shown with the item.
+  address: "booking_address",
 } as const
+
+// A service done at the customer's place: its product has
+// metadata.booking_kind "B" (set by the seed; in the admin, the product's
+// Metadata).
+export const VISIT_KIND = "B"
+export const isVisitService = (product?: { metadata?: Record<string, unknown> | null } | null) =>
+  product?.metadata?.booking_kind === VISIT_KIND
+export const VISIT_ADDRESS_MIN = 5
+export const VISIT_ADDRESS_MESSAGE = "Tell us the address for the visit."
+export const VISIT_PROBLEM_MESSAGE = "Tell us what needs doing."
 
 type Prepared = {
   cart_id: string
@@ -49,6 +63,7 @@ type Prepared = {
   starts_at: string
   ends_at: string
   notes: string | null
+  address: string | null
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -93,6 +108,25 @@ const prepareBookingStep = createStep(
       )
     }
 
+    // A visit at the customer's place (kind B, TASKS P3-20) needs to know
+    // where to go and what needs doing.
+    const {
+      data: [variant],
+    } = await query.graph({
+      entity: "product_variant",
+      fields: ["id", "product.metadata"],
+      filters: { id: input.variant_id },
+    })
+    const visit = isVisitService(variant?.product)
+    const address = visit ? (input.address ?? "").trim() : ""
+    const notes = (input.notes ?? "").trim()
+    if (visit && address.length < VISIT_ADDRESS_MIN) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, VISIT_ADDRESS_MESSAGE)
+    }
+    if (visit && !notes) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, VISIT_PROBLEM_MESSAGE)
+    }
+
     const starts_at = new Date(input.starts_at)
     const ends_at = new Date(input.ends_at)
     if (Number.isNaN(starts_at.getTime()) || Number.isNaN(ends_at.getTime())) {
@@ -108,7 +142,8 @@ const prepareBookingStep = createStep(
       timezone: resource.timezone,
       starts_at: starts_at.toISOString(),
       ends_at: ends_at.toISOString(),
-      notes: input.notes ?? null,
+      notes: notes || null,
+      address: address || null,
     }
     return new StepResponse(prepared)
   }
@@ -126,6 +161,7 @@ const createBookingHoldStep = createStep(
       cart_id: input.cart_id,
       customer_id: input.customer_id,
       notes: input.notes,
+      address: input.address,
     })
     return new StepResponse(hold, hold.id)
   },
@@ -192,6 +228,7 @@ export const addBookingToCartWorkflow = createWorkflow(
             [BOOKING_ITEM_METADATA.ends_at]: prepared.ends_at,
             [BOOKING_ITEM_METADATA.resource_name]: prepared.resource_name,
             [BOOKING_ITEM_METADATA.timezone]: prepared.timezone,
+            ...(prepared.address ? { [BOOKING_ITEM_METADATA.address]: prepared.address } : {}),
           },
         },
       ],
