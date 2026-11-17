@@ -73,6 +73,23 @@ export function isEventProduct(product: { metadata?: Meta } | null | undefined):
   return product?.metadata?.booking_kind === "F"
 }
 
+// Extras on a booking (TASKS P3-25): a product with metadata.booking_extra
+// is added only with a booking; a service lists the extras it offers by
+// handle in metadata.extras.
+export function isExtraProduct(product: { metadata?: Meta } | null | undefined): boolean {
+  return product?.metadata?.booking_extra === true
+}
+export function offeredExtras(product: { metadata?: Meta } | null | undefined): string[] {
+  const raw = product?.metadata?.extras
+  const list = Array.isArray(raw) ? raw : typeof raw === "string" ? raw.split(",") : []
+  return list.map((h) => String(h).trim()).filter(Boolean)
+}
+/** The booking an extra line belongs to, if it is one. */
+export function extraFor(item: { metadata?: Meta } | null | undefined): string | null {
+  const id = item?.metadata?.booking_extra_for
+  return typeof id === "string" && id ? id : null
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }

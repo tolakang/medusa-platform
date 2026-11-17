@@ -15,10 +15,17 @@ import {
   type BookingItemMetadata,
   type BookingRow,
 } from "../../lib/booking-cart-rules"
+import {
+  EXTRA_FOR_KEY,
+  EXTRA_MOVED_MESSAGE,
+  extrasProblem,
+  isExtraProduct,
+} from "../../lib/booking-extras"
 import { BOOKING_MODULE } from "../../modules/booking"
 import type BookingModuleService from "../../modules/booking/service"
 
-// TASKS P3-05 (BUILD_PLAN §9.3): the cart hooks for bookings. All three only
+// TASKS P3-05 (BUILD_PLAN §9.3): the cart hooks for bookings and, since
+// P3-25, their extras. All three only
 // read and throw; none of them changes the cart (the completeCartWorkflow
 // reference forbids mutating the cart in its validate hook).
 
@@ -61,6 +68,32 @@ async function serviceVariantIds(
     filters: { id: variantIds },
   })
   return new Set(data.filter((v) => (v.booking_resources ?? []).length > 0).map((v) => v.id))
+}
+
+// Extras (P3-25): every line of an extra product must belong to a booking
+// line in the same cart (in the cart already, or added with it).
+async function assertExtras(container: MedusaContainer, lines: CartItemInput[]) {
+  const variantIds = [...new Set(lines.map((l) => l.variant_id).filter((v): v is string => !!v))]
+  if (!variantIds.length) {
+    return
+  }
+  const { data } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
+    entity: "product_variant",
+    fields: ["id", "product.metadata"],
+    filters: { id: variantIds },
+  })
+  const extraVariants = new Set(data.filter((v) => isExtraProduct(v.product)).map((v) => v.id))
+  if (!extraVariants.size) {
+    return
+  }
+  const bookingIds = new Set(lines.map((l) => bookingIdOf(l.metadata)).filter((id): id is string => !!id))
+  const problem = extrasProblem(
+    lines.map((l) => ({ metadata: l.metadata, is_extra: !!l.variant_id && extraVariants.has(l.variant_id) })),
+    bookingIds
+  )
+  if (problem) {
+    refuse(problem)
+  }
 }
 
 // Checks booking items against their holds. `checkout` re-checks a hold that
@@ -144,6 +177,7 @@ addToCartWorkflow.hooks.validate(async ({ input }, { container }) => {
     }
   }
   await assertBookingItems(container, input.cart_id, added, { checkout: false })
+  await assertExtras(container, [...existing, ...added])
 })
 
 // Changing an item: a booking stays one place with its booked time.
@@ -160,6 +194,11 @@ updateLineItemInCartWorkflow.hooks.validate(async ({ input }, { container }) => 
   if (problem) {
     refuse(problem)
   }
+  // An extra stays with its booking (P3-25).
+  const update = input.update?.metadata as BookingItemMetadata
+  if (item.metadata?.[EXTRA_FOR_KEY] && update !== undefined && update?.[EXTRA_FOR_KEY] !== item.metadata[EXTRA_FOR_KEY]) {
+    refuse(EXTRA_MOVED_MESSAGE)
+  }
 })
 
 // Completing the cart (read-only, idempotent on retry): every booking item
@@ -167,4 +206,5 @@ updateLineItemInCartWorkflow.hooks.validate(async ({ input }, { container }) => 
 completeCartWorkflow.hooks.validate(async ({ input }, { container }) => {
   const items = await cartItems(container, input.id)
   await assertBookingItems(container, input.id, items, { checkout: true })
+  await assertExtras(container, items)
 })

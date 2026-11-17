@@ -6,6 +6,7 @@ import {
   createInventoryLevelsWorkflow,
   createProductsWorkflow,
   updateInventoryItemsWorkflow,
+  updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
 import { createBookingResourceWorkflow, defaultTimezone } from "../workflows/booking-resource"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
@@ -601,6 +602,54 @@ export default async function seedBookingDemo({ container }: { container: Medusa
     })
     logger.info(`Booking demo: event "${product.title}" on ${saturdays.join(", ")} created.`)
   }
+
+  // ---- Extras on a booking (TASKS P3-25) ----------------------------------
+  // Products marked metadata.booking_extra (no shipping, per unit); the
+  // moving truck offers them through its metadata.extras.
+  const EXTRAS = [
+    { handle: "packing-boxes", title: "Packing boxes", description: "Strong cardboard boxes, delivered with the truck.", price: 2 },
+    { handle: "extra-helper", title: "Extra helper", description: "One more person to carry, for the whole booking.", price: 10 },
+    { handle: "moving-insurance", title: "Moving insurance", description: "Covers breakage during the move, up to $500.", price: 8 },
+  ]
+  for (const x of EXTRAS) {
+    if (await exists(x.handle)) {
+      continue
+    }
+    await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: x.title,
+            handle: x.handle,
+            description: x.description,
+            status: ProductStatus.PUBLISHED,
+            metadata: { booking_extra: true },
+            options: [{ title: `${x.title} option`, values: ["Each"] }],
+            sales_channels: [{ id: salesChannelId }],
+            variants: [
+              {
+                title: "Each",
+                sku: `EXTRA-${x.handle.toUpperCase()}`,
+                manage_inventory: false,
+                options: { [`${x.title} option`]: "Each" },
+                prices: [{ amount: x.price, currency_code: "usd" }],
+              },
+            ],
+          },
+        ],
+      },
+    })
+  }
+  const {
+    data: [truck],
+  } = await query.graph({ entity: "product", fields: ["id", "metadata"], filters: { handle: "moving-truck" } })
+  const extraHandles = EXTRAS.map((x) => x.handle).join(",")
+  if (truck && (truck.metadata as Record<string, unknown> | null)?.extras !== extraHandles) {
+    await updateProductsWorkflow(container).run({
+      input: { selector: { id: truck.id }, update: { metadata: { ...(truck.metadata ?? {}), extras: extraHandles } } },
+    })
+  }
+  logger.info(`Booking demo: extras ${extraHandles} offered with the moving truck.`)
 
   // ---- G. Table reservation: a time and a party size ----------------------
   // As an appointment (kind A) whose variants are party sizes: each size is
