@@ -1124,6 +1124,22 @@
           "enumItems": [],
           "mappedType": "boolean"
         },
+        "whole_days": {
+          "name": "whole_days",
+          "type": "boolean",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "false",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "boolean"
+        },
         "provider_id": {
           "name": "provider_id",
           "type": "text",

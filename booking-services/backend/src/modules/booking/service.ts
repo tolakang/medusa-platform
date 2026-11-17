@@ -530,13 +530,23 @@ class BookingModuleService extends MedusaService({
       // Unknown zone: no hours can match, so the slot can't be offered.
       return no("outside_hours", resource.capacity)
     }
-    if (!fitsWeeklyHours(starts, ends, resource.timezone, resource.schedules ?? [])) {
-      return no("outside_hours", resource.capacity)
-    }
-    // A day off (P3-32), by the local day the booking starts on.
-    const localDay = toLocalTime(starts, resource.timezone).date
-    if ((resource.days_off ?? []).some((d) => d.date === localDay)) {
-      return no("outside_hours", resource.capacity)
+    if (resource.whole_days) {
+      // A rental (kind E, P3-22): whole local days, no opening hours; a day
+      // off anywhere in the range closes it.
+      const first = toLocalTime(starts, resource.timezone).date
+      const last = toLocalTime(new Date(ends.getTime() - 1), resource.timezone).date
+      if ((resource.days_off ?? []).some((d) => d.date >= first && d.date <= last)) {
+        return no("outside_hours", resource.capacity)
+      }
+    } else {
+      if (!fitsWeeklyHours(starts, ends, resource.timezone, resource.schedules ?? [])) {
+        return no("outside_hours", resource.capacity)
+      }
+      // A day off (P3-32), by the local day the booking starts on.
+      const localDay = toLocalTime(starts, resource.timezone).date
+      if ((resource.days_off ?? []).some((d) => d.date === localDay)) {
+        return no("outside_hours", resource.capacity)
+      }
     }
 
     const overlapping = await this.listBookings(

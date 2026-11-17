@@ -10,6 +10,8 @@ import { addToCartWorkflow } from "@medusajs/medusa/core-flows"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 import { hoursPrice, tripPricing, validHours, zonePriceBetween } from "../lib/trip-pricing"
+import { rentalLabel, rentalPrice, rentalSpan, rentalUnit, rentalUnits } from "../lib/rental-pricing"
+import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
 // TASKS P3-04 (BUILD_PLAN §9.3): put a booked time slot in a cart. The hold
 // and the line item are created together: if adding the line item fails, the
@@ -22,8 +24,9 @@ export type AddBookingToCartInput = {
   cart_id: string
   variant_id: string
   resource_id: string
-  starts_at: string | Date
-  ends_at: string | Date
+  // Not needed for a rental (P3-22): its dates set the times.
+  starts_at?: string | Date
+  ends_at?: string | Date
   notes?: string | null
   // For a visit at the customer's place (kind B, P3-20); a trip's pickup.
   address?: string | null
@@ -32,6 +35,9 @@ export type AddBookingToCartInput = {
   hours?: number | null
   from_zone_id?: string | null
   to_zone_id?: string | null
+  // A rental (kind E, P3-22): "YYYY-MM-DD" dates; the times come from them.
+  start_date?: string | null
+  end_date?: string | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -48,6 +54,8 @@ export const BOOKING_ITEM_METADATA = {
   // A trip (kind C, P3-21): drop-off and what was priced ("3 hours", "Town → Airport").
   dropoff_address: "booking_dropoff_address",
   trip: "booking_trip",
+  // A rental (kind E, P3-22) is shown by its dates, not its times.
+  whole_days: "booking_whole_days",
 } as const
 
 // A service done at the customer's place: its product has
@@ -62,6 +70,8 @@ export const VISIT_PROBLEM_MESSAGE = "Tell us what needs doing."
 export const TRIP_ADDRESSES_MESSAGE = "Tell us the pickup and the drop-off address."
 export const TRIP_HOURS_MESSAGE = "Choose how many hours you need the vehicle."
 export const TRIP_ZONES_MESSAGE = "There is no price for a trip between these two areas with this vehicle."
+export const RENTAL_DATES_MESSAGE = "Choose the start and end dates (up to 60 days)."
+export const RENTAL_RESOURCE_MESSAGE = "This item isn't set up to be rented by the day."
 export const TRIP_LENGTH_MESSAGE = "This time doesn't match the trip's length. Choose the time again."
 
 type Prepared = {
@@ -81,6 +91,7 @@ type Prepared = {
   // A trip's price, set by the backend (kind C, P3-21); null = the variant's.
   unit_price: number | null
   trip_label: string | null
+  whole_days: boolean
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -108,7 +119,7 @@ const prepareBookingStep = createStep(
       data: [resource],
     } = await query.graph({
       entity: "booking_resource",
-      fields: ["id", "name", "timezone", "is_active", "product_variants.id"],
+      fields: ["id", "name", "timezone", "is_active", "whole_days", "product_variants.id"],
       filters: { id: input.resource_id },
     })
     if (!resource) {
@@ -197,8 +208,40 @@ const prepareBookingStep = createStep(
       }
     }
 
-    const starts_at = new Date(input.starts_at)
-    const ends_at = new Date(input.ends_at)
+    // A rental (kind E, TASKS P3-22): whole local days of an item booked by
+    // days; the dates set the times, the count and the price.
+    const rental = rentalUnit(variant?.product)
+    let rentalTimes: { starts_at: string; ends_at: string } | null = null
+    if (rental) {
+      const units = rentalUnits(rental, input.start_date, input.end_date)
+      if (units === null) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, RENTAL_DATES_MESSAGE)
+      }
+      // (The generated query types learn `whole_days` on the next dev run.)
+      if (!(resource as { whole_days?: boolean }).whole_days) {
+        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, RENTAL_RESOURCE_MESSAGE)
+      }
+      const { data: priced } = (await query.graph({
+        entity: "product_variant",
+        fields: ["id", "calculated_price.calculated_amount"],
+        filters: { id: input.variant_id },
+        context: { calculated_price: QueryContext({ region_id: cart.region_id, currency_code: cart.currency_code }) },
+      })) as unknown as { data: { calculated_price?: { calculated_amount?: number | null } }[] }
+      const perUnit = priced[0]?.calculated_price?.calculated_amount
+      if (perUnit == null) {
+        throw new MedusaError(MedusaError.Types.INVALID_DATA, RENTAL_DATES_MESSAGE)
+      }
+      const span = rentalSpan(rental, input.start_date!, input.end_date!)
+      rentalTimes = {
+        starts_at: zonedTimeToUtc(span.from, "00:00", resource.timezone).toISOString(),
+        ends_at: zonedTimeToUtc(span.to, "00:00", resource.timezone).toISOString(),
+      }
+      unit_price = rentalPrice(perUnit, units)
+      trip_label = `${rentalLabel(rental, units)}: ${input.start_date} to ${input.end_date}`
+    }
+
+    const starts_at = new Date(rentalTimes?.starts_at ?? input.starts_at ?? "")
+    const ends_at = new Date(rentalTimes?.ends_at ?? input.ends_at ?? "")
     if (Number.isNaN(starts_at.getTime()) || Number.isNaN(ends_at.getTime())) {
       throw new MedusaError(MedusaError.Types.INVALID_DATA, "The booking times are not valid dates.")
     }
@@ -220,6 +263,7 @@ const prepareBookingStep = createStep(
       dropoff_address: dropoff || null,
       unit_price,
       trip_label,
+      whole_days: !!rental,
     }
     return new StepResponse(prepared)
   }
@@ -310,6 +354,7 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.address ? { [BOOKING_ITEM_METADATA.address]: prepared.address } : {}),
             ...(prepared.dropoff_address ? { [BOOKING_ITEM_METADATA.dropoff_address]: prepared.dropoff_address } : {}),
             ...(prepared.trip_label ? { [BOOKING_ITEM_METADATA.trip]: prepared.trip_label } : {}),
+            ...(prepared.whole_days ? { [BOOKING_ITEM_METADATA.whole_days]: true } : {}),
           },
         },
       ],

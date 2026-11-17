@@ -74,8 +74,8 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
         {booked && (
           <Text className="txt-small text-ui-fg-subtle" data-testid="product-booking">
-            {formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}
-            {booked.resource ? ` with ${booked.resource}` : ""}
+            {booked.wholeDays ? booked.resource ?? "" : formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}
+            {!booked.wholeDays && booked.resource ? ` with ${booked.resource}` : ""}
             {booked.trip ? <span className="block" data-testid="product-booking-trip">{booked.trip}</span> : null}
             {booked.address ? (
               <span className="block" data-testid="product-booking-address">

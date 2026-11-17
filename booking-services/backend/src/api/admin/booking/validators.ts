@@ -15,6 +15,8 @@ export const PostAdminBookingResource = z.object({
   capacity: z.number().int().min(1).optional(),
   timezone: z.string().min(1).optional(),
   is_active: z.boolean().optional(),
+  // Booked by whole days (a rental, P3-22).
+  whole_days: z.boolean().optional(),
   schedules: z.array(hours).optional(),
   variant_ids: z.array(z.string().min(1)).optional(),
 })

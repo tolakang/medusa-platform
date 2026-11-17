@@ -25,6 +25,8 @@ export type CreateBookingResourceInput = {
   capacity?: number
   timezone?: string
   is_active?: boolean
+  // Booked by whole days (a rental, P3-22).
+  whole_days?: boolean
   schedules?: WeeklyHoursInput[]
   variant_ids?: string[]
 }
@@ -78,6 +80,7 @@ const createResourceStep = createStep(
       capacity: input.capacity ?? 1,
       timezone,
       is_active: input.is_active ?? true,
+      whole_days: input.whole_days ?? false,
     })
     if (input.schedules?.length) {
       await booking.createBookingSchedules(
