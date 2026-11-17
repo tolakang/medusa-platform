@@ -24,6 +24,10 @@ export const Booking = model
     cart_id: model.text().nullable(),
     line_item_id: model.text().nullable(),
     notes: model.text().nullable(),
+    // Where the visit is, for a service done at the customer's place (kind
+    // B, TASKS P3-20): the address as the customer wrote it. What needs doing
+    // is in `notes`.
+    address: model.text().nullable(),
     // When the 24-hour reminder was sent (P3-09; not in the plan's field
     // list, TASKS F-046). Null = not sent yet.
     reminder_sent_at: model.dateTime().nullable(),

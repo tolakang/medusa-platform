@@ -11,6 +11,8 @@ export type CalendarBooking = {
   starts_at: string
   ends_at: string
   notes?: string | null
+  // Where a visit at the customer's place is (kind B, P3-20).
+  address?: string | null
   customer?: { email: string | null; first_name: string | null; last_name: string | null } | null
   order?: { id: string; display_id: number | null } | null
 }

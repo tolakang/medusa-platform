@@ -3,14 +3,22 @@ import type { HttpTypes } from "@medusajs/types"
 // Booking helpers shared by the product page, cart and checkout (TASKS P3-13).
 // A service is a product whose variants have metadata.duration_minutes and
 // no shipping (backend P3-12); a booking line item carries metadata
-// booking_id, booking_starts_at, booking_ends_at, booking_resource_name and
-// booking_timezone (add-booking-to-cart, P3-04 / P3-13).
+// booking_id, booking_starts_at, booking_ends_at, booking_resource_name,
+// booking_timezone and, for a visit, booking_address (add-booking-to-cart,
+// P3-04 / P3-13 / P3-20).
 
 type Meta = Record<string, unknown> | null | undefined
 
 export function durationMinutes(variant: { metadata?: Meta } | null | undefined): number | null {
   const n = Number(variant?.metadata?.duration_minutes)
   return Number.isInteger(n) && n > 0 ? n : null
+}
+
+// A service done at the customer's place (kind B, TASKS P3-20): its product
+// has metadata.booking_kind "B". Booking it asks for the address and what
+// needs doing.
+export function isVisitService(product: { metadata?: Meta } | null | undefined): boolean {
+  return product?.metadata?.booking_kind === "B"
 }
 
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
@@ -46,7 +54,14 @@ export function isServiceOnlyCart(
   return items.length > 0 && items.every((i) => i.requires_shipping === false)
 }
 
-export type ItemBooking = { starts_at: string; ends_at: string; resource: string | null; timezone: string | null }
+export type ItemBooking = {
+  starts_at: string
+  ends_at: string
+  resource: string | null
+  timezone: string | null
+  // Where a visit at the customer's place is (kind B, TASKS P3-20).
+  address: string | null
+}
 
 export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemBooking | null {
   const m = item?.metadata
@@ -58,6 +73,7 @@ export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemB
     ends_at: String(m.booking_ends_at ?? m.booking_starts_at),
     resource: typeof m.booking_resource_name === "string" ? m.booking_resource_name : null,
     timezone: typeof m.booking_timezone === "string" ? m.booking_timezone : null,
+    address: typeof m.booking_address === "string" ? m.booking_address : null,
   }
 }
 

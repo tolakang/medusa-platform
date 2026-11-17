@@ -33,6 +33,12 @@ export const BOOKING_KIND_CATEGORIES = [
     description: "Book a time with a person, a room or a court.",
   },
   {
+    kind: "B",
+    name: "Visits at your place",
+    handle: "home-visits",
+    description: "We come to you: repairs, cleaning and installation.",
+  },
+  {
     kind: "G",
     name: "Table reservations",
     handle: "table-reservations",
@@ -118,6 +124,66 @@ export default async function seedBookingDemo({ container }: { container: Medusa
       },
     })
     logger.info(`Booking demo: service "${product.title}" and stylist ${stylist.name} (${stylist.timezone}) created.`)
+  }
+
+  // ---- B. Visit at your place: a time, the address, the problem ------------
+  // As an appointment (kind A) with a technician as the resource; the product
+  // is marked metadata.booking_kind "B", so booking it asks for the address
+  // and what needs doing (add-booking-to-cart, TASKS P3-20).
+  if (await exists("air-conditioner-service")) {
+    logger.info('Booking demo: "air-conditioner-service" already exists; skipped.')
+  } else {
+    const JOBS = [
+      { title: "Cleaning", sku: "AC-CLEAN", minutes: 60, price: 15 },
+      { title: "Repair visit", sku: "AC-REPAIR", minutes: 90, price: 20 },
+    ]
+    const {
+      result: [job],
+    } = await createProductOptionsWorkflow(container).run({
+      input: { product_options: [{ title: "Job", values: JOBS.map((j) => j.title) }] },
+    })
+    const {
+      result: [product],
+    } = await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Air conditioner service",
+            handle: "air-conditioner-service",
+            description:
+              "A technician comes to your home or office to clean or repair your air conditioner. Tell us the address and the problem when you book.",
+            status: ProductStatus.PUBLISHED,
+            metadata: { booking_kind: "B" },
+            options: [{ id: job.id }],
+            sales_channels: [{ id: salesChannelId }],
+            category_ids: [categoryIds.B],
+            variants: JOBS.map((j) => ({
+              title: j.title,
+              sku: j.sku,
+              manage_inventory: false,
+              options: { Job: j.title },
+              metadata: { duration_minutes: j.minutes },
+              prices: [{ amount: j.price, currency_code: "usd" }],
+            })),
+          },
+        ],
+      },
+    })
+    // Monday to Saturday, 08:00-12:00 and 13:00-17:00 in the shop's zone.
+    const schedules = [1, 2, 3, 4, 5, 6].flatMap((weekday) => [
+      { weekday, start_time: "08:00", end_time: "12:00" },
+      { weekday, start_time: "13:00", end_time: "17:00" },
+    ])
+    const { result: technician } = await createBookingResourceWorkflow(container).run({
+      input: {
+        name: "Vannak",
+        type: "staff",
+        timezone: defaultTimezone(),
+        schedules,
+        variant_ids: product.variants.map((v) => v.id),
+      },
+    })
+    logger.info(`Booking demo: service "${product.title}" and technician ${technician.name} created.`)
   }
 
   // ---- G. Table reservation: a time and a party size ----------------------

@@ -107,13 +107,13 @@ S3, Resend, Telegram and PayWay are optional: every booking check works without 
    ```
    - `<your-email>` becomes the admin login. Don't plan to use the same email for a shop account (Part H): an admin login blocks it.
    - The first seed adds the Cambodia region (USD), the Phnom Penh location and its delivery option.
-   - The second adds one example per booking kind, each in its category: **Haircut** (Appointments) with the stylist **Sophea**, Monday to Saturday 09:00–12:00 and 13:00–17:00; **Table reservation** (Table reservations) by party size 2, 4 or 6, a $5 deposit, every day 11:00–14:00 and 17:00–22:00. It ends with `Booking demo: service "Table reservation" with Tables for 2 (4), Tables for 4 (3), Table for 6 (1) created.`
+   - The second adds one example per booking kind, each in its category: **Haircut** (Appointments) with the stylist **Sophea**, Monday to Saturday 09:00–12:00 and 13:00–17:00; **Air conditioner service** (Visits at your place) with the technician **Vannak**, which asks for the address and what needs doing; **Table reservation** (Table reservations) by party size 2, 4 or 6, a $5 deposit, every day 11:00–14:00 and 17:00–22:00. It ends with `Booking demo: service "Table reservation" with Tables for 2 (4), Tables for 4 (3), Table for 6 (1) created.`
    - Don't run `seed-initial-data.js` here: it adds demo goods and a Europe region, which this shop doesn't have.
 2. Admin `https://<api host>/app` → **Settings → Store**: **Default currency USD**, **Default region Cambodia**. The services have USD prices only (F-086).
 3. **Settings → Publishable API Keys** → the one key → it must list exactly **one** sales channel, **Default Sales Channel** → copy its `pk_…` token.
 4. **With PayWay only:** **Settings → Regions → Cambodia → Payment providers** → add **payway** → **Save**.
 
-**Check:** you can sign in; **Products** lists exactly **Haircut** and **Table reservation**; **Products → Categories** lists **Appointments** and **Table reservations**; the sidebar shows **Bookings**; the store currency is USD.
+**Check:** you can sign in; **Products** lists exactly **Haircut**, **Air conditioner service** and **Table reservation**; **Products → Categories** lists **Appointments**, **Visits at your place** and **Table reservations**; the sidebar shows **Bookings**; the store currency is USD.
 
 ---
 
@@ -181,7 +181,7 @@ Don't deploy yet if `<shop host>` still belongs to another project: Part G moves
 |---|---|
 | `https://<api host>/health` | `OK` |
 | `https://<api host>/app/` | the admin |
-| `https://<shop host>/` | redirects to `/kh`: your shop name, "Choose a service, pick a free time and book it online.", then **Appointments** (Haircut) and **Table reservations** (Table reservation), each with a **Book** button |
+| `https://<shop host>/` | redirects to `/kh`: your shop name, "Choose a service, pick a free time and book it online.", then **Appointments** (Haircut), **Visits at your place** (Air conditioner service) and **Table reservations** (Table reservation), each with a **Book** button |
 | the shop's footer | your shop name and the two kinds; no "Medusa", GitHub or "Powered by" |
 | server: `docker ps --filter name=booking- --format '{{.Names}} {{.Status}}'` | backend and storefront `(healthy)`, worker `Up` |
 

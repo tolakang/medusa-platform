@@ -35,6 +35,7 @@ const Item = ({ item, currencyCode }: ItemProps) => {
             <Text className="txt-small text-ui-fg-subtle" data-testid="product-booking">
               {formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}
               {booked.resource ? ` with ${booked.resource}` : ""}
+            {booked.address ? <span className="block" data-testid="product-booking-address">At: {booked.address}</span> : null}
             </Text>
           ) : null
         })()}

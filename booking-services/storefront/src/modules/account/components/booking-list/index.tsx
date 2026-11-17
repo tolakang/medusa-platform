@@ -66,6 +66,11 @@ export default function BookingList({
               {b.resource?.name ?? ""}
               {b.order?.display_id != null ? ` · Order #${b.order.display_id}` : ""}
             </Text>
+            {b.address && (
+              <Text className="txt-small text-ui-fg-subtle" data-testid="booking-address">
+                At: {b.address}
+              </Text>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Badge>{b.status === "pending" ? "held" : b.status.replace("_", " ")}</Badge>
