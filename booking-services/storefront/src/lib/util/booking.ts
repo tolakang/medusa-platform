@@ -67,6 +67,12 @@ export function maxSeats(product: { metadata?: Meta } | null | undefined): numbe
   return Number.isInteger(n) && n >= 1 && n <= 100 ? n : 10
 }
 
+// An event sold by section (kind F, TASKS P3-24): product metadata.booking_kind
+// "F"; each variant is a date and a section with its seats as inventory.
+export function isEventProduct(product: { metadata?: Meta } | null | undefined): boolean {
+  return product?.metadata?.booking_kind === "F"
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }

@@ -242,7 +242,7 @@ docker-entrypoint.sh medusa exec ./src/scripts/seed-booking-demo.js
 ### D. PayWay in the Cambodia region (only with PayWay)
 Admin → **Settings** → **Regions** → **Cambodia** → **Payment providers**: add **payway** (`pp_payway_payway`) → **Save**. Without this the checkout shows no ABA PayWay option.
 
-**Check:** you can log in to the admin; **Products** shows exactly **Haircut**, **Air conditioner service**, **Moving truck**, **Airport transfer**, **Bus Siem Reap to Phnom Penh**, **Angkor sunrise tour**, **Wedding tent**, **Guesthouse room** and **Table reservation**; **Products → Categories** shows **Appointments**, **Visits at your place**, **Trips**, **Departures**, **Rentals** and **Table reservations**; the sidebar shows **Bookings**.
+**Check:** you can log in to the admin; **Products** shows exactly **Haircut**, **Air conditioner service**, **Moving truck**, **Airport transfer**, **Bus Siem Reap to Phnom Penh**, **Angkor sunrise tour**, **Apsara dance show**, **Wedding tent**, **Guesthouse room** and **Table reservation**; **Products → Categories** shows **Appointments**, **Visits at your place**, **Trips**, **Departures**, **Rentals**, **Events** and **Table reservations**; the sidebar shows **Bookings**.
 
 **Reply with:**
 - "Step 3 done";
@@ -405,7 +405,7 @@ A booking belongs to the customer who is signed in when they book, so sign up **
 3. Sign in.
 
 ### B. A booking in the shop
-1. Still signed in: the home page lists **Appointments**, **Visits at your place**, **Trips**, **Departures**, **Rentals** and **Table reservations**. Under Appointments, **Haircut** → **Book**.
+1. Still signed in: the home page lists **Appointments**, **Visits at your place**, **Trips**, **Departures**, **Rentals**, **Events** and **Table reservations**. Under Appointments, **Haircut** → **Book**.
 2. Pick **Length** `30 min`, a **Day** at least two days ahead (Monday to Saturday), and a **Time** → book. The page says the time is held for you while you check out.
 3. Go to the cart → **Checkout**. A service needs no address or delivery: check **First name**, **Last name** and **Email**.
 4. Pay:

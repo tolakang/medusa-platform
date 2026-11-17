@@ -7,6 +7,7 @@ import {
   bookingStatusLabel,
   isServiceOnlyCart,
   isDepartureService,
+  isEventProduct,
   isVisitService,
   maxSeats,
   rentalUnit,
@@ -57,6 +58,9 @@ describe("booking helpers", () => {
     assert.equal(isVisitService({ metadata: { booking_kind: "B" } }), true)
     assert.equal(isVisitService({ metadata: { booking_kind: "A" } }), false)
     assert.equal(isVisitService({ metadata: null }), false)
+    // Events (P3-24).
+    assert.equal(isEventProduct({ metadata: { booking_kind: "F" } }), true)
+    assert.equal(isEventProduct({ metadata: { booking_kind: "E" } }), false)
     // Departures (P3-23).
     assert.equal(isDepartureService({ metadata: { booking_kind: "D" } }), true)
     assert.equal(maxSeats({ metadata: { max_seats: 8 } }), 8)
