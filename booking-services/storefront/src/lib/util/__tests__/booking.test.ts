@@ -6,6 +6,8 @@ import {
   formatSlotTime,
   bookingStatusLabel,
   isServiceOnlyCart,
+  depositPercent,
+  depositSplit,
   isDepartureService,
   isEventProduct,
   isExtraProduct,
@@ -61,6 +63,11 @@ describe("booking helpers", () => {
     assert.equal(isVisitService({ metadata: { booking_kind: "B" } }), true)
     assert.equal(isVisitService({ metadata: { booking_kind: "A" } }), false)
     assert.equal(isVisitService({ metadata: null }), false)
+    // Deposits (P3-26).
+    assert.equal(depositPercent({ metadata: { deposit_percent: 30 } }), 30)
+    assert.equal(depositPercent({ metadata: { deposit_percent: 100 } }), null)
+    assert.deepEqual(depositSplit([{ total: 30, product: { metadata: { deposit_percent: 30 } } }, { total: 6, product: { metadata: {} } }]), { now: 15, later: 21 })
+    assert.equal(depositSplit([{ total: 8, product: { metadata: {} } }]), null)
     // Extras (P3-25).
     assert.equal(isExtraProduct({ metadata: { booking_extra: true } }), true)
     assert.deepEqual(offeredExtras({ metadata: { extras: "packing-boxes, extra-helper" } }), ["packing-boxes", "extra-helper"])

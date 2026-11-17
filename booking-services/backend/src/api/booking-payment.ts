@@ -1,5 +1,6 @@
 import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { setCartDepositWorkflow } from "../workflows/booking-deposits"
 import { extendBookingHoldsWorkflow } from "../workflows/extend-booking-holds"
 
 // TASKS P3-06: before a payment session is created for a cart, renew the
@@ -30,4 +31,16 @@ export async function extendBookingHoldsBeforePayment(
     }
   }
   next()
+}
+
+// TASKS P3-26: before a payment session is created for a cart with deposit
+// services, the payment collection's amount becomes what is due now (the
+// session takes it). A cart without deposits is left as Medusa set it.
+export async function setDepositBeforePayment(req: MedusaRequest, _res: MedusaResponse, next: MedusaNextFunction) {
+  try {
+    await setCartDepositWorkflow(req.scope).run({ input: { payment_collection_id: req.params.id } })
+    next()
+  } catch (e) {
+    next(e)
+  }
 }
