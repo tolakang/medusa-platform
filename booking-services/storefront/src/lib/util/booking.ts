@@ -21,6 +21,30 @@ export function isVisitService(product: { metadata?: Meta } | null | undefined):
   return product?.metadata?.booking_kind === "B"
 }
 
+// A trip (kind C, TASKS P3-21): its product has metadata.booking_kind "C" and
+// metadata.trip_pricing "hours" (whole hours of a vehicle) or "zones" (a price
+// between two areas). Null for any other service.
+export type TripPricing = "hours" | "zones"
+export function tripPricing(product: { metadata?: Meta } | null | undefined): TripPricing | null {
+  if (product?.metadata?.booking_kind !== "C") {
+    return null
+  }
+  const mode = product.metadata?.trip_pricing
+  return mode === "hours" || mode === "zones" ? mode : null
+}
+
+export const MAX_TRIP_HOURS = 12
+/** A vehicle's minimum hours (variant metadata.min_hours, default 1). */
+export function minHours(variant: { metadata?: Meta } | null | undefined): number {
+  const n = Number(variant?.metadata?.min_hours)
+  return Number.isInteger(n) && n >= 1 && n <= MAX_TRIP_HOURS ? n : 1
+}
+
+/** The price row between two zones, either way round. */
+export function zonePrice<T extends { from_zone_id: string; to_zone_id: string }>(rows: T[], a: string, b: string): T | null {
+  return rows.find((r) => (r.from_zone_id === a && r.to_zone_id === b) || (r.from_zone_id === b && r.to_zone_id === a)) ?? null
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }
@@ -59,8 +83,11 @@ export type ItemBooking = {
   ends_at: string
   resource: string | null
   timezone: string | null
-  // Where a visit at the customer's place is (kind B, TASKS P3-20).
+  // Where a visit at the customer's place is (kind B, TASKS P3-20); a trip's pickup.
   address: string | null
+  // A trip (kind C, TASKS P3-21): drop-off and what was priced.
+  dropoff: string | null
+  trip: string | null
 }
 
 export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemBooking | null {
@@ -74,6 +101,8 @@ export function itemBooking(item: { metadata?: Meta } | null | undefined): ItemB
     resource: typeof m.booking_resource_name === "string" ? m.booking_resource_name : null,
     timezone: typeof m.booking_timezone === "string" ? m.booking_timezone : null,
     address: typeof m.booking_address === "string" ? m.booking_address : null,
+    dropoff: typeof m.booking_dropoff_address === "string" ? m.booking_dropoff_address : null,
+    trip: typeof m.booking_trip === "string" ? m.booking_trip : null,
   }
 }
 

@@ -26,14 +26,20 @@ export type MyBooking = {
   ends_at: string
   notes: string | null
   address?: string | null
+  dropoff_address?: string | null
   resource: { name: string; timezone: string } | null
   order: { id: string; display_id: number | null } | null
 }
 
-export async function listSlots(variantId: string, date: string): Promise<{ slots: Slot[]; error?: string }> {
+export async function listSlots(
+  variantId: string,
+  date: string,
+  // A trip's length (kind C, P3-21): hours × 60, or the zone pair's minutes.
+  durationMinutes?: number
+): Promise<{ slots: Slot[]; error?: string }> {
   return sdk.client
     .fetch<{ slots: Slot[] }>("/store/booking/slots", {
-      query: { variant_id: variantId, date },
+      query: { variant_id: variantId, date, ...(durationMinutes ? { duration_minutes: String(durationMinutes) } : {}) },
       headers: await getAuthHeaders(),
       cache: "no-store",
     })
@@ -45,9 +51,14 @@ export async function addBookingToCart(input: {
   countryCode: string
   variantId: string
   slot: Slot
-  // A visit at the customer's place (kind B, TASKS P3-20).
+  // A visit at the customer's place (kind B, TASKS P3-20); a trip's pickup.
   address?: string
   notes?: string
+  // A trip (kind C, TASKS P3-21).
+  dropoffAddress?: string
+  hours?: number
+  fromZoneId?: string
+  toZoneId?: string
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -65,6 +76,9 @@ export async function addBookingToCart(input: {
         ends_at: input.slot.ends_at,
         ...(input.address ? { address: input.address } : {}),
         ...(input.notes ? { notes: input.notes } : {}),
+        ...(input.dropoffAddress ? { dropoff_address: input.dropoffAddress } : {}),
+        ...(input.hours ? { hours: input.hours } : {}),
+        ...(input.fromZoneId ? { from_zone_id: input.fromZoneId, to_zone_id: input.toZoneId } : {}),
       },
     })
   } catch (e) {
@@ -131,4 +145,16 @@ export async function cancelMyBooking(
   } catch (e) {
     return { error: (e as { message?: string })?.message ?? "Could not cancel this booking." }
   }
+}
+
+// A zone-priced trip's zones and price table (TASKS P3-21).
+export type TripZones = {
+  zones: { id: string; name: string }[]
+  prices: { from_zone_id: string; to_zone_id: string; amount: number; currency_code: string; minutes: number }[]
+}
+
+export async function listTripZones(variantId: string): Promise<TripZones> {
+  return sdk.client
+    .fetch<TripZones>("/store/booking/zones", { query: { variant_id: variantId }, cache: "no-store" })
+    .catch(() => ({ zones: [], prices: [] }))
 }

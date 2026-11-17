@@ -1,13 +1,17 @@
 "use client"
 
-import { addBookingToCart, listSlots, type Slot } from "@lib/data/booking"
+import { addBookingToCart, listSlots, listTripZones, type Slot, type TripZones } from "@lib/data/booking"
 import {
   durationMinutes,
   formatSlotTime,
   isVisitService,
   localDate,
+  MAX_TRIP_HOURS,
+  minHours,
   orderedServices,
   serviceChoiceLabel,
+  tripPricing,
+  zonePrice,
 } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
@@ -37,20 +41,41 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
   const visit = isVisitService(product)
   const [address, setAddress] = useState("")
   const [problem, setProblem] = useState("")
-  const visitReady = !visit || (address.trim().length >= 5 && problem.trim().length > 0)
+  // A trip (kind C, P3-21): pickup, drop-off, and hours or two zones. The
+  // backend sets the price; the one shown here is from the same rules.
+  const trip = tripPricing(product)
+  const [dropoff, setDropoff] = useState("")
+  const variant = services.find((v) => v.id === variantId)
+  const [chosenHours, setHours] = useState(() => minHours(services[0]))
+  // Never below the chosen vehicle's minimum (a larger truck may need more).
+  const hours = Math.max(chosenHours, minHours(variant))
+  const [zones, setZones] = useState<TripZones>({ zones: [], prices: [] })
+  const [fromZone, setFromZone] = useState("")
+  const [toZone, setToZone] = useState("")
+  const zoneRow = trip === "zones" ? zonePrice(zones.prices, fromZone, toZone) : null
+  const tripMinutes = trip === "hours" ? hours * 60 : trip === "zones" ? zoneRow?.minutes ?? null : undefined
+  const tripReady =
+    !trip || (address.trim().length >= 5 && dropoff.trim().length >= 5 && (trip === "hours" || !!zoneRow))
+  const visitReady = trip ? tripReady : !visit || (address.trim().length >= 5 && problem.trim().length > 0)
 
   useEffect(() => {
-    if (!variantId || !date) {
+    if (trip === "zones" && variantId) {
+      listTripZones(variantId).then(setZones)
+    }
+  }, [trip, variantId])
+
+  useEffect(() => {
+    if (!variantId || !date || tripMinutes === null) {
       return
     }
     setChosen(null)
     setError(null)
     startLoading(async () => {
-      const result = await listSlots(variantId, date)
+      const result = await listSlots(variantId, date, tripMinutes)
       setSlots(result.slots)
       setError(result.error ?? null)
     })
-  }, [variantId, date])
+  }, [variantId, date, tripMinutes])
 
   const book = () => {
     if (!chosen || !visitReady) {
@@ -62,11 +87,18 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
         variantId,
         slot: chosen,
         ...(visit ? { address: address.trim(), notes: problem.trim() } : {}),
+        ...(trip
+          ? {
+              address: address.trim(),
+              dropoffAddress: dropoff.trim(),
+              ...(trip === "hours" ? { hours } : { fromZoneId: fromZone, toZoneId: toZone }),
+            }
+          : {}),
       })
       if (result.error) {
         setError(result.error)
         // Someone else may have taken it: refresh the times.
-        const fresh = await listSlots(variantId, date)
+        const fresh = await listSlots(variantId, date, tripMinutes ?? undefined)
         setSlots(fresh.slots)
         setChosen(null)
         return
@@ -101,6 +133,82 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
               </button>
             ))}
           </div>
+        </div>
+      )}
+      {trip && (
+        <div className="flex flex-col gap-y-3" data-testid="booking-trip">
+          <label className="flex flex-col gap-y-2">
+            <Text className="txt-compact-small-plus">Pickup address</Text>
+            <input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              maxLength={300}
+              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              data-testid="booking-pickup"
+            />
+          </label>
+          <label className="flex flex-col gap-y-2">
+            <Text className="txt-compact-small-plus">Drop-off address</Text>
+            <input
+              value={dropoff}
+              onChange={(e) => setDropoff(e.target.value)}
+              maxLength={300}
+              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              data-testid="booking-dropoff"
+            />
+          </label>
+          {trip === "hours" && variant && (
+            <label className="flex flex-col gap-y-2">
+              <Text className="txt-compact-small-plus">How many hours</Text>
+              <select
+                value={hours}
+                onChange={(e) => setHours(Number(e.target.value))}
+                className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+                data-testid="booking-hours"
+              >
+                {Array.from({ length: MAX_TRIP_HOURS - minHours(variant) + 1 }, (_, i) => minHours(variant) + i).map((h) => (
+                  <option key={h} value={h}>
+                    {h} hours
+                    {variant.calculated_price?.calculated_amount != null
+                      ? ` · ${convertToLocale({ amount: variant.calculated_price.calculated_amount * h, currency_code: variant.calculated_price.currency_code ?? "usd" })}`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {trip === "zones" && (
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "From", value: fromZone, set: setFromZone, id: "booking-from-zone" },
+                { label: "To", value: toZone, set: setToZone, id: "booking-to-zone" },
+              ].map((f) => (
+                <label key={f.id} className="flex flex-col gap-y-2">
+                  <Text className="txt-compact-small-plus">{f.label}</Text>
+                  <select
+                    value={f.value}
+                    onChange={(e) => f.set(e.target.value)}
+                    className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+                    data-testid={f.id}
+                  >
+                    <option value="">Choose an area</option>
+                    {zones.zones.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+              <Text className="col-span-2 txt-small text-ui-fg-subtle" data-testid="booking-zone-price">
+                {zoneRow
+                  ? `${convertToLocale({ amount: Number(zoneRow.amount), currency_code: zoneRow.currency_code })} · about ${zoneRow.minutes} minutes`
+                  : fromZone && toZone
+                    ? "No price between these two areas. Try others or contact us."
+                    : "Choose both areas to see the price."}
+              </Text>
+            </div>
+          )}
         </div>
       )}
       <div className="flex flex-col gap-y-2">
@@ -175,7 +283,9 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
         {!chosen
           ? "Choose a time"
           : !visitReady
-            ? "Add the address and the job"
+            ? trip
+              ? "Add both addresses" + (trip === "zones" ? " and the areas" : "")
+              : "Add the address and the job"
             : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}`}
       </Button>
       <Text className="txt-xsmall text-ui-fg-subtle">The time is held for you while you check out.</Text>

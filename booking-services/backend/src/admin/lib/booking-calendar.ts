@@ -13,6 +13,8 @@ export type CalendarBooking = {
   notes?: string | null
   // Where a visit at the customer's place is (kind B, P3-20).
   address?: string | null
+  // A trip's drop-off (kind C, P3-21); its pickup is `address`.
+  dropoff_address?: string | null
   customer?: { email: string | null; first_name: string | null; last_name: string | null } | null
   order?: { id: string; display_id: number | null } | null
 }

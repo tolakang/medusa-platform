@@ -44,7 +44,7 @@ describe("booking helpers", () => {
           booking_timezone: PP,
         },
       }),
-      { starts_at: "2026-11-09T03:00:00.000Z", ends_at: "2026-11-09T04:00:00.000Z", resource: "Sophea", timezone: PP, address: null }
+      { starts_at: "2026-11-09T03:00:00.000Z", ends_at: "2026-11-09T04:00:00.000Z", resource: "Sophea", timezone: PP, address: null, dropoff: null, trip: null }
     )
     // A visit at the customer's place carries its address (P3-20).
     assert.equal(

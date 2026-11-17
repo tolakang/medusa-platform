@@ -64,3 +64,20 @@ export type PostAdminCommissionSettleType = z.infer<typeof PostAdminCommissionSe
 
 export const PostAdminPayoutPay = z.object({ reference: z.string().trim().min(1).max(200) })
 export type PostAdminPayoutPayType = z.infer<typeof PostAdminPayoutPay>
+
+// Trip zones (TASKS P3-21).
+export const PostAdminZone = z.object({
+  name: z.string().trim().min(1).max(80),
+  rank: z.number().int().min(0).max(1000).optional(),
+})
+export type PostAdminZoneType = z.infer<typeof PostAdminZone>
+
+export const PostAdminZonePrice = z.object({
+  variant_id: z.string().min(1),
+  from_zone_id: z.string().min(1),
+  to_zone_id: z.string().min(1),
+  amount: z.number().min(0).max(1_000_000),
+  minutes: z.number().int().min(5).max(1440),
+  currency_code: z.string().regex(/^[a-z]{3}$/),
+})
+export type PostAdminZonePriceType = z.infer<typeof PostAdminZonePrice>

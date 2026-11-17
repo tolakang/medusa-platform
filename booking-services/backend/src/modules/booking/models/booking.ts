@@ -28,6 +28,9 @@ export const Booking = model
     // B, TASKS P3-20): the address as the customer wrote it. What needs doing
     // is in `notes`.
     address: model.text().nullable(),
+    // A trip's drop-off address (kind C, TASKS P3-21); its pickup is
+    // `address`.
+    dropoff_address: model.text().nullable(),
     // When the 24-hour reminder was sent (P3-09; not in the plan's field
     // list, TASKS F-046). Null = not sent yet.
     reminder_sent_at: model.dateTime().nullable(),

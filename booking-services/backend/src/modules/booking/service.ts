@@ -14,6 +14,8 @@ import { BookingPayout } from "./models/booking-payout"
 import { BookingProvider } from "./models/booking-provider"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
+import { BookingZone } from "./models/booking-zone"
+import { BookingZonePrice } from "./models/booking-zone-price"
 import { candidateSlots, fitsWeeklyHours, isValidTimeZone, peakOverlap, toLocalTime } from "./utils/slot"
 
 export type BookingModuleOptions = {
@@ -91,6 +93,8 @@ export type CreateHoldInput = {
   notes?: string | null
   // Where a visit at the customer's place is (kind B, P3-20).
   address?: string | null
+  // A trip's drop-off (kind C, P3-21).
+  dropoff_address?: string | null
   now?: Date
   // Admin walk-in (P3-11): created `confirmed` with no hold, and may start
   // up to now (see SlotRequest.allow_started).
@@ -126,6 +130,8 @@ class BookingModuleService extends MedusaService({
   BookingProvider,
   BookingResource,
   BookingSchedule,
+  BookingZone,
+  BookingZonePrice,
   Booking,
 }) {
   protected options_: Required<BookingModuleOptions>
@@ -221,6 +227,7 @@ class BookingModuleService extends MedusaService({
         line_item_id: input.line_item_id ?? null,
         notes: input.notes ?? null,
         address: input.address ?? null,
+        dropoff_address: input.dropoff_address ?? null,
       },
       sharedContext
     )

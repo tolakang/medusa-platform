@@ -13,6 +13,7 @@ export const BOOKING_FIELDS = [
   "hold_expires_at",
   "notes",
   "address",
+  "dropoff_address",
   "customer_id",
   "resource.id",
   "resource.name",

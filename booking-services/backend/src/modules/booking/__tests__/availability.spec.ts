@@ -7,6 +7,8 @@ import { BookingDayOff } from "../models/booking-day-off"
 import { BookingPayout } from "../models/booking-payout"
 import { BookingProvider } from "../models/booking-provider"
 import { BookingSchedule } from "../models/booking-schedule"
+import { BookingZone } from "../models/booking-zone"
+import { BookingZonePrice } from "../models/booking-zone-price"
 import BookingModuleService from "../service"
 
 jest.setTimeout(60 * 1000)
@@ -23,7 +25,7 @@ const MON_11 = at("2026-11-09T04:00:00Z")
 
 moduleIntegrationTestRunner<BookingModuleService>({
   moduleName: BOOKING_MODULE,
-  moduleModels: [BookingCommission, BookingDayOff, BookingPayout, BookingProvider, BookingResource, BookingSchedule, Booking],
+  moduleModels: [BookingCommission, BookingDayOff, BookingPayout, BookingProvider, BookingResource, BookingSchedule, BookingZone, BookingZonePrice, Booking],
   moduleOptions: { holdMinutes: 20 },
   resolve: "./src/modules/booking",
   testSuite: ({ service }) => {

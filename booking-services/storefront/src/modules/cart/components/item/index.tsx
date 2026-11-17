@@ -76,7 +76,13 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           <Text className="txt-small text-ui-fg-subtle" data-testid="product-booking">
             {formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}
             {booked.resource ? ` with ${booked.resource}` : ""}
-            {booked.address ? <span className="block" data-testid="product-booking-address">At: {booked.address}</span> : null}
+            {booked.trip ? <span className="block" data-testid="product-booking-trip">{booked.trip}</span> : null}
+            {booked.address ? (
+              <span className="block" data-testid="product-booking-address">
+                {booked.dropoff ? `From: ${booked.address}` : `At: ${booked.address}`}
+              </span>
+            ) : null}
+            {booked.dropoff ? <span className="block" data-testid="product-booking-dropoff">To: {booked.dropoff}</span> : null}
           </Text>
         )}
       </Table.Cell>
