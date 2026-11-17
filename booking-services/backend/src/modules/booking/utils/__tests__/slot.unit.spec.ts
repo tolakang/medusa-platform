@@ -74,6 +74,18 @@ describe("fitsWeeklyHours", () => {
 })
 
 describe("peakOverlap", () => {
+  it("counts each booking's seats (P3-23)", () => {
+    const seat = (s: string, e: string, weight: number) => ({
+      starts_at: at(`2026-11-09T${s}:00Z`),
+      ends_at: at(`2026-11-09T${e}:00Z`),
+      weight,
+    })
+    const from = at("2026-11-09T00:00:00Z")
+    const to = at("2026-11-09T12:00:00Z")
+    expect(peakOverlap([seat("01:00", "07:00", 3), seat("01:00", "07:00", 5)], from, to)).toBe(8)
+    expect(peakOverlap([seat("01:00", "04:00", 3), seat("04:00", "07:00", 5)], from, to)).toBe(5)
+  })
+
   const i = (s: string, e: string) => ({
     starts_at: at(`2026-11-09T${s}:00Z`),
     ends_at: at(`2026-11-09T${e}:00Z`),

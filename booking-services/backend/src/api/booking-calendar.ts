@@ -14,6 +14,7 @@ export const BOOKING_FIELDS = [
   "notes",
   "address",
   "dropoff_address",
+  "seats",
   "customer_id",
   "resource.id",
   "resource.name",

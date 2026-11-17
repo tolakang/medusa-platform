@@ -11,6 +11,7 @@ import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 import { hoursPrice, tripPricing, validHours, zonePriceBetween } from "../lib/trip-pricing"
 import { rentalLabel, rentalPrice, rentalSpan, rentalUnit, rentalUnits } from "../lib/rental-pricing"
+import { isDepartureService, validSeats } from "../lib/departure"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
 // TASKS P3-04 (BUILD_PLAN §9.3): put a booked time slot in a cart. The hold
@@ -38,6 +39,8 @@ export type AddBookingToCartInput = {
   // A rental (kind E, P3-22): "YYYY-MM-DD" dates; the times come from them.
   start_date?: string | null
   end_date?: string | null
+  // A scheduled departure (kind D, P3-23): how many seats.
+  seats?: number | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -56,6 +59,8 @@ export const BOOKING_ITEM_METADATA = {
   trip: "booking_trip",
   // A rental (kind E, P3-22) is shown by its dates, not its times.
   whole_days: "booking_whole_days",
+  // Seats on a departure (kind D, P3-23).
+  seats: "booking_seats",
 } as const
 
 // A service done at the customer's place: its product has
@@ -70,6 +75,7 @@ export const VISIT_PROBLEM_MESSAGE = "Tell us what needs doing."
 export const TRIP_ADDRESSES_MESSAGE = "Tell us the pickup and the drop-off address."
 export const TRIP_HOURS_MESSAGE = "Choose how many hours you need the vehicle."
 export const TRIP_ZONES_MESSAGE = "There is no price for a trip between these two areas with this vehicle."
+export const DEPARTURE_SEATS_MESSAGE = "Choose how many seats (up to the most one booking can take)."
 export const RENTAL_DATES_MESSAGE = "Choose the start and end dates (up to 60 days)."
 export const RENTAL_RESOURCE_MESSAGE = "This item isn't set up to be rented by the day."
 export const TRIP_LENGTH_MESSAGE = "This time doesn't match the trip's length. Choose the time again."
@@ -92,6 +98,8 @@ type Prepared = {
   unit_price: number | null
   trip_label: string | null
   whole_days: boolean
+  // Places held and the line's quantity (seats on a departure, P3-23).
+  seats: number
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -210,6 +218,14 @@ const prepareBookingStep = createStep(
 
     // A rental (kind E, TASKS P3-22): whole local days of an item booked by
     // days; the dates set the times, the count and the price.
+    // A scheduled departure (kind D, TASKS P3-23): several seats in one
+    // booking, at most the product's metadata.max_seats (default 10).
+    const departure = isDepartureService(variant?.product)
+    const seats = departure ? validSeats(input.seats, variant?.product) : 1
+    if (seats === null) {
+      throw new MedusaError(MedusaError.Types.INVALID_DATA, DEPARTURE_SEATS_MESSAGE)
+    }
+
     const rental = rentalUnit(variant?.product)
     let rentalTimes: { starts_at: string; ends_at: string } | null = null
     if (rental) {
@@ -264,6 +280,7 @@ const prepareBookingStep = createStep(
       unit_price,
       trip_label,
       whole_days: !!rental,
+      seats,
     }
     return new StepResponse(prepared)
   }
@@ -283,6 +300,7 @@ const createBookingHoldStep = createStep(
       notes: input.notes,
       address: input.address,
       dropoff_address: input.dropoff_address,
+      seats: input.seats,
     })
     return new StepResponse(hold, hold.id)
   },
@@ -341,7 +359,8 @@ export const addBookingToCartWorkflow = createWorkflow(
       items: [
         {
           variant_id: prepared.variant_id,
-          quantity: 1,
+          // Seats on a departure (P3-23): Medusa prices seat × count.
+          quantity: prepared.seats,
           // A trip's price from its pricing mode (P3-21); kept by Medusa as a custom price.
           ...(prepared.unit_price !== null ? { unit_price: prepared.unit_price } : {}),
           metadata: {
@@ -355,6 +374,7 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.dropoff_address ? { [BOOKING_ITEM_METADATA.dropoff_address]: prepared.dropoff_address } : {}),
             ...(prepared.trip_label ? { [BOOKING_ITEM_METADATA.trip]: prepared.trip_label } : {}),
             ...(prepared.whole_days ? { [BOOKING_ITEM_METADATA.whole_days]: true } : {}),
+            ...(prepared.seats > 1 ? { [BOOKING_ITEM_METADATA.seats]: prepared.seats } : {}),
           },
         },
       ],

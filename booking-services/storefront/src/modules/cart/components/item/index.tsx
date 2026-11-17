@@ -77,6 +77,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             {booked.wholeDays ? booked.resource ?? "" : formatBookingRange(booked.starts_at, booked.ends_at, booked.timezone)}
             {!booked.wholeDays && booked.resource ? ` with ${booked.resource}` : ""}
             {booked.trip ? <span className="block" data-testid="product-booking-trip">{booked.trip}</span> : null}
+            {booked.seats > 1 ? <span className="block" data-testid="product-booking-seats">{booked.seats} seats</span> : null}
             {booked.address ? (
               <span className="block" data-testid="product-booking-address">
                 {booked.dropoff ? `From: ${booked.address}` : `At: ${booked.address}`}

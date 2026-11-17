@@ -186,6 +186,7 @@ const BookingsPage = () => {
                     <Text size="xsmall" className="text-ui-fg-subtle">Order #{b.order.display_id}</Text>
                   )}
                   {b.address && !b.dropoff_address && <Text size="xsmall" className="text-ui-fg-subtle">Visit at: {b.address}</Text>}
+                  {(b.seats ?? 1) > 1 && <Text size="xsmall" className="text-ui-fg-subtle">{b.seats} seats</Text>}
                   {b.dropoff_address && (
                     <Text size="xsmall" className="text-ui-fg-subtle">
                       Trip: {b.address} → {b.dropoff_address}

@@ -8,7 +8,15 @@ export const BOOKING_METADATA_KEYS = [
   "booking_resource_id",
   "booking_starts_at",
   "booking_ends_at",
+  // Seats on a departure (P3-23): the line's quantity must match.
+  "booking_seats",
 ] as const
+
+/** The places a booking line is for: its seats (P3-23), else 1. */
+export function bookingSeatsOf(metadata: BookingItemMetadata): number {
+  const n = Number(metadata?.booking_seats)
+  return Number.isInteger(n) && n >= 1 ? n : 1
+}
 
 export type BookingItemMetadata = Record<string, unknown> | null | undefined
 
@@ -68,8 +76,11 @@ export function holdState(booking: BookingRow, now: Date): HoldState {
   return "released"
 }
 
-// Booking items are one place each (TASKS F-045): their quantity stays 1
-// and their booking metadata can't be changed.
+// Booking items keep the places they were booked for (TASKS F-045): one,
+// or the seats of a departure (P3-23); their booking metadata can't change.
+export const BOOKING_QUANTITY_MESSAGE =
+  "A booking is for the places you chose. To change them, remove it and book again."
+
 export function bookingItemUpdateProblem(
   current: BookingItemMetadata,
   update: { quantity?: unknown; metadata?: BookingItemMetadata }
@@ -77,8 +88,8 @@ export function bookingItemUpdateProblem(
   if (!bookingIdOf(current)) {
     return null
   }
-  if (update.quantity !== undefined && Number(update.quantity) !== 1) {
-    return "A booking is for one place. Book another time to add more."
+  if (update.quantity !== undefined && Number(update.quantity) !== bookingSeatsOf(current)) {
+    return BOOKING_QUANTITY_MESSAGE
   }
   if (update.metadata !== undefined) {
     for (const key of BOOKING_METADATA_KEYS) {

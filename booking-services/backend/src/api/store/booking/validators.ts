@@ -30,6 +30,8 @@ export const PostBookingCart = z.object({
   ends_at: instant.optional(),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullish(),
+  // Seats on a scheduled departure (kind D, P3-23).
+  seats: z.number().int().min(1).max(100).nullish(),
   notes: z.string().max(500).nullish(),
   // A visit at the customer's place (kind B, P3-20).
   address: z.string().max(300).nullish(),

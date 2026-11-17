@@ -15,6 +15,8 @@ type Booking = {
   address: string | null
   // A trip's drop-off (kind C, P3-21).
   dropoff_address: string | null
+  // Seats on a departure (kind D, P3-23).
+  seats?: number
   customer: { email: string | null; first_name: string | null; last_name: string | null } | null
   order: { id: string; display_id: number | null } | null
 }
@@ -90,6 +92,7 @@ export default async function CalendarPage({
                   <div>
                     <p className="font-medium">
                       {timeRange(b, calendar.timezone)} · {customerLabel(b)}
+                      {(b.seats ?? 1) > 1 ? ` · ${b.seats} seats` : ""}
                     </p>
                     <p className="text-sm text-ui-fg-subtle">
                       {STATUS_LABEL[b.status] ?? b.status}

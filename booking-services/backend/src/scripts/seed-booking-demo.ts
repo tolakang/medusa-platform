@@ -47,6 +47,12 @@ export const BOOKING_KIND_CATEGORIES = [
     description: "Moving, transfers and a driver for the day: from your pickup to your drop-off.",
   },
   {
+    kind: "D",
+    name: "Departures",
+    handle: "departures",
+    description: "Buses, boats and tours that leave at set times. Book your seats.",
+  },
+  {
     kind: "E",
     name: "Rentals",
     handle: "rentals",
@@ -328,6 +334,99 @@ export default async function seedBookingDemo({ container }: { container: Medusa
       })
     }
     logger.info(`Booking demo: service "${product.title}" (by zones: ${zoneNames.join(", ")}) created.`)
+  }
+
+  // ---- D. Scheduled departure (TASKS P3-23) -------------------------------
+  // Each route is a variant with its length; its vehicle is a resource whose
+  // weekly hours are its departures, each window exactly one trip long, and
+  // whose capacity is its seats. A booking takes several seats (quantity).
+  const everyDay = (windows: [string, string][]) =>
+    [0, 1, 2, 3, 4, 5, 6].flatMap((weekday) => windows.map(([start_time, end_time]) => ({ weekday, start_time, end_time })))
+  const DEPARTURES = [
+    {
+      handle: "bus-siem-reap-phnom-penh",
+      title: "Bus Siem Reap to Phnom Penh",
+      description: "An air-conditioned bus, about 6 hours. Two departures a day. The price is per seat.",
+      max_seats: 10,
+      routes: [
+        {
+          title: "Siem Reap → Phnom Penh",
+          sku: "BUS-SR-PP",
+          minutes: 360,
+          price: 12,
+          vehicle: "Bus to Phnom Penh",
+          seats: 40,
+          windows: [["07:00", "13:00"], ["13:30", "19:30"]] as [string, string][],
+        },
+      ],
+    },
+    {
+      handle: "angkor-sunrise-tour",
+      title: "Angkor sunrise tour",
+      description: "Sunrise at Angkor Wat, then Bayon and Ta Prohm with a guide, back for lunch. The price is per seat.",
+      max_seats: 8,
+      routes: [
+        {
+          title: "Sunrise tour (8 hours)",
+          sku: "TOUR-SUNRISE",
+          minutes: 480,
+          price: 25,
+          vehicle: "Tour van",
+          seats: 12,
+          windows: [["04:30", "12:30"]] as [string, string][],
+        },
+      ],
+    },
+  ]
+  for (const d of DEPARTURES) {
+    if (await exists(d.handle)) {
+      logger.info(`Booking demo: "${d.handle}" already exists; skipped.`)
+      continue
+    }
+    const {
+      result: [route],
+    } = await createProductOptionsWorkflow(container).run({
+      input: { product_options: [{ title: `${d.title} route`, values: d.routes.map((r) => r.title) }] },
+    })
+    const {
+      result: [product],
+    } = await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: d.title,
+            handle: d.handle,
+            description: d.description,
+            status: ProductStatus.PUBLISHED,
+            metadata: { booking_kind: "D", max_seats: d.max_seats },
+            options: [{ id: route.id }],
+            sales_channels: [{ id: salesChannelId }],
+            category_ids: [categoryIds.D],
+            variants: d.routes.map((r) => ({
+              title: r.title,
+              sku: r.sku,
+              manage_inventory: false,
+              options: { [`${d.title} route`]: r.title },
+              metadata: { duration_minutes: r.minutes },
+              prices: [{ amount: r.price, currency_code: "usd" }],
+            })),
+          },
+        ],
+      },
+    })
+    for (const r of d.routes) {
+      await createBookingResourceWorkflow(container).run({
+        input: {
+          name: r.vehicle,
+          type: "equipment",
+          capacity: r.seats,
+          timezone: defaultTimezone(),
+          schedules: everyDay(r.windows),
+          variant_ids: [product.variants.find((v) => v.title === r.title)!.id],
+        },
+      })
+    }
+    logger.info(`Booking demo: departures "${d.title}" created.`)
   }
 
   // ---- E. Rental by dates (TASKS P3-22) -----------------------------------

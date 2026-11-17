@@ -1610,6 +1610,22 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "seats": {
+          "name": "seats",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": "1",
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
         "reminder_sent_at": {
           "name": "reminder_sent_at",
           "type": "timestamptz",
@@ -1742,6 +1758,11 @@
         }
       ],
       "checks": [
+        {
+          "name": "booking_seats_positive",
+          "expression": "seats >= 1",
+          "definition": "check ((seats >= 1))"
+        },
         {
           "name": "booking_ends_after_start",
           "expression": "ends_at > starts_at",

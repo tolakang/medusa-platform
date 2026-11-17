@@ -113,7 +113,7 @@ S3, Resend, Telegram and PayWay are optional: every booking check works without 
 3. **Settings → Publishable API Keys** → the one key → it must list exactly **one** sales channel, **Default Sales Channel** → copy its `pk_…` token.
 4. **With PayWay only:** **Settings → Regions → Cambodia → Payment providers** → add **payway** → **Save**.
 
-**Check:** you can sign in; **Products** lists exactly **Haircut**, **Air conditioner service**, **Moving truck**, **Airport transfer**, **Wedding tent**, **Guesthouse room** and **Table reservation**; **Products → Categories** lists **Appointments**, **Visits at your place**, **Trips**, **Rentals** and **Table reservations**; the sidebar shows **Bookings**; the store currency is USD.
+**Check:** you can sign in; **Products** lists exactly **Haircut**, **Air conditioner service**, **Moving truck**, **Airport transfer**, **Bus Siem Reap to Phnom Penh**, **Angkor sunrise tour**, **Wedding tent**, **Guesthouse room** and **Table reservation**; **Products → Categories** lists **Appointments**, **Visits at your place**, **Trips**, **Departures**, **Rentals** and **Table reservations**; the sidebar shows **Bookings**; the store currency is USD.
 
 ---
 

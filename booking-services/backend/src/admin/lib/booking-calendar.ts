@@ -15,6 +15,8 @@ export type CalendarBooking = {
   address?: string | null
   // A trip's drop-off (kind C, P3-21); its pickup is `address`.
   dropoff_address?: string | null
+  // Seats on a departure (kind D, P3-23).
+  seats?: number
   customer?: { email: string | null; first_name: string | null; last_name: string | null } | null
   order?: { id: string; display_id: number | null } | null
 }

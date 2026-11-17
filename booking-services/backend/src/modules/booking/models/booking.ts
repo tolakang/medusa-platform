@@ -31,6 +31,9 @@ export const Booking = model
     // A trip's drop-off address (kind C, TASKS P3-21); its pickup is
     // `address`.
     dropoff_address: model.text().nullable(),
+    // Places this booking takes of the resource's capacity: seats on a
+    // scheduled departure (kind D, TASKS P3-23); 1 for everything else.
+    seats: model.number().default(1),
     // When the 24-hour reminder was sent (P3-09; not in the plan's field
     // list, TASKS F-046). Null = not sent yet.
     reminder_sent_at: model.dateTime().nullable(),
@@ -51,6 +54,10 @@ export const Booking = model
     },
   ])
   .checks([
+    {
+      name: "booking_seats_positive",
+      expression: (columns) => `${columns.seats} >= 1`,
+    },
     {
       name: "booking_ends_after_start",
       expression: (columns) => `${columns.ends_at} > ${columns.starts_at}`,
