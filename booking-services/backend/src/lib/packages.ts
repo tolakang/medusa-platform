@@ -16,7 +16,8 @@ export const PACKAGE_ALONE_MESSAGE = "Book this package with its event date."
 export const PACKAGE_INCOMPLETE_MESSAGE = "This package is missing some of its parts. Remove it and book it again."
 export const PACKAGE_DATE_MESSAGE = "Choose an event date from tomorrow on, at most a year ahead."
 
-export type PackagePiece = { sku: string; day: number; time?: string; days?: number; label?: string; seats?: number; hours?: number }
+// `sku`, or a `variant_id` (a partner's own services have no SKU).
+export type PackagePiece = { sku: string; variant_id?: string; day: number; time?: string; days?: number; label?: string; seats?: number; hours?: number }
 
 const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/
 
@@ -26,9 +27,13 @@ export function packagePieces(meta: Record<string, unknown> | null | undefined):
   const pieces: PackagePiece[] = []
   for (const r of raw as Record<string, unknown>[]) {
     const sku = typeof r?.sku === "string" ? r.sku.trim() : ""
+    const variantId = typeof r?.variant_id === "string" ? r.variant_id.trim() : ""
     const day = r?.day === undefined ? 0 : Number(r.day)
-    if (!sku || !Number.isInteger(day) || day < 0 || day > 30) return null
-    const label = typeof r.label === "string" && r.label.trim() ? { label: r.label.trim().slice(0, 80) } : {}
+    if ((!sku && !variantId) || !Number.isInteger(day) || day < 0 || day > 30) return null
+    const label = {
+      ...(typeof r.label === "string" && r.label.trim() ? { label: r.label.trim().slice(0, 80) } : {}),
+      ...(variantId ? { variant_id: variantId } : {}),
+    }
     // A departure's seats, or a trip's hours (P3-30 follow-up).
     const seats = Number(r.seats)
     const hours = Number(r.hours)

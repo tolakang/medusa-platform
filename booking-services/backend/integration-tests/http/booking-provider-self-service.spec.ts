@@ -184,6 +184,51 @@ medusaIntegrationTestRunner({
         expect(hidden.data.products.map((p: { title: string }) => p.title).sort()).toEqual(["Full house move", "Haircut"])
       })
 
+      it("a partner builds an event package from their own services, and the shop books it whole (P3-30)", async () => {
+        const dara = await partner("dara@clinic.test", "Dr. Dara")
+        const vuthy = await partner("vuthy@clinic.test", "Dr. Vuthy")
+        await api.post(`/providers/me/resources/${dara.calendar.id}`, { schedules: WEEK }, dara.auth)
+        const check = (await api.post("/providers/me/services", { title: "Check-up", lengths: [{ minutes: 60, price: 5 }] }, dara.auth)).data.service
+        const other = (await api.post("/providers/me/services", { title: "X-ray", lengths: [{ minutes: 30, price: 9 }] }, vuthy.auth)).data.service
+
+        // Someone else's service can't be a piece.
+        const theirs = await call(
+          api.post("/providers/me/packages", { title: "Mixed", price: 20, pieces: [{ variant_id: other.variants[0].id, time: "09:00" }] }, dara.auth)
+        )
+        expect(theirs.status).toBe(400)
+
+        const made = await api.post(
+          "/providers/me/packages",
+          {
+            title: "Family check-up morning",
+            price: 12,
+            pieces: [
+              { variant_id: check.variants[0].id, time: "09:00", label: "First check-up" },
+              { variant_id: check.variants[0].id, time: "10:00", label: "Second check-up" },
+            ],
+          },
+          dara.auth
+        )
+        expect(made.status).toBe(201)
+        expect(made.data.package).toMatchObject({ title: "Family check-up morning", price: { amount: 12 } })
+        expect((await api.get("/providers/me/packages", dara.auth)).data.packages).toHaveLength(1)
+        // Not listed as a service, and not Vuthy's.
+        expect((await api.get("/providers/me/services", dara.auth)).data.services.map((x: any) => x.title)).toEqual(["Check-up"])
+        expect((await api.get("/providers/me/packages", vuthy.auth)).data.packages).toEqual([])
+
+        // A customer books it on a Monday: both times on Dara's calendar, at $12.
+        const query = getContainer().resolve(ContainerRegistrationKeys.QUERY)
+        const regionId = (await query.graph({ entity: "region", fields: ["id"] })).data[0].id
+        const {
+          data: [product],
+        } = await query.graph({ entity: "product", fields: ["variants.id"], filters: { id: made.data.package.id } })
+        const cart = (await api.post("/store/carts", { region_id: regionId }, store)).data.cart.id
+        const booked = await call(api.post("/store/booking/package", { cart_id: cart, variant_id: product.variants![0]!.id, date: monday }, store))
+        expect(booked.status).toBe(200)
+        const items = (await api.get(`/store/carts/${cart}`, store)).data.cart.items
+        expect(items.map((i: any) => i.unit_price).sort((a: number, b: number) => a - b)).toEqual([0, 0, 12])
+      })
+
       it("a provider sees and serves only their own calendars, bookings and services", async () => {
         const dara = await partner("dara@clinic.test", "Dr. Dara")
         const vuthy = await partner("vuthy@clinic.test", "Dr. Vuthy")
