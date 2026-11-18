@@ -20,6 +20,7 @@ import {
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text, clx } from "@modules/common/components/ui"
+import JoinWaitlist from "@modules/products/components/join-waitlist"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState, useTransition } from "react"
 
@@ -27,7 +28,7 @@ import { useEffect, useMemo, useState, useTransition } from "react"
 // a table, P3-19), a day and a free
 // time, then the slot is held and added to the cart (POST /store/booking/cart,
 // hold for BOOKING_HOLD_MINUTES). Times are the resource's local time.
-export default function BookingPicker({ product }: { product: HttpTypes.StoreProduct }) {
+export default function BookingPicker({ product, signedIn = false }: { product: HttpTypes.StoreProduct; signedIn?: boolean }) {
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const services = useMemo(
@@ -270,7 +271,10 @@ export default function BookingPicker({ product }: { product: HttpTypes.StorePro
         <Text className="txt-compact-small-plus">Time</Text>
         {loading && <Text className="txt-small text-ui-fg-subtle">Loading times…</Text>}
         {!loading && slots.length === 0 && (
-          <Text className="txt-small text-ui-fg-subtle">No free times on this day. Try another day.</Text>
+          <>
+            <Text className="txt-small text-ui-fg-subtle">No free times on this day. Try another day.</Text>
+            {!trip && variantId && <JoinWaitlist key={`${variantId}${date}`} variantId={variantId} date={date} signedIn={signedIn} />}
+          </>
         )}
         <div className="grid grid-cols-3 gap-2">
           {slots.filter((s) => !departure || s.remaining >= seats).map((s) => (

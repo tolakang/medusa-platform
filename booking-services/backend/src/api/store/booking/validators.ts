@@ -67,3 +67,10 @@ export const PostBookingMove = z.object({
   ends_at: instant,
 })
 export type PostBookingMoveType = z.infer<typeof PostBookingMove>
+
+// Waitlist (TASKS P3-29).
+export const PostWaitlist = z.object({
+  variant_id: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD"),
+})
+export type PostWaitlistType = z.infer<typeof PostWaitlist>

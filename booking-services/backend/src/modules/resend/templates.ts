@@ -10,6 +10,7 @@ import {
 import { EVENT_TICKETS_TEMPLATE, eventTicketsEmail, type EventTicketsData } from "../../lib/event-tickets"
 import { BALANCE_TEMPLATE, balanceReminderEmail, type BalanceReminderData } from "../../lib/deposits"
 import { QUOTE_TEMPLATE, quoteEmail, type QuoteEmailData } from "../../lib/quotes"
+import { WAITLIST_TEMPLATE, waitlistEmail, type WaitlistEmailData } from "../../lib/waitlist"
 import { BOOKING_MOVED_TEMPLATE, bookingMovedEmail, type BookingMovedEmailData } from "../../lib/booking-move"
 import { escapeHtml } from "@medusa-platform/medusa-core/lib/order-notification"
 
@@ -36,6 +37,10 @@ export function renderEmail(
   // A booking staff moved (TASKS P3-28).
   if (template === BOOKING_MOVED_TEMPLATE && (data as BookingMovedEmailData | null)?.starts_at) {
     return bookingMovedEmail(data as BookingMovedEmailData, escapeHtml)
+  }
+  // A free time for someone on the waitlist (TASKS P3-29).
+  if (template === WAITLIST_TEMPLATE && (data as WaitlistEmailData | null)?.times?.length) {
+    return waitlistEmail(data as WaitlistEmailData, escapeHtml)
   }
   return renderCoreEmail(template, data)
 }
