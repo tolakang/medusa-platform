@@ -109,6 +109,8 @@ export type CreateHoldInput = {
   seats?: number
   // A weekly series booked together (P3-29).
   series_id?: string | null
+  // An event package's piece (P3-30).
+  package_id?: string | null
   now?: Date
   // Admin walk-in (P3-11): created `confirmed` with no hold, and may start
   // up to now (see SlotRequest.allow_started).
@@ -302,6 +304,7 @@ class BookingModuleService extends MedusaService({
         dropoff_address: input.dropoff_address ?? null,
         seats: input.seats ?? 1,
         series_id: input.series_id ?? null,
+        package_id: input.package_id ?? null,
       },
       sharedContext
     )

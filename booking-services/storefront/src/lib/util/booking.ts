@@ -241,3 +241,9 @@ export function bookingStatusLabel(statuses: string[], orderStatus?: string | nu
 export function isQuoteOnly(product: HttpTypes.StoreProduct): boolean {
   return (product.metadata as Record<string, unknown> | null)?.quote_only === true
 }
+
+// Event package (TASKS P3-30, kind H): pieces booked together on one date.
+export function isPackageProduct(product: HttpTypes.StoreProduct): boolean {
+  const items = (product.metadata as Record<string, unknown> | null)?.package_items
+  return Array.isArray(items) && items.length > 0
+}

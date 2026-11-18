@@ -820,6 +820,47 @@ export default async function seedBookingDemo({ container }: { container: Medusa
     })
     logger.info('Booking demo: pass "Haircut 5-pack" created.')
   }
+
+  // ---- H. Event package (TASKS P3-30): pieces booked together ------------
+  // Metadata package_items lists the pieces by variant SKU: a time on the
+  // event day, or whole days of a rental. The package's price is the whole
+  // price; the pieces go in the cart at $0. No shipping profile.
+  if (await exists("small-wedding")) {
+    logger.info('Booking demo: "small-wedding" already exists; skipped.')
+  } else {
+    await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Small wedding",
+            handle: "small-wedding",
+            description:
+              "Hair for the bride in the morning, the 50-guest tent for the day and a table for six in the evening, booked together on your date.",
+            status: ProductStatus.PUBLISHED,
+            metadata: {
+              package_items: [
+                { sku: "HAIRCUT-60", day: 0, time: "09:00" },
+                { sku: "TENT-50", day: 0, days: 1 },
+                { sku: "TABLE-6", day: 0, time: "18:00" },
+              ],
+            },
+            options: [{ title: "Package", values: ["Small wedding"] }],
+            sales_channels: [{ id: salesChannelId }],
+            variants: [
+              {
+                title: "Small wedding",
+                sku: "PACKAGE-WEDDING-S",
+                manage_inventory: false,
+                options: { Package: "Small wedding" },
+                prices: [{ amount: 150, currency_code: "usd" }],
+              },
+            ],
+          },
+        ],
+      },
+    })
+    logger.info('Booking demo: package "Small wedding" created.')
+  }
 }
 
 // The kind categories, created when missing (by handle). Returns their ids.

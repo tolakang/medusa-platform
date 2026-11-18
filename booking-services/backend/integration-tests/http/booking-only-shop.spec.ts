@@ -44,7 +44,7 @@ medusaIntegrationTestRunner({
 
       it("sells only the booking services, one per kind, each in its kind's category", async () => {
         const { data: products } = await api.get("/store/products?fields=handle,categories.handle", store)
-        expect(products.products.map((p: { handle: string }) => p.handle).sort()).toEqual(["air-conditioner-service", "airport-transfer", "angkor-sunrise-tour", "apsara-dance-show", "bus-siem-reap-phnom-penh", "extra-helper", "full-house-move", "guesthouse-room", "haircut", "haircut-5-pack", "moving-insurance", "moving-truck", "packing-boxes", "table-reservation", "wedding-tent"])
+        expect(products.products.map((p: { handle: string }) => p.handle).sort()).toEqual(["air-conditioner-service", "airport-transfer", "angkor-sunrise-tour", "apsara-dance-show", "bus-siem-reap-phnom-penh", "extra-helper", "full-house-move", "guesthouse-room", "haircut", "haircut-5-pack", "moving-insurance", "moving-truck", "packing-boxes", "small-wedding", "table-reservation", "wedding-tent"])
 
         // As the storefront reads them: the kinds by rank, then each kind's
         // services through /store/products?category_id=.
@@ -187,7 +187,7 @@ medusaIntegrationTestRunner({
         const before = await count()
         await seedBookingDemo({ container })
         expect(await count()).toEqual(before)
-        expect(before).toEqual({ products: 15, categories: 7, variants: 26 })
+        expect(before).toEqual({ products: 16, categories: 7, variants: 27 })
       })
     })
   },

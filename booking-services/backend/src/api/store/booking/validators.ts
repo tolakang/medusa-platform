@@ -97,3 +97,13 @@ export const PostRecurring = z.object({
   notes: z.string().max(1000).nullish(),
 })
 export type PostRecurringType = z.infer<typeof PostRecurring>
+
+// An event package on its date (TASKS P3-30).
+export const PostPackage = z.object({
+  cart_id: z.string().min(1),
+  variant_id: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD"),
+  address: z.string().max(300).nullish(),
+  notes: z.string().max(1000).nullish(),
+})
+export type PostPackageType = z.infer<typeof PostPackage>

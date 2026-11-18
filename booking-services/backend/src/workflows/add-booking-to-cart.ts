@@ -14,6 +14,7 @@ import { rentalLabel, rentalPrice, rentalSpan, rentalUnit, rentalUnits } from ".
 import { isDepartureService, validSeats } from "../lib/departure"
 import { isQuoteOnly, QUOTE_NOT_YOURS_MESSAGE, QUOTE_ONLY_MESSAGE, quoteBookable } from "../lib/quotes"
 import { PASS_ITEM_KEY, PASS_NOT_FOUND_MESSAGE, PASS_SERVICE_MESSAGE, passProblem } from "../lib/passes"
+import { PACKAGE_ITEM_KEY } from "../lib/packages"
 import { EXTRA_FOR_KEY, EXTRA_NOT_OFFERED_MESSAGE, isExtraProduct, MAX_EXTRA_QUANTITY, offeredExtras } from "../lib/booking-extras"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
@@ -52,6 +53,10 @@ export type AddBookingToCartInput = {
   pass_id?: string | null
   // A weekly series booked together (P3-29, POST /store/booking/recurring).
   series_id?: string | null
+  // A piece of an event package (P3-30, POST /store/booking/package): its
+  // line is $0, the package line carries the price. Never from the store's
+  // own cart route.
+  package_id?: string | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -76,6 +81,8 @@ export const BOOKING_ITEM_METADATA = {
   quote_id: "booking_quote_id",
   // The pass that pays for it (P3-29).
   pass_id: PASS_ITEM_KEY,
+  // The event package it belongs to (P3-30).
+  package_id: PACKAGE_ITEM_KEY,
 } as const
 
 // A service done at the customer's place: its product has
@@ -120,6 +127,7 @@ type Prepared = {
   quote_id: string | null
   pass_id: string | null
   series_id: string | null
+  package_id: string | null
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -352,6 +360,11 @@ const prepareBookingStep = createStep(
       passId = pass.id
     }
 
+    // A package piece: the package line carries the price (P3-30).
+    if (input.package_id) {
+      unit_price = 0
+    }
+
     const prepared: Prepared = {
       cart_id: cart.id,
       customer_id: cart.customer_id ?? null,
@@ -372,6 +385,7 @@ const prepareBookingStep = createStep(
       quote_id: quoteId,
       pass_id: passId,
       series_id: input.series_id ?? null,
+      package_id: input.package_id ?? null,
     }
     return new StepResponse(prepared)
   }
@@ -393,6 +407,7 @@ const createBookingHoldStep = createStep(
       dropoff_address: input.dropoff_address,
       seats: input.seats,
       series_id: input.series_id,
+      package_id: input.package_id,
     })
     return new StepResponse(hold, hold.id)
   },
@@ -469,6 +484,7 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.seats > 1 ? { [BOOKING_ITEM_METADATA.seats]: prepared.seats } : {}),
             ...(prepared.quote_id ? { [BOOKING_ITEM_METADATA.quote_id]: prepared.quote_id } : {}),
             ...(prepared.pass_id ? { [BOOKING_ITEM_METADATA.pass_id]: prepared.pass_id } : {}),
+            ...(prepared.package_id ? { [BOOKING_ITEM_METADATA.package_id]: prepared.package_id } : {}),
           },
         },
         // Its extras, each tied to this booking (P3-25).

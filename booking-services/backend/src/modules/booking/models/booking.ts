@@ -40,6 +40,9 @@ export const Booking = model
     // The weekly series this booking belongs to (TASKS P3-29): the same
     // calendar and local time, booked together. Null = a single booking.
     series_id: model.text().nullable(),
+    // The event package this booking is a piece of (TASKS P3-30): its
+    // pieces are booked, paid and cancelled together.
+    package_id: model.text().nullable(),
     resource: model.belongsTo(() => BookingResource, {
       mappedBy: "bookings",
     }),
