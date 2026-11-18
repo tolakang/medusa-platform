@@ -108,3 +108,7 @@ export const PostAdminBookingMove = z
   })
   .refine((v) => v.resource_id || v.starts_at, { message: "Give a calendar or a start." })
 export type PostAdminBookingMoveType = z.infer<typeof PostAdminBookingMove>
+
+// Hide or show a review (TASKS P3-29).
+export const PostAdminReview = z.object({ status: z.enum(["published", "hidden"]) })
+export type PostAdminReviewType = z.infer<typeof PostAdminReview>

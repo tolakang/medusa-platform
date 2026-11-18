@@ -6,6 +6,7 @@ import { isServiceProduct } from "@lib/util/booking"
 import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
+import ServiceReviews from "@modules/products/components/service-reviews"
 import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
@@ -64,6 +65,13 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           </Suspense>
         </div>
       </div>
+      {isServiceProduct(product) && (
+        <div className="content-container mt-8 max-w-3xl">
+          <Suspense fallback={null}>
+            <ServiceReviews productId={product.id} />
+          </Suspense>
+        </div>
+      )}
       <div
         className="content-container my-16 small:my-32"
         data-testid="related-products-container"

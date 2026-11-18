@@ -7,6 +7,7 @@ import { BookingDayOff } from "../models/booking-day-off"
 import { BookingPayout } from "../models/booking-payout"
 import { BookingQuote } from "../models/booking-quote"
 import { BookingWaitlist } from "../models/booking-waitlist"
+import { BookingReview } from "../models/booking-review"
 import { BookingProvider } from "../models/booking-provider"
 import { BookingSchedule } from "../models/booking-schedule"
 import { BookingTicket } from "../models/booking-ticket"
@@ -28,7 +29,7 @@ const MON_11 = at("2026-11-09T04:00:00Z")
 
 moduleIntegrationTestRunner<BookingModuleService>({
   moduleName: BOOKING_MODULE,
-  moduleModels: [BookingCommission, BookingDayOff, BookingPayout, BookingProvider, BookingQuote, BookingResource, BookingWaitlist, BookingSchedule, BookingTicket, BookingZone, BookingZonePrice, Booking],
+  moduleModels: [BookingCommission, BookingDayOff, BookingPayout, BookingProvider, BookingQuote, BookingResource, BookingReview, BookingWaitlist, BookingSchedule, BookingTicket, BookingZone, BookingZonePrice, Booking],
   moduleOptions: { holdMinutes: 20 },
   resolve: "./src/modules/booking",
   testSuite: ({ service }) => {

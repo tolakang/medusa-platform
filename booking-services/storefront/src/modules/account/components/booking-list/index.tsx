@@ -1,8 +1,8 @@
 "use client"
 
-import { cancelMyBooking, listSlots, moveMyBooking, type MyBooking, type Slot } from "@lib/data/booking"
+import { cancelMyBooking, listSlots, moveMyBooking, writeReview, type MyBooking, type Slot } from "@lib/data/booking"
 import { formatBookingRange } from "@lib/util/booking"
-import { Badge, Button, Heading, Text } from "@modules/common/components/ui"
+import { Badge, Button, Heading, Text, clx } from "@modules/common/components/ui"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
@@ -66,6 +66,57 @@ function ChangeTime({ booking, onDone }: { booking: MyBooking; onDone: (notice: 
   )
 }
 
+// Review a booking you had (TASKS P3-29): stars and an optional comment.
+function WriteReview({ booking, onDone }: { booking: MyBooking; onDone: (notice: string) => void }) {
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [pending, start] = useTransition()
+  return (
+    <div className="flex w-full flex-col gap-y-2" data-testid="booking-review-form">
+      <div className="flex gap-x-1" role="radiogroup" aria-label="Rating">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={rating === n}
+            aria-label={`${n} star${n > 1 ? "s" : ""}`}
+            className={clx("text-2xl leading-none", n <= rating ? "text-ui-fg-base" : "text-ui-fg-muted")}
+            onClick={() => setRating(n)}
+          >
+            {n <= rating ? "★" : "☆"}
+          </button>
+        ))}
+      </div>
+      <textarea
+        className="w-full rounded-md border border-ui-border-base px-3 py-2 txt-small"
+        rows={3}
+        maxLength={1000}
+        placeholder="How was it? (optional)"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+      />
+      <Button
+        className="self-start"
+        disabled={!rating}
+        isLoading={pending}
+        data-testid="booking-review-submit"
+        onClick={() =>
+          start(async () => {
+            const r = await writeReview(booking.id, rating, comment)
+            if (r.error) setError(r.error)
+            else onDone("Thank you for your review.")
+          })
+        }
+      >
+        Post review
+      </Button>
+      {error && <Text className="txt-small text-ui-fg-error">{error}</Text>}
+    </div>
+  )
+}
+
 // A list of the customer's bookings (TASKS P3-13).
 export default function BookingList({
   title,
@@ -85,6 +136,7 @@ export default function BookingList({
   // Two-step cancel in the page (no browser dialog): Cancel → Yes, cancel.
   const [confirming, setConfirming] = useState<string | null>(null)
   const [changing, setChanging] = useState<string | null>(null)
+  const [reviewing, setReviewing] = useState<string | null>(null)
 
   const cancel = (id: string) => {
     setConfirming(null)
@@ -134,6 +186,13 @@ export default function BookingList({
                   Change time
                 </Button>
               )}
+            {!canCancel && b.product_id && !b.reviewed && reviewing !== b.id &&
+              (b.status === "confirmed" || b.status === "completed") && (
+                <Button variant="secondary" onClick={() => setReviewing(b.id)} data-testid="booking-review">
+                  Write a review
+                </Button>
+              )}
+            {!canCancel && b.reviewed && <Text className="txt-small text-ui-fg-subtle">Reviewed</Text>}
             {canCancel && confirming !== b.id && (
               <Button
                 variant="secondary"
@@ -155,6 +214,16 @@ export default function BookingList({
               </>
             )}
           </div>
+          {reviewing === b.id && (
+            <WriteReview
+              booking={b}
+              onDone={(text) => {
+                setReviewing(null)
+                setNotice(text)
+                router.refresh()
+              }}
+            />
+          )}
           {changing === b.id && (
             <ChangeTime
               booking={b}
