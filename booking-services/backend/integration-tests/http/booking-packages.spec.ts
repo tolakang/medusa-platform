@@ -200,6 +200,8 @@ medusaIntegrationTestRunner({
         // Not captured yet: nothing to refund.
         expect(done.data).toEqual({ cancelled: 3, refund: "not_captured", refunded_amount: 0 })
         expect((await api.get("/admin/booking/events", admin)).data.events[0].status).toBe("cancelled")
+      })
+
       it("books the pieces chosen à la carte at their own prices, together", async () => {
         const sok = await customer("sok@example.com")
         const {
