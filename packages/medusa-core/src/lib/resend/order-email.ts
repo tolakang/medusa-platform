@@ -4,6 +4,7 @@ import {
   addressLine,
   escapeHtml,
   formatMoney,
+  itemDetail,
   itemLabel,
   ORDER_PLACED_TEMPLATE,
   type OrderNotificationData,
@@ -15,7 +16,9 @@ function orderPlaced(order: OrderNotificationData): RenderedEmail {
     .filter(Boolean)
     .map(
       (item) =>
-        `<tr><td>${escapeHtml(itemLabel(item!))}</td>` +
+        `<tr><td>${escapeHtml(itemLabel(item!))}${
+          itemDetail(item!) ? `<br><span style="color:#555;font-size:13px">${escapeHtml(itemDetail(item!)).replace(/\n/g, "<br>")}</span>` : ""
+        }</td>` +
         `<td style="text-align:center">${escapeHtml(item!.quantity)}</td>` +
         `<td style="text-align:right">${escapeHtml(formatMoney(item!.total, order.currency_code))}</td></tr>`
     )

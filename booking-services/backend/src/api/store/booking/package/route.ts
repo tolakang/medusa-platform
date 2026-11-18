@@ -16,6 +16,7 @@ import {
   packagePieces,
 } from "../../../../lib/packages"
 import { rentalSpan, rentalUnit } from "../../../../lib/rental-pricing"
+import { LINE_DETAIL_KEY, packageLineDetail } from "../../../../lib/line-detail"
 import { localDate } from "../../../../lib/waitlist"
 import { BOOKING_MODULE } from "../../../../modules/booking"
 import type BookingModuleService from "../../../../modules/booking/service"
@@ -145,7 +146,12 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
             variant_id: pkg.id,
             quantity: 1,
             ...(aLaCarte ? { unit_price: 0 } : {}),
-            metadata: { [PACKAGE_ITEM_KEY]: package_id, [PACKAGE_DATE_KEY]: body.date, [PACKAGE_PIECES_KEY]: plans.length },
+            metadata: {
+              [PACKAGE_ITEM_KEY]: package_id,
+              [PACKAGE_DATE_KEY]: body.date,
+              [PACKAGE_PIECES_KEY]: plans.length,
+              [LINE_DETAIL_KEY]: packageLineDetail(body.date),
+            },
           },
         ],
       },

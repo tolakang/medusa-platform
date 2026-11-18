@@ -39,6 +39,9 @@ export const ORDER_NOTIFICATION_FIELDS = [
   "items.variant_title",
   "items.quantity",
   "items.total",
+  // A line's own detail an app writes (Booking: the time, place, seats or
+  // dates), shown under the item in emails and alerts.
+  "items.metadata",
   "shipping_address.first_name",
   "shipping_address.last_name",
   "shipping_address.address_1",
@@ -66,6 +69,7 @@ export type OrderNotificationData = {
     variant_title?: string | null
     quantity?: number | null
     total?: number | null
+    metadata?: Record<string, unknown> | null
   } | null)[] | null
   shipping_address?: {
     first_name?: string | null
@@ -132,6 +136,15 @@ export function itemLabel(item: { title?: string | null; variant_title?: string 
   return variant && variant.toLowerCase() !== "default variant" && variant !== title
     ? `${title} (${variant})`
     : title
+}
+
+// The line's detail an app wrote in its metadata (`line_detail`, one or more
+// lines of text), e.g. Booking's "Wed 25 Nov, 09:00–09:30 with Sophea".
+export const LINE_DETAIL_KEY = "line_detail"
+
+export function itemDetail(item: { metadata?: Record<string, unknown> | null }): string | null {
+  const d = item.metadata?.[LINE_DETAIL_KEY]
+  return typeof d === "string" && d.trim() ? d.trim().slice(0, 500) : null
 }
 
 // "#111, St 310, Khan Chamkar Mon, Phnom Penh": street, khan/srok, province.

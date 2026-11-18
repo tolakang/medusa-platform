@@ -143,6 +143,23 @@ medusaIntegrationTestRunner({
         }
         expect(rows.map((b) => b.status)).toEqual(["confirmed", "confirmed", "confirmed"])
 
+        // The order email shows each line's detail (line_detail).
+        let mail: any = null
+        for (let i = 0; i < 40 && !mail; i++) {
+          mail = (await query().graph({ entity: "notification", fields: ["data"], filters: { template: "order-placed" } })).data[0]
+          if (!mail) await new Promise((res) => setTimeout(res, 250))
+        }
+        const details = (mail.data.order.items as any[]).map((i) => i.metadata?.line_detail)
+        expect(details).toHaveLength(4)
+        expect(details).toEqual(
+          expect.arrayContaining([
+            `Event on ${new Date(`${monday}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`,
+            expect.stringMatching(/^\w{3} \d+ \w{3}, 09:00–10:00 with Sophea\nPart of your event package$/),
+            expect.stringMatching(/^\w{3} \d+ \w{3}, 18:00–19:30 with Table for 6\nPart of your event package$/),
+            expect.stringMatching(/^1 day: .+\nPart of your event package$/),
+          ])
+        )
+
         // The rest as two instalments: 40% a month before (already past:
         // due now) and 30% a week before the first piece, never after it.
         let balances: any[] = []

@@ -63,6 +63,18 @@ describe("Telegram provider", () => {
     ).rejects.toThrow('No Telegram template "telegram-text"')
   })
 
+  it("adds a line's detail under the item in the staff alert", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: 9 } }) })
+    const service = new TelegramNotificationProviderService({ logger }, options)
+    await service.send({
+      to: "staff",
+      channel: "telegram",
+      template: "order-placed-staff",
+      data: { order: { ...order, items: [{ title: "Moving truck", variant_title: "Small truck", quantity: 1, total: 30, metadata: { line_detail: "Mon 30 Nov, 08:00–10:00\nFrom: A\nTo: B" } }] } },
+    })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).text).toContain("• 1 × Moving truck (Small truck)\n   Mon 30 Nov, 08:00–10:00\n   From: A\n   To: B")
+  })
+
   it("throws with Telegram's description, never the token", async () => {
     fetchMock.mockResolvedValue({
       ok: false,

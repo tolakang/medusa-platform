@@ -84,4 +84,11 @@ describe("Resend provider", () => {
     expect(email?.html).toContain("Tee &lt;b&gt; (M / &lt;i&gt;)")
     expect(email?.html).not.toContain("Tee <b>")
   })
+
+  it("shows a line's detail under the item, escaped (line_detail, TASKS P3-30 follow-up)", () => {
+    const email = renderEmail("order-placed", {
+      order: { ...order, items: [{ title: "Haircut", variant_title: "30 min", quantity: 1, total: 8, metadata: { line_detail: "Wed 25 Nov, 09:00–09:30 with <Sophea>\nAt: #12" } }] },
+    })
+    expect(email?.html).toContain("Wed 25 Nov, 09:00–09:30 with &lt;Sophea&gt;<br>At: #12")
+  })
 })
