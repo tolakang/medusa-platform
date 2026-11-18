@@ -51,8 +51,10 @@ export default function BookingPicker({
   const [variantId, setVariantId] = useState(services[0]?.id ?? "")
   const [date, setDate] = useState(() => localDate(null))
   const [slots, setSlots] = useState<Slot[]>([])
-  const [chosen, setChosen] = useState<Slot | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // The chosen time and any error belong to one service, day and length:
+  // they are kept with that key and read only while it's current, so a new
+  // day or service starts clean without resetting state in an effect.
+  const [picked, setPicked] = useState<{ key: string; slot: Slot | null; error: string | null }>({ key: "", slot: null, error: null })
   const [loading, startLoading] = useTransition()
   const [booking, startBooking] = useTransition()
   // A visit at the customer's place (kind B, P3-20): where and what.
@@ -95,16 +97,21 @@ export default function BookingPicker({
     }
   }, [trip, variantId])
 
+  const slotKey = `${variantId}|${date}|${tripMinutes}`
+  const chosen = picked.key === slotKey ? picked.slot : null
+  const error = picked.key === slotKey ? picked.error : null
+  const setChosen = (slot: Slot | null) => setPicked((p) => ({ key: slotKey, slot, error: p.key === slotKey ? p.error : null }))
+  const setError = (e: string | null) => setPicked((p) => ({ key: slotKey, slot: p.key === slotKey ? p.slot : null, error: e }))
+
   useEffect(() => {
     if (!variantId || !date || tripMinutes === null) {
       return
     }
-    setChosen(null)
-    setError(null)
+    const key = `${variantId}|${date}|${tripMinutes}`
     startLoading(async () => {
       const result = await listSlots(variantId, date, tripMinutes)
       setSlots(result.slots)
-      setError(result.error ?? null)
+      setPicked({ key, slot: null, error: result.error ?? null })
     })
   }, [variantId, date, tripMinutes])
 
