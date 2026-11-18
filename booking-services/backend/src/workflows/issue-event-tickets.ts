@@ -26,6 +26,9 @@ const issueTicketsStep = createStep(
         "email",
         "customer.first_name",
         "customer.last_name",
+        // A guest's name is on the checkout contact (billing address).
+        "billing_address.first_name",
+        "billing_address.last_name",
         "items.id",
         "items.quantity",
         "items.variant_id",
@@ -65,7 +68,9 @@ const issueTicketsStep = createStep(
     }
     const created = await booking.createBookingTickets(rows)
     const tickets: Issued[] = created.map((t) => ({ code: t.code, event_title: t.event_title, label: t.label }))
-    const name = [order.customer?.first_name, order.customer?.last_name].filter(Boolean).join(" ")
+    const name =
+      [order.customer?.first_name, order.customer?.last_name].filter(Boolean).join(" ") ||
+      [order.billing_address?.first_name, order.billing_address?.last_name].filter(Boolean).join(" ")
     return new StepResponse(
       {
         email: order.email ?? null,

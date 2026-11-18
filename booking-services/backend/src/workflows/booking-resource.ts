@@ -39,6 +39,8 @@ export type UpdateBookingResourceInput = {
   timezone?: string
   is_active?: boolean
   telegram_chat_id?: string | null
+  // Booked by whole days, a rental (P3-22).
+  whole_days?: boolean
   // Replace all weekly hours / offered services when given.
   schedules?: WeeklyHoursInput[]
   variant_ids?: string[]
@@ -125,6 +127,7 @@ type ResourceSnapshot = {
   timezone: string
   is_active: boolean
   telegram_chat_id: string | null
+  whole_days: boolean
   schedules: WeeklyHoursInput[] | null
 }
 
@@ -146,6 +149,7 @@ const updateResourceStep = createStep(
       timezone: current.timezone,
       is_active: current.is_active,
       telegram_chat_id: current.telegram_chat_id ?? null,
+      whole_days: current.whole_days,
       schedules: input.schedules
         ? (current.schedules ?? []).map((h) => ({ weekday: h.weekday, start_time: h.start_time, end_time: h.end_time }))
         : null,

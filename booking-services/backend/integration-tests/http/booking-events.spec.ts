@@ -34,6 +34,8 @@ medusaIntegrationTestRunner({
         if (added.status !== 200) {
           return { added }
         }
+        // A guest's contact name, as the checkout sets it on the billing address.
+        await api.post(`/store/carts/${cart}`, { billing_address: { first_name: "Sok", last_name: "Chan", country_code: "kh" } }, store)
         const {
           data: { payment_collection },
         } = await api.post("/store/payment-collections", { cart_id: cart }, store)
@@ -96,6 +98,8 @@ medusaIntegrationTestRunner({
         })
         expect(sent).toHaveLength(1)
         expect(sent[0].to).toBe("sok@example.com")
+        // A guest is greeted by the checkout name (P3-24 follow-up).
+        expect((sent[0].data as any).customer_name).toBe("Sok Chan")
         expect(((sent[0].data as any).tickets as any[]).map((t) => t.code).sort()).toEqual(tickets.map((t: any) => t.code).sort())
       })
 

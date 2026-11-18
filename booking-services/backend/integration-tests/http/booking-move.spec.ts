@@ -173,6 +173,11 @@ medusaIntegrationTestRunner({
         expect(moved.data.booking.starts_at).toBe(free[0].starts_at)
         expect((await query().graph({ entity: "booking", fields: ["resource.name"], filters: { id } })).data[0].resource!.name).toBe("Dara")
 
+        // The whole-days switch on a calendar (P3-22 follow-up).
+        const switched = await api.post(`/admin/booking/resources/${dara.id}`, { whole_days: true }, admin)
+        expect(switched.data.resource.whole_days).toBe(true)
+        await api.post(`/admin/booking/resources/${dara.id}`, { whole_days: false }, admin)
+
         // A calendar that doesn't offer haircuts.
         const {
           data: [crew],
