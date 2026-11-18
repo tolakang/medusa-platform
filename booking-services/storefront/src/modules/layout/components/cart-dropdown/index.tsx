@@ -6,6 +6,7 @@ import {
   PopoverPanel,
   Transition,
 } from "@headlessui/react"
+import { itemBooking } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -30,9 +31,11 @@ const CartDropdown = ({
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
 
+  // A booking counts once, whatever its seats (TASKS P3-23: a departure's
+  // seats are its line's quantity).
   const totalItems =
     cartState?.items?.reduce((acc, item) => {
-      return acc + item.quantity
+      return acc + (itemBooking(item) ? 1 : item.quantity)
     }, 0) || 0
 
   const subtotal = cartState?.subtotal ?? 0
