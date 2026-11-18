@@ -171,6 +171,7 @@ export default function BookingList({
             <Text className="txt-small text-ui-fg-subtle">
               {b.resource?.name ?? ""}
               {b.order?.display_id != null ? ` · Order #${b.order.display_id}` : ""}
+              {b.series_id ? " · Weekly" : ""}
             </Text>
             {b.address && (
               <Text className="txt-small text-ui-fg-subtle" data-testid="booking-address">

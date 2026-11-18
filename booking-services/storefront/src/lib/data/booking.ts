@@ -29,6 +29,8 @@ export type MyBooking = {
   address?: string | null
   dropoff_address?: string | null
   seats?: number
+  // A weekly series (P3-29).
+  series_id?: string | null
   resource: { id?: string; name: string; timezone: string } | null
   order: { id: string; display_id: number | null } | null
   // The service booked, for changing the time (P3-28).
@@ -432,4 +434,39 @@ export async function listMyPasses(): Promise<MyPass[]> {
     .fetch<{ passes: MyPass[] }>("/store/booking/passes", { headers, cache: "no-store" })
     .then((r) => r.passes)
     .catch(() => [])
+}
+
+// The same time every week, 2-12 weeks (TASKS P3-29): all weeks or none.
+export async function addRecurringToCart(input: {
+  countryCode: string
+  variantId: string
+  slot: Slot
+  weeks: number
+  address?: string
+  notes?: string
+}): Promise<{ error?: string }> {
+  const cart = await getOrSetCart(input.countryCode)
+  if (!cart) {
+    return { error: "Could not open your cart." }
+  }
+  try {
+    await sdk.client.fetch("/store/booking/recurring", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: {
+        cart_id: cart.id,
+        variant_id: input.variantId,
+        resource_id: input.slot.resource_id,
+        starts_at: input.slot.starts_at,
+        ends_at: input.slot.ends_at,
+        weeks: input.weeks,
+        ...(input.address ? { address: input.address } : {}),
+        ...(input.notes ? { notes: input.notes } : {}),
+      },
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "These weeks can't be booked." }
+  }
+  revalidateTag(await getCacheTag("carts"), { expire: 0 })
+  return {}
 }
