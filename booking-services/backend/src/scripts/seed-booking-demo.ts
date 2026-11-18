@@ -843,6 +843,8 @@ export default async function seedBookingDemo({ container }: { container: Medusa
                 { sku: "TENT-50", day: 0, days: 1 },
                 { sku: "TABLE-6", day: 0, time: "18:00" },
               ],
+              // 30% at checkout, 40% a month before, 30% a week before (P3-30).
+              payment_plan: SMALL_WEDDING_PLAN,
             },
             options: [{ title: "Package", values: ["Small wedding"] }],
             sales_channels: [{ id: salesChannelId }],
@@ -860,6 +862,18 @@ export default async function seedBookingDemo({ container }: { container: Medusa
       },
     })
     logger.info('Booking demo: package "Small wedding" created.')
+  }
+  // The payment plan on a Small wedding seeded before it existed (P3-30).
+  {
+    const {
+      data: [wedding],
+    } = await query.graph({ entity: "product", fields: ["id", "metadata"], filters: { handle: "small-wedding" } })
+    const meta = (wedding?.metadata ?? {}) as Record<string, unknown>
+    if (wedding && !meta.payment_plan) {
+      await updateProductsWorkflow(container).run({
+        input: { selector: { id: wedding.id }, update: { metadata: { ...meta, payment_plan: SMALL_WEDDING_PLAN } } },
+      })
+    }
   }
 
   // À la carte (TASKS P3-30): the customer picks the pieces; each costs its
@@ -904,6 +918,12 @@ export default async function seedBookingDemo({ container }: { container: Medusa
     logger.info('Booking demo: à la carte package "Build your event" created.')
   }
 }
+
+const SMALL_WEDDING_PLAN = [
+  { percent: 30 },
+  { percent: 40, days_before: 30 },
+  { percent: 30, days_before: 7 },
+]
 
 // The kind categories, created when missing (by handle). Returns their ids.
 async function ensureKindCategories(container: MedusaContainer): Promise<Record<Kind, string>> {

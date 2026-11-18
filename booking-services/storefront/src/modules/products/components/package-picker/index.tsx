@@ -1,7 +1,7 @@
 "use client"
 
 import { addPackageToCart } from "@lib/data/booking"
-import { localDate } from "@lib/util/booking"
+import { localDate, paymentPlanText } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text } from "@modules/common/components/ui"
@@ -90,6 +90,11 @@ export default function PackagePicker({ product }: { product: HttpTypes.StorePro
       >
         {date ? `Book the package on ${date}` : "Choose the event date"}
       </Button>
+      {paymentPlanText(product.metadata) && (
+        <Text className="txt-small text-ui-fg-subtle" data-testid="package-plan">
+          {paymentPlanText(product.metadata)}
+        </Text>
+      )}
       <Text className="txt-xsmall text-ui-fg-subtle">Every part is held for you while you check out, and confirmed together.</Text>
     </div>
   )

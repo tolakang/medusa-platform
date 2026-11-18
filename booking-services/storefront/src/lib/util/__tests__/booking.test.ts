@@ -8,6 +8,7 @@ import {
   isServiceOnlyCart,
   depositPercent,
   depositSplit,
+  paymentPlanText,
   isDepartureService,
   isEventProduct,
   isExtraProduct,
@@ -66,7 +67,11 @@ describe("booking helpers", () => {
     // Deposits (P3-26).
     assert.equal(depositPercent({ metadata: { deposit_percent: 30 } }), 30)
     assert.equal(depositPercent({ metadata: { deposit_percent: 100 } }), null)
-    assert.deepEqual(depositSplit([{ total: 30, product: { metadata: { deposit_percent: 30 } } }, { total: 6, product: { metadata: {} } }]), { now: 15, later: 21 })
+    assert.deepEqual(depositSplit([{ total: 30, product: { metadata: { deposit_percent: 30 } } }, { total: 6, product: { metadata: {} } }]), { now: 15, later: 21, plan: false })
+    // A payment plan (P3-30): its first instalment now.
+    const plan = [{ percent: 30 }, { percent: 40, days_before: 30 }, { percent: 30, days_before: 7 }]
+    assert.deepEqual(depositSplit([{ total: 150, product: { metadata: { payment_plan: plan } } }]), { now: 45, later: 105, plan: true })
+    assert.equal(paymentPlanText({ payment_plan: plan }), "Pay 30% now, 40% 30 days before, 30% 7 days before.")
     assert.equal(depositSplit([{ total: 8, product: { metadata: {} } }]), null)
     // Extras (P3-25).
     assert.equal(isExtraProduct({ metadata: { booking_extra: true } }), true)

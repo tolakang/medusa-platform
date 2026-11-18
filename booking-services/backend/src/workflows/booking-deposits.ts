@@ -1,7 +1,7 @@
 import { ContainerRegistrationKeys, MathBN, Modules } from "@medusajs/framework/utils"
 import { createStep, createWorkflow, StepResponse, transform, when, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
-import { createOrderPaymentCollectionWorkflow } from "@medusajs/medusa/core-flows"
-import { BALANCE_METADATA_KEY, depositNow, depositPercent } from "../lib/deposits"
+import { createPaymentCollectionsStep, createRemoteLinkStep } from "@medusajs/medusa/core-flows"
+import { BALANCE_METADATA_KEY, depositNow, depositPercent, instalmentsDue, paymentPlan } from "../lib/deposits"
 
 // Deposit and balance (TASKS P3-26). Two steps around Medusa's own payment
 // flow:
@@ -62,7 +62,11 @@ export const setCartDepositWorkflow = createWorkflow("set-cart-deposit", functio
   return new WorkflowResponse(setDepositStep(input))
 })
 
-type Balance = { order_id: string; amount: number; due_at: string | null } | null
+// What's still due after checkout (TASKS P3-26, P3-30): one entry per later
+// instalment of a payment plan line (due days before the event), and one for
+// the rest of the deposit lines (due at the first booking).
+type Due = { amount: number; due_at: string | null; instalment: number | null }
+type Balance = { order_id: string; currency_code: string; dues: Due[] } | null
 
 const balanceDueStep = createStep("balance-due", async (input: { order_id: string }, { container }) => {
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
@@ -70,7 +74,16 @@ const balanceDueStep = createStep("balance-due", async (input: { order_id: strin
     data: [order],
   } = await query.graph({
     entity: "order",
-    fields: ["id", "total", "items.variant.product.metadata", "payment_collections.amount", "payment_collections.metadata", "bookings.starts_at"],
+    fields: [
+      "id",
+      "total",
+      "currency_code",
+      "items.total",
+      "items.variant.product.metadata",
+      "payment_collections.amount",
+      "payment_collections.metadata",
+      "bookings.starts_at",
+    ],
     filters: { id: input.order_id },
   })
   if (!order || !(order.items ?? []).some((i) => depositPercent(i?.variant?.product) !== null)) {
@@ -81,42 +94,59 @@ const balanceDueStep = createStep("balance-due", async (input: { order_id: strin
     return new StepResponse<Balance>(null)
   }
   const paidFor = collections.reduce((s, c) => MathBN.add(s, cents(c!.amount)), MathBN.convert(0))
-  const rest = cents(MathBN.sub(cents(order.total), paidFor))
+  let rest = cents(MathBN.sub(cents(order.total), paidFor))
   if (rest <= 0) {
     return new StepResponse<Balance>(null)
   }
   const starts = ((order as unknown as { bookings?: { starts_at: string }[] }).bookings ?? [])
     .map((b) => new Date(b.starts_at).toISOString())
     .sort()
-  return new StepResponse<Balance>({ order_id: order.id, amount: rest, due_at: starts[0] ?? null })
+  const first = starts[0] ?? null
+  const dues: Due[] = []
+  const now = new Date()
+  for (const item of order.items ?? []) {
+    const plan = paymentPlan(item?.variant?.product?.metadata as Record<string, unknown> | null)
+    if (!plan || !first) continue
+    instalmentsDue(item!.total, plan, new Date(first), now).forEach((d, i) => {
+      dues.push({ amount: d.amount, due_at: d.due_at, instalment: i + 2 })
+      rest = cents(MathBN.sub(rest, d.amount))
+    })
+  }
+  if (rest > 0) dues.push({ amount: rest, due_at: first, instalment: null })
+  return new StepResponse<Balance>(dues.length ? { order_id: order.id, currency_code: order.currency_code, dues } : null)
 })
 
-const markBalanceStep = createStep(
-  "mark-balance",
-  async (input: { collection_id: string; due_at: string | null }, { container }) => {
-    await container.resolve(Modules.PAYMENT).updatePaymentCollections(input.collection_id, {
-      metadata: { [BALANCE_METADATA_KEY]: true, due_at: input.due_at },
-    })
-    return new StepResponse(input.collection_id)
-  }
-)
-
 // Run by the order.placed subscriber after the bookings are confirmed and
-// linked (their start is the due date). Idempotent: an order that already has
-// its balance collection is skipped.
+// linked (their start sets the due dates). Each entry is an order payment
+// collection (as createOrderPaymentCollectionWorkflow: the payment
+// collection, then its link to the order), marked a booking balance with its
+// due date: the admin shows it outstanding with "Mark as paid", and the
+// reminder job emails before its due date. Idempotent: an order that already
+// has a balance collection is skipped.
 export const createBookingBalanceWorkflow = createWorkflow("create-booking-balance", function (input: { order_id: string }) {
   const balance = balanceDueStep(input)
-  const created = when("has-balance", balance, (b) => !!b).then(() => {
-    const collections = createOrderPaymentCollectionWorkflow.runAsStep({
-      input: transform({ balance }, ({ balance }) => ({ order_id: balance!.order_id, amount: balance!.amount })),
-    })
-    markBalanceStep(
-      transform({ collections, balance }, ({ collections, balance }) => ({
-        collection_id: collections[0].id,
-        due_at: balance!.due_at,
-      }))
+  when("has-balance", balance, (b) => !!b).then(() => {
+    const created = createPaymentCollectionsStep(
+      transform({ balance }, ({ balance }) =>
+        balance!.dues.map((d) => ({
+          currency_code: balance!.currency_code,
+          amount: d.amount,
+          metadata: {
+            [BALANCE_METADATA_KEY]: true,
+            due_at: d.due_at,
+            ...(d.instalment ? { instalment: d.instalment } : {}),
+          },
+        }))
+      )
     )
-    return collections
+    createRemoteLinkStep(
+      transform({ balance, created }, ({ balance, created }) =>
+        created.map((c) => ({
+          [Modules.ORDER]: { order_id: balance!.order_id },
+          [Modules.PAYMENT]: { payment_collection_id: c.id },
+        }))
+      )
+    ).config({ name: "link-booking-balances" })
   })
-  return new WorkflowResponse(transform({ balance, created }, ({ balance }) => balance))
+  return new WorkflowResponse(balance)
 })
