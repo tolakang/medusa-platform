@@ -1,7 +1,8 @@
 import { Metadata } from "next"
 
-import { listMyBookings } from "@lib/data/booking"
+import { listMyBookings, listMyWaitlist } from "@lib/data/booking"
 import BookingList from "@modules/account/components/booking-list"
+import WaitlistList from "@modules/account/components/waitlist-list"
 
 export const metadata: Metadata = {
   title: "Bookings",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 // Account → Bookings (TASKS P3-13): the customer's bookings, upcoming first,
 // with cancel (the shop's cancellation policy decides any refund, P3-08).
 export default async function BookingsPage() {
-  const bookings = (await listMyBookings()) ?? []
+  const [bookings, waitlist] = await Promise.all([listMyBookings().then((b) => b ?? []), listMyWaitlist().then((w) => w ?? [])])
   const now = Date.now()
   const active = (s: string) => s === "confirmed" || s === "pending"
   const upcoming = bookings
@@ -30,6 +31,7 @@ export default async function BookingsPage() {
       </div>
       <div className="flex flex-col gap-y-8">
         <BookingList title="Upcoming" bookings={upcoming} canCancel empty="No upcoming bookings." />
+        <WaitlistList entries={waitlist} />
         {past.length > 0 && <BookingList title="Past and cancelled" bookings={past} empty="" />}
       </div>
     </div>

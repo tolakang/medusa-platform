@@ -13,7 +13,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment, setDepositBeforePayment } from './booking-payment'
-import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostQuoteRequest } from './store/booking/validators'
+import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostQuoteRequest, PostWaitlist } from './store/booking/validators'
 import {
   PostAdminBookingProvider,
   PostAdminBookingResource,
@@ -221,6 +221,17 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/booking/cancel',
       middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingCancel)],
+    },
+    {
+      // Waitlist (TASKS P3-29): a signed-in customer waits for a full day.
+      method: ['GET', 'POST'],
+      matcher: '/store/booking/waitlist*',
+      middlewares: [authenticate('customer', ['session', 'bearer'])],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/booking/waitlist',
+      middlewares: [validateAndTransformBody(PostWaitlist)],
     },
     {
       // Move a booking (TASKS P3-28): the customer reschedules, staff assign.

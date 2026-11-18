@@ -337,3 +337,46 @@ export async function moveMyBooking(bookingId: string, slot: Slot): Promise<{ er
   }
   return {}
 }
+
+// Waitlist (TASKS P3-29).
+export type MyWaitlistEntry = {
+  id: string
+  date: string
+  status: "waiting" | "notified"
+  service: string | null
+  variant_title: string | null
+  handle: string | null
+}
+
+export async function joinWaitlist(variantId: string, date: string): Promise<{ error?: string }> {
+  try {
+    await sdk.client.fetch("/store/booking/waitlist", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: { variant_id: variantId, date },
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not join the waitlist." }
+  }
+  return {}
+}
+
+export async function listMyWaitlist(): Promise<MyWaitlistEntry[] | null> {
+  const headers = await getAuthHeaders()
+  if (!("authorization" in headers)) {
+    return null
+  }
+  return sdk.client
+    .fetch<{ waitlist: MyWaitlistEntry[] }>("/store/booking/waitlist", { headers, cache: "no-store" })
+    .then((r) => r.waitlist)
+    .catch(medusaError)
+}
+
+export async function leaveWaitlist(id: string): Promise<{ error?: string }> {
+  try {
+    await sdk.client.fetch(`/store/booking/waitlist/${id}/leave`, { method: "POST", headers: await getAuthHeaders() })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not leave the waitlist." }
+  }
+  return {}
+}

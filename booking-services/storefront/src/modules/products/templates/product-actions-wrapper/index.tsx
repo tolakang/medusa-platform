@@ -46,7 +46,9 @@ export default async function ProductActionsWrapper({
     return <RentalPicker product={product} />
   }
   if (isServiceProduct(product)) {
-    return <BookingPicker product={product} />
+    // Signed in, a full day can be waited for (TASKS P3-29).
+    const customer = await retrieveCustomer().catch(() => null)
+    return <BookingPicker product={product} signedIn={!!customer} />
   }
   return <ProductActions product={product} region={region} />
 }
