@@ -1,6 +1,6 @@
 "use client"
 
-import { addBookingToCart, listExtras, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
+import { addBookingToCart, addRecurringToCart, listExtras, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
 import {
   durationMinutes,
   formatSlotTime,
@@ -39,6 +39,8 @@ export default function BookingPicker({
   passes?: MyPass[]
 }) {
   const [passId, setPassId] = useState("")
+  // Every week (P3-29): 1 = once.
+  const [weeks, setWeeks] = useState(1)
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const services = useMemo(
@@ -110,7 +112,16 @@ export default function BookingPicker({
       return
     }
     startBooking(async () => {
-      const result = await addBookingToCart({
+      const result =
+        weeks > 1
+          ? await addRecurringToCart({
+              countryCode,
+              variantId,
+              slot: chosen,
+              weeks,
+              ...(visit ? { address: address.trim(), notes: problem.trim() } : {}),
+            })
+          : await addBookingToCart({
         countryCode,
         variantId,
         slot: chosen,
@@ -388,7 +399,33 @@ export default function BookingPicker({
           {error}
         </Text>
       )}
-      {passes.length > 0 && !departure && (
+      {!trip && !departure && (
+        <label className="flex items-center gap-x-2 txt-small" data-testid="booking-repeat">
+          <input
+            type="checkbox"
+            checked={weeks > 1}
+            onChange={(e) => {
+              setWeeks(e.target.checked ? 4 : 1)
+              if (e.target.checked) setPassId("")
+            }}
+          />
+          Repeat every week for
+          <select
+            className="rounded-md border border-ui-border-base px-1"
+            value={weeks > 1 ? weeks : 4}
+            disabled={weeks === 1}
+            onChange={(e) => setWeeks(Number(e.target.value))}
+            aria-label="Weeks"
+          >
+            {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+              <option key={n} value={n}>
+                {n} weeks
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {passes.length > 0 && !departure && weeks === 1 && (
         <label className="flex items-center gap-x-2 txt-small" data-testid="booking-use-pass">
           <input type="checkbox" checked={!!passId} onChange={(e) => setPassId(e.target.checked ? passes[0].id : "")} />
           Use my pass ({passes[0].title}: {passes[0].credits_left} of {passes[0].credits_total} left)
@@ -401,7 +438,7 @@ export default function BookingPicker({
             ? trip
               ? "Add both addresses" + (trip === "zones" ? " and the areas" : "")
               : "Add the address and the job"
-            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}`}
+            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}${weeks > 1 ? ` × ${weeks} weeks` : ""}`}
       </Button>
       {depositPercent(product) !== null && (
         <Text className="txt-small text-ui-fg-subtle" data-testid="booking-deposit">

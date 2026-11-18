@@ -50,6 +50,8 @@ export type AddBookingToCartInput = {
   quote_id?: string | null
   // Pay with one credit of the customer's pass (P3-29): the line is $0.
   pass_id?: string | null
+  // A weekly series booked together (P3-29, POST /store/booking/recurring).
+  series_id?: string | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -117,6 +119,7 @@ type Prepared = {
   extras: { variant_id: string; quantity: number }[]
   quote_id: string | null
   pass_id: string | null
+  series_id: string | null
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -368,6 +371,7 @@ const prepareBookingStep = createStep(
       extras: extras.map((e) => ({ variant_id: e.variant_id, quantity: e.quantity })),
       quote_id: quoteId,
       pass_id: passId,
+      series_id: input.series_id ?? null,
     }
     return new StepResponse(prepared)
   }
@@ -388,6 +392,7 @@ const createBookingHoldStep = createStep(
       address: input.address,
       dropoff_address: input.dropoff_address,
       seats: input.seats,
+      series_id: input.series_id,
     })
     return new StepResponse(hold, hold.id)
   },

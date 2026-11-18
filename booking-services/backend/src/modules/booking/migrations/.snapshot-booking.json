@@ -2454,6 +2454,22 @@
           "enumItems": [],
           "mappedType": "datetime"
         },
+        "series_id": {
+          "name": "series_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "resource_id": {
           "name": "resource_id",
           "type": "text",
