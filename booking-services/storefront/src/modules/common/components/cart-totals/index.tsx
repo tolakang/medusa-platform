@@ -93,7 +93,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             <span>{convertToLocale({ amount: split.now, currency_code })}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>{balancePaid ? "Balance paid" : "Balance at the venue"}</span>
+            <span>{balancePaid ? "Balance paid" : split.plan ? "Later payments (plan)" : "Balance at the venue"}</span>
             <span>{convertToLocale({ amount: split.later, currency_code })}</span>
           </div>
         </div>

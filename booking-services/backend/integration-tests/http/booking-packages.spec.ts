@@ -2,6 +2,7 @@ import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { capturePaymentWorkflow, createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
 import { PACKAGE_PIECE_CANCEL_MESSAGE } from "../../src/workflows/cancel-booking"
+import { sendBalanceRemindersWorkflow } from "../../src/workflows/send-balance-reminders"
 import jwt from "jsonwebtoken"
 import { PACKAGE_ALONE_MESSAGE, PACKAGE_CHOICE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE } from "../../src/lib/packages"
 import { zonedTimeToUtc } from "../../src/modules/booking/utils/slot"
@@ -129,7 +130,9 @@ medusaIntegrationTestRunner({
         const {
           data: { payment_collection },
         } = await api.post("/store/payment-collections", { cart_id: cart }, sok)
-        await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
+        const session = await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
+        // The payment plan: 30% at checkout.
+        expect(Number(session.data.payment_collection.amount)).toBe(45)
         const done = await api.post(`/store/carts/${cart}/complete`, {}, sok)
         expect([done.data.type, done.data.order.total]).toEqual(["order", 150])
         let rows: any[] = []
@@ -139,6 +142,27 @@ medusaIntegrationTestRunner({
           await new Promise((res) => setTimeout(res, 250))
         }
         expect(rows.map((b) => b.status)).toEqual(["confirmed", "confirmed", "confirmed"])
+
+        // The rest as two instalments: 40% a month before (already past:
+        // due now) and 30% a week before the first piece, never after it.
+        let balances: any[] = []
+        for (let i = 0; i < 40 && balances.length < 2; i++) {
+          const { data } = await query().graph({
+            entity: "order",
+            fields: ["payment_collections.amount", "payment_collections.status", "payment_collections.metadata"],
+            filters: { id: done.data.order.id },
+          })
+          balances = (data[0].payment_collections ?? []).filter((c: any) => c?.metadata?.booking_balance)
+          if (balances.length < 2) await new Promise((res) => setTimeout(res, 250))
+        }
+        balances.sort((a, b) => a.metadata.instalment - b.metadata.instalment)
+        expect(balances.map((c) => [Number(c.amount), c.status, c.metadata.instalment])).toEqual([
+          [60, "not_paid", 2],
+          [45, "not_paid", 3],
+        ])
+        const firstPiece = zonedTimeToUtc(monday, "00:00", "Asia/Phnom_Penh").getTime()
+        expect(Date.parse(balances[0].metadata.due_at)).toBeLessThanOrEqual(Date.parse(balances[1].metadata.due_at))
+        expect(Date.parse(balances[1].metadata.due_at)).toBeLessThanOrEqual(firstPiece)
       })
 
       // Book and pay the package on monday; returns its id, the order and payment.
@@ -187,7 +211,16 @@ medusaIntegrationTestRunner({
 
         // A week ahead: all cancelled, the package's $150 refunded.
         const done = await api.post(`/store/booking/package/${pkg.id}/cancel`, {}, sok)
-        expect(done.data).toEqual({ cancelled: 3, refund: "refunded", refunded_amount: 150 })
+        // Paid so far: the plan's first 30% ($45), refunded in full.
+        expect(done.data).toEqual({ cancelled: 3, refund: "refunded", refunded_amount: 45 })
+        // The instalments left aren't chased any more: a day before the
+        // later instalment is due, no reminder goes out.
+        const { data: cols } = await query().graph({ entity: "payment_collection", fields: ["metadata"], filters: { status: "not_paid" } })
+        const later = cols.map((c: any) => c.metadata?.due_at).filter(Boolean).sort().pop()
+        const reminders = await sendBalanceRemindersWorkflow(getContainer()).run({
+          input: { now: new Date(Date.parse(later) - 86_400_000).toISOString() },
+        })
+        expect(reminders.result).toEqual([])
         const { data: rows } = await query().graph({ entity: "booking", fields: ["status"], filters: { package_id: pkg.id } })
         expect(rows.map((b) => b.status)).toEqual(["cancelled", "cancelled", "cancelled"])
         expect((await call(api.post(`/admin/booking/events/${pkg.id}/cancel`, {}, admin))).status).toBe(404)

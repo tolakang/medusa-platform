@@ -92,7 +92,25 @@ export function extraFor(item: { metadata?: Meta } | null | undefined): string |
 
 // Deposits (TASKS P3-26): a service's product metadata.deposit_percent (1-99)
 // is paid at checkout, the rest at the shop or venue.
+// A payment plan (TASKS P3-30): Metadata payment_plan, the first instalment
+// at checkout, the others `days_before` the event. Read for display; the
+// backend checks it.
+export function paymentPlan(meta: Meta): { percent: number; days_before: number | null }[] | null {
+  const raw = (meta as Record<string, unknown> | null | undefined)?.payment_plan
+  if (!Array.isArray(raw) || raw.length < 2) return null
+  const plan = (raw as Record<string, unknown>[]).map((r, i) => ({ percent: Number(r?.percent), days_before: i === 0 ? null : Number(r?.days_before) }))
+  return plan.reduce((s, p) => s + p.percent, 0) === 100 ? plan : null
+}
+
+export function paymentPlanText(meta: Meta): string | null {
+  const plan = paymentPlan(meta)
+  if (!plan) return null
+  return `Pay ${plan.map((p) => (p.days_before === null ? `${p.percent}% now` : `${p.percent}% ${p.days_before} days before`)).join(", ")}.`
+}
+
 export function depositPercent(product: { metadata?: Meta } | null | undefined): number | null {
+  const plan = paymentPlan(product?.metadata)
+  if (plan) return plan[0].percent
   const n = Number(product?.metadata?.deposit_percent)
   return Number.isFinite(n) && n >= 1 && n <= 99 ? n : null
 }
@@ -100,14 +118,15 @@ export function depositPercent(product: { metadata?: Meta } | null | undefined):
 /** What is paid now and left for later, as the backend computes it. */
 export function depositSplit(
   items: { total?: number | null; product?: { metadata?: Meta } | null }[] | null | undefined
-): { now: number; later: number } | null {
+): { now: number; later: number; plan: boolean } | null {
   const lines = (items ?? []).map((i) => ({ total: Number(i.total ?? 0), percent: depositPercent(i.product) }))
   if (!lines.some((l) => l.percent !== null)) {
     return null
   }
   const now = Math.round(lines.reduce((s, l) => s + (l.percent === null ? l.total : (l.total * l.percent) / 100), 0) * 100) / 100
   const total = Math.round(lines.reduce((s, l) => s + l.total, 0) * 100) / 100
-  return { now, later: Math.round((total - now) * 100) / 100 }
+  const plan = (items ?? []).some((i) => paymentPlan(i.product?.metadata) !== null)
+  return { now, later: Math.round((total - now) * 100) / 100, plan }
 }
 
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {

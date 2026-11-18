@@ -15,14 +15,24 @@ const dueRemindersStep = createStep("due-reminders", async (input: { now?: strin
   const until = new Date(now.getTime() + reminderDays() * 86_400_000)
   const { data } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
     entity: "payment_collection",
-    fields: ["id", "amount", "currency_code", "status", "metadata", "order.id", "order.email", "order.display_id", "order.customer.first_name", "order.customer.last_name"],
+    fields: ["id", "amount", "currency_code", "status", "metadata", "order.id", "order.email", "order.display_id", "order.customer.first_name", "order.customer.last_name", "order.bookings.status"],
     filters: { status: ["not_paid", "awaiting"] },
   })
   const due: Due[] = []
   for (const c of data) {
     const meta = (c.metadata ?? {}) as Record<string, unknown>
-    const order = (c as unknown as { order?: { email?: string; display_id?: number; customer?: { first_name?: string; last_name?: string } } }).order
+    const order = (
+      c as unknown as {
+        order?: { email?: string; display_id?: number; customer?: { first_name?: string; last_name?: string }; bookings?: { status: string }[] }
+      }
+    ).order
     if (!meta[BALANCE_METADATA_KEY] || meta.reminded_at || !order?.email || typeof meta.due_at !== "string") {
+      continue
+    }
+    // Every booking of the order cancelled (one booking, or a whole event
+    // package, P3-30): nothing is due any more.
+    const bookings = order.bookings ?? []
+    if (bookings.length && bookings.every((b) => b.status === "cancelled")) {
       continue
     }
     const at = new Date(meta.due_at)
@@ -39,6 +49,7 @@ const dueRemindersStep = createStep("due-reminders", async (input: { now?: strin
         amount: Number(c.amount),
         currency_code: c.currency_code,
         due_at: meta.due_at,
+        instalment: typeof meta.instalment === "number" ? meta.instalment : null,
       },
     })
   }
