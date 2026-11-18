@@ -33,6 +33,9 @@ export type MyBooking = {
   order: { id: string; display_id: number | null } | null
   // The service booked, for changing the time (P3-28).
   variant_id?: string | null
+  // For reviews (P3-29).
+  product_id?: string | null
+  reviewed?: boolean
 }
 
 export async function listSlots(
@@ -377,6 +380,32 @@ export async function leaveWaitlist(id: string): Promise<{ error?: string }> {
     await sdk.client.fetch(`/store/booking/waitlist/${id}/leave`, { method: "POST", headers: await getAuthHeaders() })
   } catch (e) {
     return { error: (e as { message?: string })?.message ?? "Could not leave the waitlist." }
+  }
+  return {}
+}
+
+// Reviews (TASKS P3-29).
+export type ServiceReviews = {
+  average: number | null
+  count: number
+  reviews: { id: string; rating: number; comment: string | null; author: string | null; created_at: string }[]
+}
+
+export async function listServiceReviews(productId: string): Promise<ServiceReviews> {
+  return sdk.client
+    .fetch<ServiceReviews>("/store/booking/reviews", { query: { product_id: productId }, cache: "no-store" })
+    .catch(() => ({ average: null, count: 0, reviews: [] }))
+}
+
+export async function writeReview(bookingId: string, rating: number, comment: string): Promise<{ error?: string }> {
+  try {
+    await sdk.client.fetch("/store/booking/reviews", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: { booking_id: bookingId, rating, ...(comment.trim() ? { comment: comment.trim() } : {}) },
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not save your review." }
   }
   return {}
 }

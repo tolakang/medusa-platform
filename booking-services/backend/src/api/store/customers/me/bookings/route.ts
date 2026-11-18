@@ -26,11 +26,17 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "order.display_id",
       // The service, for rescheduling (P3-28): the order line of this booking.
       "order.items.variant_id",
+      "order.items.product_id",
       "order.items.metadata",
     ],
     filters: { customer_id: req.auth_context.actor_id },
     pagination: { order: { starts_at: "DESC" }, take: 100 },
   })
+  // Which of them the customer reviewed (P3-29).
+  const { data: reviews } = data.length
+    ? await query.graph({ entity: "booking_review", fields: ["booking_id"], filters: { booking_id: data.map((b) => b.id) } })
+    : { data: [] }
+  const reviewed = new Set(reviews.map((r) => r.booking_id))
   const now = Date.now()
   res.json({
     bookings: data
@@ -40,6 +46,8 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
         return {
           ...b,
           variant_id: item?.variant_id ?? null,
+          product_id: item?.product_id ?? null,
+          reviewed: reviewed.has(b.id),
           order: order ? { id: order.id, display_id: order.display_id } : null,
         }
       }),

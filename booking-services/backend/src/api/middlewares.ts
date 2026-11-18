@@ -13,7 +13,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment, setDepositBeforePayment } from './booking-payment'
-import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostQuoteRequest, PostWaitlist } from './store/booking/validators'
+import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostQuoteRequest, PostReview, PostWaitlist } from './store/booking/validators'
 import {
   PostAdminBookingProvider,
   PostAdminBookingResource,
@@ -26,6 +26,7 @@ import {
   PostAdminZonePrice,
   PostAdminQuote,
   PostAdminBookingMove,
+  PostAdminReview,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
 import {
@@ -221,6 +222,18 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/booking/cancel',
       middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingCancel)],
+    },
+    {
+      // Reviews (TASKS P3-29): anyone reads a service's reviews; a signed-in
+      // customer writes one for a booking they had.
+      method: ['POST'],
+      matcher: '/store/booking/reviews',
+      middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostReview)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/reviews/:id',
+      middlewares: [validateAndTransformBody(PostAdminReview)],
     },
     {
       // Waitlist (TASKS P3-29): a signed-in customer waits for a full day.

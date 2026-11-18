@@ -74,3 +74,11 @@ export const PostWaitlist = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD"),
 })
 export type PostWaitlistType = z.infer<typeof PostWaitlist>
+
+// Reviews (TASKS P3-29).
+export const PostReview = z.object({
+  booking_id: z.string().min(1),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(1000).nullish(),
+})
+export type PostReviewType = z.infer<typeof PostReview>
