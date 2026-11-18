@@ -48,3 +48,37 @@ export function moveDecision(
 export function movedEnd(booking: { starts_at: Date | string; ends_at: Date | string }, startsAt: Date): Date {
   return new Date(startsAt.getTime() + (new Date(booking.ends_at).getTime() - new Date(booking.starts_at).getTime()))
 }
+
+// The customer's email when staff moved their booking (TASKS P3-28).
+export const BOOKING_MOVED_TEMPLATE = "booking-moved"
+
+export type BookingMovedEmailData = {
+  customer_name?: string | null
+  service?: string | null
+  calendar: string
+  timezone: string
+  starts_at: string
+  ends_at: string
+  previous_starts_at: string
+}
+
+export function bookingMovedEmail(data: BookingMovedEmailData, escape: (s: string) => string) {
+  const fmt = (iso: string, withDay = true) =>
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: data.timezone,
+      ...(withDay ? { weekday: "short", day: "numeric", month: "short" } : {}),
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(new Date(iso))
+  const now = `${fmt(data.starts_at)}–${fmt(data.ends_at, false)} with ${data.calendar}`
+  const what = data.service ? escape(data.service) : "Your booking"
+  const html = `<!doctype html>
+<html><body style="font-family:Arial,sans-serif;color:#111">
+<h2>Your booking has changed</h2>
+<p>${data.customer_name ? `Hello ${escape(data.customer_name)},` : "Hello,"}</p>
+<p>${what} is now on <strong>${escape(now)}</strong> (it was ${escape(fmt(data.previous_starts_at))}).</p>
+<p>If this time doesn't suit you, reply to this email or change it in your account.</p>
+</body></html>`
+  return { subject: `Booking changed: ${now}`, html }
+}

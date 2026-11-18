@@ -53,6 +53,16 @@ describe("Telegram provider", () => {
     expect(body.text).toContain("Delivery: Phnom Penh Delivery")
   })
 
+  it("sends an app's own text to one person's chat (telegram-text, TASKS P3-28)", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true, result: { message_id: 7 } }) })
+    const direct = new TelegramNotificationProviderService({ logger }, { bot_token: "123:TEST_TOKEN", per_recipient: true })
+    await direct.send({ to: "555123", channel: "telegram_staff", template: "telegram-text", data: { text: " New job " } })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ chat_id: "555123", text: "New job" })
+    await expect(
+      direct.send({ to: "555123", channel: "telegram_staff", template: "telegram-text", data: { text: "" } })
+    ).rejects.toThrow('No Telegram template "telegram-text"')
+  })
+
   it("throws with Telegram's description, never the token", async () => {
     fetchMock.mockResolvedValue({
       ok: false,

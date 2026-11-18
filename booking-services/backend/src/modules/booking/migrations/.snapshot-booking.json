@@ -1504,6 +1504,22 @@
           "enumItems": [],
           "mappedType": "boolean"
         },
+        "telegram_chat_id": {
+          "name": "telegram_chat_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "whole_days": {
           "name": "whole_days",
           "type": "boolean",

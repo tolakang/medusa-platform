@@ -2,7 +2,7 @@ import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
 import jwt from "jsonwebtoken"
-import { MOVE_LENGTH_MESSAGE, MOVE_SERVICE_MESSAGE, MOVE_TOO_LATE_MESSAGE } from "../../src/lib/booking-move"
+import { BOOKING_MOVED_TEMPLATE, MOVE_LENGTH_MESSAGE, MOVE_SERVICE_MESSAGE, MOVE_TOO_LATE_MESSAGE } from "../../src/lib/booking-move"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import seed from "../../src/scripts/seed"
@@ -46,6 +46,15 @@ medusaIntegrationTestRunner({
         return { headers: { ...store.headers, authorization: `Bearer ${token}` } }
       }
       const slots = async () => (await api.get(`/store/booking/slots?variant_id=${haircut}&date=${monday}`, store)).data.slots
+      // Notifications sent so far by template, waited for (subscribers run after the response).
+      const sent = async (template: string, count: number) => {
+        let rows: any[] = []
+        for (let i = 0; i < 40 && rows.length < count; i++) {
+          rows = (await query().graph({ entity: "notification", fields: ["to", "channel", "data"], filters: { template } })).data
+          if (rows.length < count) await new Promise((r) => setTimeout(r, 250))
+        }
+        return rows
+      }
       // Book and pay a slot; returns the confirmed booking id.
       const bookAndPay = async (who: { headers: Record<string, string> }, slot: any) => {
         const cart = (await api.post("/store/carts", { region_id: regionId }, who)).data.cart.id
@@ -144,7 +153,23 @@ medusaIntegrationTestRunner({
             variant_ids: [haircut],
           },
         })
+        // A new booking's job went to the staff group, with whose calendar it is.
+        const [first] = await sent("telegram-text", 1)
+        expect([first.to, first.channel]).toEqual(["staff", "telegram"])
+        expect(first.data.text).toMatch(/^👤 Sophea\n🗓 New job: Haircut\n/)
+
+        // Dara gets jobs in their own chat with the staff bot.
+        await api.post(`/admin/booking/resources/${dara.id}`, { telegram_chat_id: "555123" }, admin)
         const moved = await api.post(`/admin/booking/bookings/${id}/move`, { resource_id: dara.id }, admin)
+        const jobs = await sent("telegram-text", 3)
+        expect(jobs.slice(1).map((n: any) => [n.to, n.channel, n.data.text.split("\n")[0]]).sort()).toEqual([
+          ["555123", "telegram_staff", "🔁 Job moved: Haircut"],
+          ["staff", "telegram", "👤 Sophea"],
+        ])
+        expect(jobs.find((n: any) => n.to === "staff" && n.data.text.includes("taken off"))).toBeTruthy()
+        // The customer is emailed when staff move it.
+        const [email] = await sent(BOOKING_MOVED_TEMPLATE, 1)
+        expect([email.to, email.channel, email.data.calendar]).toEqual(["sok@example.com", "email", "Dara"])
         expect(moved.data.booking.starts_at).toBe(free[0].starts_at)
         expect((await query().graph({ entity: "booking", fields: ["resource.name"], filters: { id } })).data[0].resource!.name).toBe("Dara")
 

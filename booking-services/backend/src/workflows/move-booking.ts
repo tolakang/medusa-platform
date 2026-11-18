@@ -1,5 +1,6 @@
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
-import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { createStep, createWorkflow, StepResponse, transform, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { emitEventStep } from "@medusajs/medusa/core-flows"
 import {
   movedEnd,
   moveDecision,
@@ -84,7 +85,7 @@ const moveBookingStep = createStep(
       ends_at: new Date(booking.ends_at),
     }
     const moved = await service.moveBooking({ id: booking.id, resource_id: resourceId, starts_at: startsAt, ends_at: endsAt, now })
-    return new StepResponse(moved, before)
+    return new StepResponse({ moved, before }, before)
   },
   async (before, { container }) => {
     if (before) {
@@ -93,6 +94,30 @@ const moveBookingStep = createStep(
   }
 )
 
+// After the move: the job to the calendars (and the customer's email when
+// staff moved it) are sent by the booking.moved subscriber, so a message
+// that fails never undoes the move.
+export const BOOKING_MOVED_EVENT = "booking.moved"
+
+export type BookingMovedData = {
+  id: string
+  by: "customer" | "staff"
+  previous: { resource_id: string; starts_at: string; ends_at: string }
+}
+
 export const moveBookingWorkflow = createWorkflow("move-booking", function (input: MoveBookingInput) {
-  return new WorkflowResponse(moveBookingStep(input))
+  const result = moveBookingStep(input)
+  emitEventStep({
+    eventName: BOOKING_MOVED_EVENT,
+    data: transform({ result, input }, ({ result, input }): BookingMovedData => ({
+      id: result.before.id,
+      by: input.by,
+      previous: {
+        resource_id: result.before.resource_id,
+        starts_at: new Date(result.before.starts_at).toISOString(),
+        ends_at: new Date(result.before.ends_at).toISOString(),
+      },
+    })),
+  })
+  return new WorkflowResponse(transform({ result }, ({ result }) => result.moved))
 })

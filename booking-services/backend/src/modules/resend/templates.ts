@@ -10,6 +10,7 @@ import {
 import { EVENT_TICKETS_TEMPLATE, eventTicketsEmail, type EventTicketsData } from "../../lib/event-tickets"
 import { BALANCE_TEMPLATE, balanceReminderEmail, type BalanceReminderData } from "../../lib/deposits"
 import { QUOTE_TEMPLATE, quoteEmail, type QuoteEmailData } from "../../lib/quotes"
+import { BOOKING_MOVED_TEMPLATE, bookingMovedEmail, type BookingMovedEmailData } from "../../lib/booking-move"
 import { escapeHtml } from "@medusa-platform/medusa-core/lib/order-notification"
 
 export function renderEmail(
@@ -31,6 +32,10 @@ export function renderEmail(
   // A priced quote (TASKS P3-27).
   if (template === QUOTE_TEMPLATE && typeof (data as QuoteEmailData | null)?.amount === "number") {
     return quoteEmail(data as QuoteEmailData, escapeHtml)
+  }
+  // A booking staff moved (TASKS P3-28).
+  if (template === BOOKING_MOVED_TEMPLATE && (data as BookingMovedEmailData | null)?.starts_at) {
+    return bookingMovedEmail(data as BookingMovedEmailData, escapeHtml)
   }
   return renderCoreEmail(template, data)
 }
