@@ -110,6 +110,10 @@ const statusMessages: Record<string, (order: OrderNotificationData) => string> =
   [ORDER_CANCELED_STAFF_TEMPLATE]: orderStatusStaff("❌ Order #? canceled"),
 }
 
+// A message an app writes itself (Booking's job for the assignee, TASKS
+// P3-28): data.text is sent as it is, so the app keeps its own wording.
+export const TELEGRAM_TEXT_TEMPLATE = "telegram-text"
+
 export const TELEGRAM_START_HELP_TEMPLATE = "telegram-start-help"
 const START_HELP =
   "Hello! To get updates about an order, open your order confirmation page and tap “Get order updates on Telegram”."
@@ -124,6 +128,10 @@ export function renderMessage(
   // Refund alert: the message comes from the shared core.
   if (template === PAYMENT_REFUNDED_STAFF_TEMPLATE) {
     return refundAlertStaffMessage(data as unknown as RefundAlertData)
+  }
+  if (template === TELEGRAM_TEXT_TEMPLATE) {
+    const text = typeof data?.text === "string" ? data.text.trim() : ""
+    return text || null
   }
   if (template === TELEGRAM_START_HELP_TEMPLATE) {
     return START_HELP

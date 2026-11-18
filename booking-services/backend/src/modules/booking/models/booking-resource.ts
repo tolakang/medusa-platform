@@ -19,6 +19,10 @@ export const BookingResource = model
     // are local to this zone; booking times are stored in UTC.
     timezone: model.text(),
     is_active: model.boolean().default(true),
+    // Where the person, driver or keeper of this calendar gets their jobs on
+    // Telegram (TASKS P3-28): their chat with the staff bot. Null = the staff
+    // group gets the job, with the calendar's name.
+    telegram_chat_id: model.text().nullable(),
     // Booked by whole days (a rental, kind E, TASKS P3-22): no weekly hours;
     // a booking runs from local midnight to local midnight, and capacity is
     // how many of the item the shop has.

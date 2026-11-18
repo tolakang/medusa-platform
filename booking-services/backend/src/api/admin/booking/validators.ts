@@ -22,7 +22,11 @@ export const PostAdminBookingResource = z.object({
 })
 export type PostAdminBookingResourceType = z.infer<typeof PostAdminBookingResource>
 
-export const PostAdminBookingResourceUpdate = PostAdminBookingResource.partial()
+export const PostAdminBookingResourceUpdate = PostAdminBookingResource.partial().extend({
+  // A Telegram chat ID (digits, a group's starts with -), or null to use the
+  // staff group (TASKS P3-28).
+  telegram_chat_id: z.string().trim().regex(/^-?\d{1,20}$/, "must be a Telegram chat ID (digits)").nullable().optional(),
+})
 export type PostAdminBookingResourceUpdateType = z.infer<typeof PostAdminBookingResourceUpdate>
 
 export const GetAdminBookings = z.object({

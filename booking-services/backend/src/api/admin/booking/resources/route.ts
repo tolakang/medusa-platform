@@ -12,6 +12,7 @@ export const RESOURCE_FIELDS = [
   "capacity",
   "timezone",
   "is_active",
+  "telegram_chat_id",
   "schedules.weekday",
   "schedules.start_time",
   "schedules.end_time",

@@ -24,7 +24,15 @@ import { sdk } from "../../lib/sdk"
 // and POST /admin/booking/bookings/:id/cancel (policy and refund, P3-08),
 // and POST /admin/booking/bookings/:id/move (assign or move, P3-28).
 
-type Resource = { id: string; name: string; type: string; capacity: number; timezone: string; is_active: boolean }
+type Resource = {
+  id: string
+  name: string
+  type: string
+  capacity: number
+  timezone: string
+  is_active: boolean
+  telegram_chat_id?: string | null
+}
 
 const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
 
@@ -87,6 +95,35 @@ const MoveForm = ({
         <Button size="small" variant="secondary" onClick={onClose}>Close</Button>
       </div>
       {move.error && <Text size="xsmall" className="text-ui-fg-error">{errorText(move.error)}</Text>}
+    </div>
+  )
+}
+
+// Where this calendar's person, driver or keeper gets their jobs on Telegram
+// (TASKS P3-28): their chat ID with the staff bot; empty = the staff group.
+const TelegramChat = ({ resource }: { resource: Resource }) => {
+  const queryClient = useQueryClient()
+  const [chat, setChat] = useState(resource.telegram_chat_id ?? "")
+  useEffect(() => setChat(resource.telegram_chat_id ?? ""), [resource.id, resource.telegram_chat_id])
+  const save = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch(`/admin/booking/resources/${resource.id}`, {
+        method: "POST",
+        body: { telegram_chat_id: chat.trim() || null },
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["booking-resources"] }),
+  })
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="flex flex-col gap-y-1">
+        <Label size="small">Telegram chat for jobs</Label>
+        <Input value={chat} placeholder="Staff group" onChange={(e) => setChat(e.target.value)} className="w-48" />
+      </div>
+      <Button size="small" variant="secondary" isLoading={save.isPending} onClick={() => save.mutate()}>
+        Save
+      </Button>
+      {save.isSuccess && <Text size="xsmall" className="text-ui-fg-subtle">Saved.</Text>}
+      {save.error && <Text size="xsmall" className="text-ui-fg-error">{errorText(save.error)}</Text>}
     </div>
   )
 }
@@ -223,6 +260,11 @@ const BookingsPage = () => {
           <Button variant="secondary" onClick={() => resource && setDate(todayIn(resource.timezone))}>Today</Button>
           <Button variant="secondary" onClick={() => setDate(shiftDate(date, view, 1))}>Next</Button>
         </div>
+        {resource && <TelegramChat resource={resource} />}
+        <Text size="xsmall" className="text-ui-fg-subtle">
+          New and moved bookings on this calendar are sent to that chat (the person first messages the staff bot);
+          without one, they go to the staff group with the calendar&apos;s name.
+        </Text>
       </Container>
 
       <Container>

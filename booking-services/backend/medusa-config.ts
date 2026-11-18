@@ -156,6 +156,20 @@ const notificationModule = {
             },
           }
         : localProvider("local-telegram", "telegram"),
+      // A booking's job to the person, driver or keeper of its calendar, in
+      // their own chat with the staff bot (TASKS P3-28: the calendar's
+      // telegram_chat_id is the notification's `to`).
+      TELEGRAM_BOT_TOKEN
+        ? {
+            resolve: "@medusa-platform/medusa-core/providers/telegram",
+            id: "telegram-staff",
+            options: {
+              channels: ["telegram_staff"],
+              bot_token: TELEGRAM_BOT_TOKEN,
+              per_recipient: true,
+            },
+          }
+        : localProvider("local-telegram-staff", "telegram_staff"),
       // Customer order updates from a separate customer bot (TASKS P1-17): sends
       // to each customer's own chat (the notification's `to`).
       TELEGRAM_CUSTOMER_BOT_TOKEN

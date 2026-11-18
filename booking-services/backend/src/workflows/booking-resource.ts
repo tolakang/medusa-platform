@@ -38,6 +38,7 @@ export type UpdateBookingResourceInput = {
   capacity?: number
   timezone?: string
   is_active?: boolean
+  telegram_chat_id?: string | null
   // Replace all weekly hours / offered services when given.
   schedules?: WeeklyHoursInput[]
   variant_ids?: string[]
@@ -123,6 +124,7 @@ type ResourceSnapshot = {
   capacity: number
   timezone: string
   is_active: boolean
+  telegram_chat_id: string | null
   schedules: WeeklyHoursInput[] | null
 }
 
@@ -143,6 +145,7 @@ const updateResourceStep = createStep(
       capacity: current.capacity,
       timezone: current.timezone,
       is_active: current.is_active,
+      telegram_chat_id: current.telegram_chat_id ?? null,
       schedules: input.schedules
         ? (current.schedules ?? []).map((h) => ({ weekday: h.weekday, start_time: h.start_time, end_time: h.end_time }))
         : null,
