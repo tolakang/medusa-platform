@@ -1,6 +1,6 @@
 "use client"
 
-import { addBookingToCart, addRecurringToCart, listExtras, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
+import { addBookingToCart, addRecurringToCart, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
 import {
   durationMinutes,
   formatSlotTime,
@@ -11,7 +11,6 @@ import {
   MAX_TRIP_HOURS,
   maxSeats,
   minHours,
-  offeredExtras,
   orderedServices,
   serviceChoiceLabel,
   tripPricing,
@@ -21,6 +20,7 @@ import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text, clx } from "@modules/common/components/ui"
 import JoinWaitlist from "@modules/products/components/join-waitlist"
+import ExtrasChooser, { chosenExtras } from "@modules/products/components/extras-chooser"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState, useTransition } from "react"
 
@@ -81,14 +81,7 @@ export default function BookingPicker({
   const departure = isDepartureService(product)
   const [seats, setSeats] = useState(1)
   // Extras the service offers (P3-25), each with a quantity.
-  const [extras, setExtras] = useState<HttpTypes.StoreProduct[]>([])
   const [extraQty, setExtraQty] = useState<Record<string, number>>({})
-  const extraHandles = offeredExtras(product).join(",")
-  useEffect(() => {
-    if (extraHandles) {
-      listExtras(extraHandles.split(","), countryCode).then(setExtras)
-    }
-  }, [extraHandles, countryCode])
   const visitReady = trip ? tripReady : !visit || (address.trim().length >= 5 && problem.trim().length > 0)
 
   useEffect(() => {
@@ -144,9 +137,7 @@ export default function BookingPicker({
           : {}),
         ...(departure ? { seats } : {}),
         ...(passId ? { passId } : {}),
-        extras: Object.entries(extraQty)
-          .filter(([, q]) => q > 0)
-          .map(([variant_id, quantity]) => ({ variant_id, quantity })),
+        extras: chosenExtras(extraQty),
       })
       if (result.error) {
         setError(result.error)
@@ -357,52 +348,7 @@ export default function BookingPicker({
           </label>
         </>
       )}
-      {extras.length > 0 && (
-        <div className="flex flex-col gap-y-2" data-testid="booking-extras">
-          <Text className="txt-compact-small-plus">Extras</Text>
-          {extras.map((x) => {
-            const v = x.variants?.[0]
-            if (!v) return null
-            const q = extraQty[v.id] ?? 0
-            return (
-              <div key={x.id} className="flex items-center justify-between gap-2 border border-ui-border-base rounded-md px-3 py-2">
-                <span className="flex flex-col">
-                  <span className="txt-small-plus">{x.title}</span>
-                  <span className="txt-xsmall text-ui-fg-subtle">
-                    {v.calculated_price?.calculated_amount != null
-                      ? `${convertToLocale({ amount: v.calculated_price.calculated_amount, currency_code: v.calculated_price.currency_code ?? "usd" })} each`
-                      : ""}
-                    {x.description ? ` · ${x.description}` : ""}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label={`Fewer ${x.title}`}
-                    disabled={q === 0}
-                    onClick={() => setExtraQty({ ...extraQty, [v.id]: Math.max(q - 1, 0) })}
-                    className="border border-ui-border-base rounded-md w-8 h-8 disabled:opacity-40"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center txt-small" data-testid="extra-quantity">
-                    {q}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={`More ${x.title}`}
-                    disabled={q >= 20}
-                    onClick={() => setExtraQty({ ...extraQty, [v.id]: Math.min(q + 1, 20) })}
-                    className="border border-ui-border-base rounded-md w-8 h-8 disabled:opacity-40"
-                  >
-                    +
-                  </button>
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />
       {error && (
         <Text className="txt-small text-ui-fg-error" data-testid="booking-error">
           {error}

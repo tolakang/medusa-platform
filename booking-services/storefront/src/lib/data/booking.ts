@@ -207,6 +207,8 @@ export async function addRentalToCart(input: {
   resourceId: string
   startDate: string
   endDate: string
+  // Extras with the rental (P3-25 follow-up).
+  extras?: { variant_id: string; quantity: number }[]
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -222,6 +224,7 @@ export async function addRentalToCart(input: {
         resource_id: input.resourceId,
         start_date: input.startDate,
         end_date: input.endDate,
+        ...(input.extras?.length ? { extras: input.extras } : {}),
       },
     })
   } catch (e) {
@@ -541,4 +544,41 @@ export async function reviewSummary(productId: string): Promise<{ average: numbe
     .fetch<ServiceReviews>("/store/booking/reviews", { query: { product_id: productId }, next: { revalidate: 300 } })
     .then((r) => ({ average: r.average, count: r.count }))
     .catch(() => ({ average: null, count: 0 }))
+}
+
+// Event tickets with extras (TASKS P3-25 follow-up): the ticket line gets a
+// group id and each extra points at it, so the extras stay with these tickets
+// (the backend checks the group is in the cart).
+export async function addTicketsToCart(input: {
+  countryCode: string
+  variantId: string
+  quantity: number
+  extras?: { variant_id: string; quantity: number }[]
+}): Promise<{ error?: string }> {
+  const cart = await getOrSetCart(input.countryCode)
+  if (!cart) {
+    return { error: "Could not open your cart." }
+  }
+  const headers = await getAuthHeaders()
+  const group = `tkt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+  try {
+    await sdk.store.cart.createLineItem(
+      cart.id,
+      { variant_id: input.variantId, quantity: input.quantity, ...(input.extras?.length ? { metadata: { booking_ticket_group: group } } : {}) },
+      {},
+      headers
+    )
+    for (const x of input.extras ?? []) {
+      await sdk.store.cart.createLineItem(
+        cart.id,
+        { variant_id: x.variant_id, quantity: x.quantity, metadata: { booking_extra_for: group, line_detail: "With your tickets" } },
+        {},
+        headers
+      )
+    }
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "These tickets can't be added." }
+  }
+  revalidateTag(await getCacheTag("carts"), { expire: 0 })
+  return {}
 }

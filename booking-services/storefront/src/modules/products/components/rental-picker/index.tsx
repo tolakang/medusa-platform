@@ -1,6 +1,7 @@
 "use client"
 
 import { addRentalToCart, rentalAvailability, type RentalAvailability } from "@lib/data/booking"
+import ExtrasChooser, { chosenExtras } from "@modules/products/components/extras-chooser"
 import { localDate, orderedServices, rentalUnit, serviceChoiceLabel } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
@@ -41,12 +42,22 @@ export default function RentalPicker({ product }: { product: HttpTypes.StoreProd
     })
   }, [variantId, start, end])
 
+  // Extras with the rental (P3-25 follow-up).
+  const [extraQty, setExtraQty] = useState<Record<string, number>>({})
+
   const book = () => {
     if (!item) {
       return
     }
     startBooking(async () => {
-      const result = await addRentalToCart({ countryCode, variantId, resourceId: item.resource_id, startDate: start, endDate: end })
+      const result = await addRentalToCart({
+        countryCode,
+        variantId,
+        resourceId: item.resource_id,
+        startDate: start,
+        endDate: end,
+        extras: chosenExtras(extraQty),
+      })
       if (result.error) {
         setError(result.error)
         return
@@ -129,6 +140,7 @@ export default function RentalPicker({ product }: { product: HttpTypes.StoreProd
           {error}
         </Text>
       )}
+      <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />
       <Button onClick={book} disabled={!ready || booking} isLoading={booking} className="w-full h-10" data-testid="rental-submit">
         {ready ? `Book ${label(found!.units)}` : "Choose the dates"}
       </Button>

@@ -22,6 +22,7 @@ import {
   isExtraProduct,
 } from "../../lib/booking-extras"
 import { PASS_EMPTY_MESSAGE, PASS_EXPIRED_MESSAGE, PASS_ITEM_KEY } from "../../lib/passes"
+import { TICKET_GROUP_KEY } from "../../lib/booking-extras"
 import { PACKAGE_ALONE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE, PACKAGE_ITEM_KEY, PACKAGE_PIECES_KEY, packageComplete, packagePieces } from "../../lib/packages"
 import { BOOKING_MODULE } from "../../modules/booking"
 import type BookingModuleService from "../../modules/booking/service"
@@ -88,7 +89,13 @@ async function assertExtras(container: MedusaContainer, lines: CartItemInput[]) 
   if (!extraVariants.size) {
     return
   }
-  const bookingIds = new Set(lines.map((l) => bookingIdOf(l.metadata)).filter((id): id is string => !!id))
+  // Extras belong to a booking, or to a group of event tickets (the ticket
+  // line's `booking_ticket_group`, P3-25 follow-up).
+  const bookingIds = new Set(
+    lines
+      .flatMap((l) => [bookingIdOf(l.metadata), (l.metadata as Record<string, unknown> | null | undefined)?.[TICKET_GROUP_KEY]])
+      .filter((id): id is string => typeof id === "string" && !!id)
+  )
   const problem = extrasProblem(
     lines.map((l) => ({ metadata: l.metadata, is_extra: !!l.variant_id && extraVariants.has(l.variant_id) })),
     bookingIds
