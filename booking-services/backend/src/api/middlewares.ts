@@ -236,6 +236,12 @@ export default defineMiddlewares({
       middlewares: [validateAndTransformBody(PostAdminReview)],
     },
     {
+      // Passes (TASKS P3-29): the signed-in customer's own.
+      method: ['GET'],
+      matcher: '/store/booking/passes',
+      middlewares: [authenticate('customer', ['session', 'bearer'])],
+    },
+    {
       // Waitlist (TASKS P3-29): a signed-in customer waits for a full day.
       method: ['GET', 'POST'],
       matcher: '/store/booking/waitlist*',
