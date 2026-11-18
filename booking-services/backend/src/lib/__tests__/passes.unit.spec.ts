@@ -18,5 +18,8 @@ describe("passes (TASKS P3-29)", () => {
     expect(passProblem(pass, "prod_hair", at, 2)).toBe(PASS_EMPTY_MESSAGE)
     expect(passProblem(pass, "prod_ac", at, 0)).toBe(PASS_SERVICE_MESSAGE)
     expect(passProblem(pass, "prod_hair", new Date("2027-01-02T00:00:00Z"), 0)).toBe(PASS_EXPIRED_MESSAGE)
+    // Three seats need three credits.
+    expect(passProblem(pass, "prod_hair", at, 0, 3)).toBe(PASS_EMPTY_MESSAGE)
+    expect(passProblem({ ...pass, credits_left: 3 }, "prod_hair", at, 0, 3)).toBeNull()
   })
 })

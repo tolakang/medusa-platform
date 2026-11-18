@@ -21,7 +21,7 @@ import {
   extrasProblem,
   isExtraProduct,
 } from "../../lib/booking-extras"
-import { PASS_EMPTY_MESSAGE, PASS_EXPIRED_MESSAGE, PASS_ITEM_KEY } from "../../lib/passes"
+import { PASS_EMPTY_MESSAGE, PASS_EXPIRED_MESSAGE, PASS_ITEM_KEY, passCreditsOf } from "../../lib/passes"
 import { TICKET_GROUP_KEY } from "../../lib/booking-extras"
 import { PACKAGE_ALONE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE, PACKAGE_ITEM_KEY, PACKAGE_PIECES_KEY, packageComplete, packagePieces } from "../../lib/packages"
 import { BOOKING_MODULE } from "../../modules/booking"
@@ -271,7 +271,7 @@ async function assertPassCredits(container: MedusaContainer, items: CartItemInpu
   const wanted = new Map<string, number>()
   for (const item of items) {
     const id = (item.metadata as Record<string, unknown> | null | undefined)?.[PASS_ITEM_KEY]
-    if (typeof id === "string") wanted.set(id, (wanted.get(id) ?? 0) + 1)
+    if (typeof id === "string") wanted.set(id, (wanted.get(id) ?? 0) + passCreditsOf(item.metadata as Record<string, unknown> | null))
   }
   if (!wanted.size) return
   const passes = await container.resolve<BookingModuleService>(BOOKING_MODULE).listBookingPasses({ id: [...wanted.keys()] })

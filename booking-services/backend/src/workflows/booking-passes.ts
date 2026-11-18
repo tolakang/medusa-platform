@@ -1,6 +1,6 @@
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
-import { PASS_ITEM_KEY, passProduct } from "../lib/passes"
+import { passCreditsOf, PASS_ITEM_KEY, passProduct } from "../lib/passes"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
@@ -68,17 +68,18 @@ const takePassCreditsStep = createStep(
   async (input: { order_id: string }, { container }) => {
     const { order } = await loadOrder(container, input.order_id)
     const booking = service(container)
-    const taken: { use_id: string; pass_id: string }[] = []
+    const taken: { use_id: string; pass_id: string; credits: number }[] = []
     for (const item of order?.items ?? []) {
       const passId = item.metadata?.[PASS_ITEM_KEY]
       const bookingId = item.metadata?.booking_id
       if (typeof passId !== "string" || typeof bookingId !== "string") continue
       if ((await booking.listBookingPassUses({ booking_id: bookingId })).length) continue
+      const credits = passCreditsOf(item.metadata)
       const [pass] = await booking.listBookingPasses({ id: passId })
-      if (!pass || pass.credits_left < 1) continue
-      await booking.updateBookingPasses({ id: pass.id, credits_left: pass.credits_left - 1 })
-      const use = await booking.createBookingPassUses({ pass_id: pass.id, booking_id: bookingId })
-      taken.push({ use_id: use.id, pass_id: pass.id })
+      if (!pass || pass.credits_left < credits) continue
+      await booking.updateBookingPasses({ id: pass.id, credits_left: pass.credits_left - credits })
+      const use = await booking.createBookingPassUses({ pass_id: pass.id, booking_id: bookingId, credits })
+      taken.push({ use_id: use.id, pass_id: pass.id, credits })
     }
     return new StepResponse(taken.length, taken)
   },
@@ -86,7 +87,7 @@ const takePassCreditsStep = createStep(
     const booking = service(container)
     for (const t of taken ?? []) {
       const [pass] = await booking.listBookingPasses({ id: t.pass_id })
-      if (pass) await booking.updateBookingPasses({ id: pass.id, credits_left: pass.credits_left + 1 })
+      if (pass) await booking.updateBookingPasses({ id: pass.id, credits_left: pass.credits_left + t.credits })
       await booking.deleteBookingPassUses(t.use_id)
     }
   }
@@ -98,8 +99,9 @@ export const placeOrderPassesWorkflow = createWorkflow("place-order-passes", fun
   return new WorkflowResponse({ issued, taken })
 })
 
-// A cancelled booking paid with a pass gets its credit back (called by
-// cancel-booking when the cancellation is within the policy).
+// A cancelled booking paid with a pass gets its credits back (called by
+// cancel-booking): within the policy, or whenever staff cancel it (P3-29
+// follow-up: the shop's own cancellation never costs the customer a credit).
 export const returnPassCreditStep = createStep(
   "return-pass-credit",
   async (input: { booking_id: string; within_policy: boolean }, { container }) => {
@@ -109,15 +111,16 @@ export const returnPassCreditStep = createStep(
     if (!use) return new StepResponse(false, null)
     const [pass] = await booking.listBookingPasses({ id: use.pass_id })
     if (!pass) return new StepResponse(false, null)
-    await booking.updateBookingPasses({ id: pass.id, credits_left: Math.min(pass.credits_left + 1, pass.credits_total) })
+    const credits = use.credits ?? 1
+    await booking.updateBookingPasses({ id: pass.id, credits_left: Math.min(pass.credits_left + credits, pass.credits_total) })
     await booking.updateBookingPassUses({ id: use.id, status: "returned" })
-    return new StepResponse(true, { use_id: use.id, pass_id: pass.id })
+    return new StepResponse(true, { use_id: use.id, pass_id: pass.id, credits })
   },
   async (prev, { container }) => {
     if (!prev) return
     const booking = service(container)
     const [pass] = await booking.listBookingPasses({ id: prev.pass_id })
-    if (pass) await booking.updateBookingPasses({ id: pass.id, credits_left: Math.max(pass.credits_left - 1, 0) })
+    if (pass) await booking.updateBookingPasses({ id: pass.id, credits_left: Math.max(pass.credits_left - prev.credits, 0) })
     await booking.updateBookingPassUses({ id: prev.use_id, status: "used" })
   }
 )

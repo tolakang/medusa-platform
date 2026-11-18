@@ -1,6 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
+import { createDefaultsWorkflow, createShippingProfilesWorkflow, updateProductsWorkflow } from "@medusajs/medusa/core-flows"
 import { BALANCE_METADATA_KEY, BALANCE_TEMPLATE } from "../../src/lib/deposits"
 import seed from "../../src/scripts/seed"
 import seedBookingDemo from "../../src/scripts/seed-booking-demo"
@@ -150,6 +150,37 @@ medusaIntegrationTestRunner({
         await new Promise((r) => setTimeout(r, 1500))
         const { data } = await query().graph({ entity: "order", fields: ["payment_collections.id"], filters: { id: done.data.order.id } })
         expect(data[0].payment_collections).toHaveLength(1)
+      })
+
+      it("takes the deposit on a rental and on event tickets too (P3-26 follow-up)", async () => {
+        // The 20-guest wedding tent: $35 a day, 50% deposit.
+        const {
+          data: [tent],
+        } = await query().graph({ entity: "product", fields: ["variants.id", "variants.title", "variants.booking_resources.id"], filters: { handle: "wedding-tent" } })
+        const small = tent.variants!.find((v) => v!.title === "20 guests") as unknown as { id: string; booking_resources: { id: string }[] }
+        const rental = await checkout((cart) =>
+          api.post(
+            "/store/booking/cart",
+            { cart_id: cart, variant_id: small.id, resource_id: small.booking_resources[0].id, start_date: monday, end_date: monday },
+            store
+          )
+        )
+        expect([Number(rental.session.amount), rental.done.data.order.total]).toEqual([17.5, 35])
+        expect(Number((await balanceOf(rental.done.data.order.id)).amount)).toBe(17.5)
+
+        // Event tickets with a 40% deposit: the balance has no booking date.
+        const {
+          data: [show],
+        } = await query().graph({ entity: "product", fields: ["id", "metadata", "variants.id", "variants.title"], filters: { handle: "apsara-dance-show" } })
+        await updateProductsWorkflow(getContainer()).run({
+          input: { selector: { id: show.id }, update: { metadata: { ...(show.metadata ?? {}), deposit_percent: 40 } } },
+        })
+        const vip = show.variants!.find((v) => v!.title.endsWith("VIP"))!
+        const tickets = await checkout((cart) => api.post(`/store/carts/${cart}/line-items`, { variant_id: vip.id, quantity: 2 }, store))
+        const total = tickets.done.data.order.total
+        expect(Number(tickets.session.amount)).toBe(Math.round(total * 0.4 * 100) / 100)
+        const balance = await balanceOf(tickets.done.data.order.id)
+        expect([Number(balance.amount), balance.metadata.due_at]).toEqual([Math.round(total * 0.6 * 100) / 100, null])
       })
 
       it("reminds once before the booking, and not after the balance is paid", async () => {

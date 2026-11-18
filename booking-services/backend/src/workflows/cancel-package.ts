@@ -1,6 +1,6 @@
 import { ContainerRegistrationKeys, MathBN, MedusaError } from "@medusajs/framework/utils"
 import { createStep, createWorkflow, StepResponse, transform, when, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
-import { refundPaymentWorkflow } from "@medusajs/medusa/core-flows"
+import { emitEventStep, refundPaymentWorkflow } from "@medusajs/medusa/core-flows"
 import { cancelDecision } from "../lib/booking-cancel-policy"
 import { PACKAGE_ITEM_KEY } from "../lib/packages"
 import { BOOKING_MODULE } from "../modules/booking"
@@ -13,6 +13,10 @@ import type { RefundOutcome } from "./cancel-booking"
 // payment (the pieces are $0). The refund runs last, with an idempotency key.
 
 export const PACKAGE_NOT_FOUND_MESSAGE = "This event package was not found."
+
+// After a cancellation; when staff did it, the customer is emailed (P3-30).
+export const PACKAGE_CANCELLED_EVENT = "booking.package_cancelled"
+export type PackageCancelledData = { package_id: string; by: "customer" | "staff"; refunded_amount: number }
 
 type Plan = {
   package_id: string
@@ -115,7 +119,7 @@ const markPackageCancelledStep = createStep(
 
 export const cancelPackageWorkflow = createWorkflow(
   "cancel-package",
-  function (input: { package_id: string; customer_id?: string; created_by?: string }) {
+  function (input: { package_id: string; customer_id?: string; created_by?: string; by?: "customer" | "staff" }) {
     const plan = planPackageCancelStep(input)
     const cancelled = markPackageCancelledStep(plan)
     when("refund-cancelled-package", plan, (p) => p.refund !== null).then(() => {
@@ -128,6 +132,14 @@ export const cancelPackageWorkflow = createWorkflow(
           created_by: input.created_by,
         })),
       })
+    })
+    emitEventStep({
+      eventName: PACKAGE_CANCELLED_EVENT,
+      data: transform({ plan, input }, ({ plan, input }): PackageCancelledData => ({
+        package_id: plan.package_id,
+        by: input.by ?? (input.customer_id ? "customer" : "staff"),
+        refunded_amount: plan.refund?.amount ?? 0,
+      })),
     })
     return new WorkflowResponse(
       transform({ plan, cancelled }, ({ plan, cancelled }) => ({

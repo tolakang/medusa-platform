@@ -392,10 +392,10 @@ export default function BookingPicker({
           </select>
         </label>
       )}
-      {passes.length > 0 && !departure && weeks === 1 && (
+      {passes.length > 0 && weeks === 1 && (
         <label className="flex items-center gap-x-2 txt-small" data-testid="booking-use-pass">
           <input type="checkbox" checked={!!passId} onChange={(e) => setPassId(e.target.checked ? passes[0].id : "")} />
-          Use my pass ({passes[0].title}: {passes[0].credits_left} of {passes[0].credits_total} left)
+          Use my pass ({passes[0].title}: {passes[0].credits_left} of {passes[0].credits_total} left{departure && seats > 1 ? `; ${seats} seats take ${seats}` : ""})
         </label>
       )}
       <Button onClick={book} disabled={!chosen || !visitReady || booking} isLoading={booking} className="w-full h-10" data-testid="booking-submit">

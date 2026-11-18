@@ -11,6 +11,7 @@ import { EVENT_TICKETS_TEMPLATE, eventTicketsEmail, type EventTicketsData } from
 import { BALANCE_TEMPLATE, balanceReminderEmail, type BalanceReminderData } from "../../lib/deposits"
 import { QUOTE_TEMPLATE, quoteEmail, type QuoteEmailData } from "../../lib/quotes"
 import { WAITLIST_TEMPLATE, waitlistEmail, type WaitlistEmailData } from "../../lib/waitlist"
+import { PACKAGE_CHANGED_TEMPLATE, packageChangedEmail, type PackageChangedData } from "../../lib/package-email"
 import { REVIEW_REQUEST_TEMPLATE, reviewRequestEmail, type ReviewRequestData } from "../../lib/reviews"
 import { BOOKING_MOVED_TEMPLATE, bookingMovedEmail, type BookingMovedEmailData } from "../../lib/booking-move"
 import { escapeHtml } from "@medusa-platform/medusa-core/lib/order-notification"
@@ -46,6 +47,10 @@ export function renderEmail(
   // Asking for a review after a booking (P3-29 follow-up).
   if (template === REVIEW_REQUEST_TEMPLATE && (data as ReviewRequestData | null)?.service) {
     return reviewRequestEmail(data as ReviewRequestData, escapeHtml)
+  }
+  // An event package staff cancelled or moved (P3-30 follow-up).
+  if (template === PACKAGE_CHANGED_TEMPLATE && (data as PackageChangedData | null)?.event_date) {
+    return packageChangedEmail(data as PackageChangedData, escapeHtml)
   }
   return renderCoreEmail(template, data)
 }

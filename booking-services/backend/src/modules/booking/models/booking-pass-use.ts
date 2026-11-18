@@ -9,5 +9,8 @@ export const BookingPassUse = model
     pass_id: model.text(),
     booking_id: model.text(),
     status: model.enum(["used", "returned"]).default("used"),
+    // Credits this booking took: its seats on a departure, its days or nights
+    // of a rental, else 1 (P3-29 follow-up).
+    credits: model.number().default(1),
   })
   .indexes([{ name: "IDX_booking_pass_use_booking", on: ["booking_id"], unique: true, where: "deleted_at IS NULL" }])
