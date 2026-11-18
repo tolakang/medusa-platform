@@ -37,6 +37,9 @@ export const Booking = model
     // When the 24-hour reminder was sent (P3-09; not in the plan's field
     // list, TASKS F-046). Null = not sent yet.
     reminder_sent_at: model.dateTime().nullable(),
+    // The weekly series this booking belongs to (TASKS P3-29): the same
+    // calendar and local time, booked together. Null = a single booking.
+    series_id: model.text().nullable(),
     resource: model.belongsTo(() => BookingResource, {
       mappedBy: "bookings",
     }),

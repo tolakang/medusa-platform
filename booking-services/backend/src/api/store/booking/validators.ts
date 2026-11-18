@@ -84,3 +84,16 @@ export const PostReview = z.object({
   comment: z.string().max(1000).nullish(),
 })
 export type PostReviewType = z.infer<typeof PostReview>
+
+// Every week (TASKS P3-29).
+export const PostRecurring = z.object({
+  cart_id: z.string().min(1),
+  variant_id: z.string().min(1),
+  resource_id: z.string().min(1),
+  starts_at: instant,
+  ends_at: instant,
+  weeks: z.number().int().min(2).max(12),
+  address: z.string().max(300).nullish(),
+  notes: z.string().max(1000).nullish(),
+})
+export type PostRecurringType = z.infer<typeof PostRecurring>
