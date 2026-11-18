@@ -150,6 +150,9 @@ RESEND_FROM=My Shop <orders@<verified domain>>
 # Bot token and chat ID: see "Telegram bot and chat ID, step by step" (alerts section)
 TELEGRAM_BOT_TOKEN=<staff bot token>
 TELEGRAM_CHAT_ID=<staff group id, negative>
+# Staff bot /start answers a person's chat ID (TASKS P3-28): any long random
+# string; after the first deploy run the setup script once (Step 6b).
+TELEGRAM_STAFF_WEBHOOK_SECRET=<long random string>
 # ABA PayWay sandbox (empty API URL = sandbox)
 PAYWAY_MERCHANT_ID=<merchant id>
 PAYWAY_API_KEY=<the "Public Key" from ABA's email>
@@ -436,6 +439,30 @@ A booking belongs to the customer who is signed in when they book, so sign up **
 - with PayWay: whether the admin shows the refund.
 
 ---
+
+## Step 6b: The booking kinds and shared features (TASKS P3-20 to P3-30, about 45 minutes)
+
+The demo seed (Step 3 B) creates a service for every kind. Sign in to the shop as a test customer, then try each; the admin pages named are in the left menu.
+
+1. **Visit at your place:** "Air conditioner service": the address and the problem are asked; the admin **Bookings** card shows the address.
+2. **Trips:** "Moving truck" (hours, two addresses) and "Airport transfer" (zones). The order email shows the time and both addresses under the line.
+3. **Departures:** "Bus Siem Reap to Phnom Penh" with 3 seats: the header cart says "Cart (1)".
+4. **Rentals:** "Wedding tent" for a day: 50% deposit at checkout, **Mark as paid** on the order for the rest.
+5. **Event tickets:** "Apsara dance show": the order page shows each code with its QR code; **Tickets** lets one in once.
+6. **Extras:** the truck with packing boxes; the tent and the show offer extras too when their product Metadata `extras` lists them.
+7. **Quote:** "Full house move": ask, price it in **Quotes**, accept in Account → Quotes, pay.
+8. **Assign and reschedule:** in **Bookings**, **Move** a booking to another calendar; set a calendar's "Telegram chat for jobs". Telegram setup for the staff bot, once:
+   ```
+   docker-entrypoint.sh medusa exec ./src/scripts/telegram-set-staff-webhook.js https://<api host>/telegram/staff-webhook
+   ```
+   (in the backend container's console). Then send `/start` to the staff bot privately: it answers your chat ID.
+9. **Waitlist:** give a calendar a day off; on that day the service offers **Join the waitlist**; remove the day off; within 15 minutes the worker emails a free time (**Waitlist** in the admin lists who waits).
+10. **Reviews:** an hour after a paid booking ends, the worker emails a review request; write one, reply in **Reviews**; the service card shows the stars.
+11. **Passes:** buy "Haircut 5-pack", book a haircut with **Use my pass** ($0); **Passes** in the admin.
+12. **Every week:** book a haircut "every week × 4" (or every 2 weeks, or monthly); **Cancel the rest** in the account.
+13. **Event packages:** "Small wedding" on a date (30% now, then two instalments); "Build your event" à la carte; admin **Events**: move it to another date, then cancel it (the customer gets one email each time). A partner adds a package from their own services in the provider portal (**Packages**).
+
+Write down anything that looks wrong with the step number.
 
 ## Step 7: What I check from here
 With your two hosts, the `pk_…` key and the order number, I check:
