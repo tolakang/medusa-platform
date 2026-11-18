@@ -86,13 +86,18 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
       "booking_resources.timezone",
       "booking_resources.is_active",
     ],
-    filters: { sku: pieces.map((p) => p.sku) },
+    filters: {
+      $or: [
+        { sku: pieces.map((p) => p.sku).filter(Boolean) },
+        { id: pieces.map((p) => p.variant_id).filter((v): v is string => !!v) },
+      ],
+    },
   })
   const plans: Plan[] = []
   const unavailable: string[] = []
   const address = (body.address ?? "").trim()
   for (const piece of pieces) {
-    const v = variants.find((x) => x.sku === piece.sku)
+    const v = variants.find((x) => (piece.variant_id ? x.id === piece.variant_id : x.sku === piece.sku))
     const title = v ? `${v.product?.title ?? ""}${v.title && v.title !== v.product?.title ? ` (${v.title})` : ""}` : piece.sku
     if (!v) {
       unavailable.push(title)

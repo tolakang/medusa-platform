@@ -4,11 +4,12 @@ import type { Provider } from "@/lib/server/provider"
 
 // TASKS P3-32: header and navigation of every portal page. One portal, two
 // roles: staff see their calendar and profile; partners also their hours,
-// days off and services.
+// days off, services and event packages.
 const LINKS = [
   { href: "/", label: "Calendar", partner: false },
   { href: "/hours", label: "Hours and days off", partner: true },
   { href: "/services", label: "Services", partner: true },
+  { href: "/packages", label: "Packages", partner: true },
   { href: "/earnings", label: "Earnings", partner: true },
   { href: "/profile", label: "Profile", partner: false },
 ]
