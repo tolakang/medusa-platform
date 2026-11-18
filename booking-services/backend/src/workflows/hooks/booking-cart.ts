@@ -21,6 +21,7 @@ import {
   extrasProblem,
   isExtraProduct,
 } from "../../lib/booking-extras"
+import { PASS_EMPTY_MESSAGE, PASS_EXPIRED_MESSAGE, PASS_ITEM_KEY } from "../../lib/passes"
 import { BOOKING_MODULE } from "../../modules/booking"
 import type BookingModuleService from "../../modules/booking/service"
 
@@ -203,8 +204,31 @@ updateLineItemInCartWorkflow.hooks.validate(async ({ input }, { container }) => 
 
 // Completing the cart (read-only, idempotent on retry): every booking item
 // still has its slot, and no service is in the cart without a booking.
+// Bookings paid with a pass (TASKS P3-29): at checkout the pass must still
+// have a credit for each of them and not have expired (another cart may have
+// used it since).
+async function assertPassCredits(container: MedusaContainer, items: CartItemInput[]) {
+  const wanted = new Map<string, number>()
+  for (const item of items) {
+    const id = (item.metadata as Record<string, unknown> | null | undefined)?.[PASS_ITEM_KEY]
+    if (typeof id === "string") wanted.set(id, (wanted.get(id) ?? 0) + 1)
+  }
+  if (!wanted.size) return
+  const passes = await container.resolve<BookingModuleService>(BOOKING_MODULE).listBookingPasses({ id: [...wanted.keys()] })
+  for (const [id, count] of wanted) {
+    const pass = passes.find((p) => p.id === id)
+    if (!pass || pass.credits_left < count) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PASS_EMPTY_MESSAGE)
+    }
+    if (new Date(pass.expires_at).getTime() < Date.now()) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PASS_EXPIRED_MESSAGE)
+    }
+  }
+}
+
 completeCartWorkflow.hooks.validate(async ({ input }, { container }) => {
   const items = await cartItems(container, input.id)
   await assertBookingItems(container, input.id, items, { checkout: true })
   await assertExtras(container, items)
+  await assertPassCredits(container, items)
 })

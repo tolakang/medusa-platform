@@ -1,6 +1,6 @@
 "use client"
 
-import { addBookingToCart, listExtras, listSlots, listTripZones, type Slot, type TripZones } from "@lib/data/booking"
+import { addBookingToCart, listExtras, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
 import {
   durationMinutes,
   formatSlotTime,
@@ -28,7 +28,17 @@ import { useEffect, useMemo, useState, useTransition } from "react"
 // a table, P3-19), a day and a free
 // time, then the slot is held and added to the cart (POST /store/booking/cart,
 // hold for BOOKING_HOLD_MINUTES). Times are the resource's local time.
-export default function BookingPicker({ product, signedIn = false }: { product: HttpTypes.StoreProduct; signedIn?: boolean }) {
+export default function BookingPicker({
+  product,
+  signedIn = false,
+  passes = [],
+}: {
+  product: HttpTypes.StoreProduct
+  signedIn?: boolean
+  // The customer's passes that cover this service and have credits (P3-29).
+  passes?: MyPass[]
+}) {
+  const [passId, setPassId] = useState("")
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const services = useMemo(
@@ -113,6 +123,7 @@ export default function BookingPicker({ product, signedIn = false }: { product: 
             }
           : {}),
         ...(departure ? { seats } : {}),
+        ...(passId ? { passId } : {}),
         extras: Object.entries(extraQty)
           .filter(([, q]) => q > 0)
           .map(([variant_id, quantity]) => ({ variant_id, quantity })),
@@ -376,6 +387,12 @@ export default function BookingPicker({ product, signedIn = false }: { product: 
         <Text className="txt-small text-ui-fg-error" data-testid="booking-error">
           {error}
         </Text>
+      )}
+      {passes.length > 0 && !departure && (
+        <label className="flex items-center gap-x-2 txt-small" data-testid="booking-use-pass">
+          <input type="checkbox" checked={!!passId} onChange={(e) => setPassId(e.target.checked ? passes[0].id : "")} />
+          Use my pass ({passes[0].title}: {passes[0].credits_left} of {passes[0].credits_total} left)
+        </label>
       )}
       <Button onClick={book} disabled={!chosen || !visitReady || booking} isLoading={booking} className="w-full h-10" data-testid="booking-submit">
         {!chosen

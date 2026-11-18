@@ -36,6 +36,8 @@ export const PostBookingCart = z.object({
   extras: z.array(z.object({ variant_id: z.string().min(1), quantity: z.number().int().min(1).max(20) })).max(10).nullish(),
   // An accepted quote (P3-27).
   quote_id: z.string().min(1).nullish(),
+  // Pay with a pass credit (P3-29).
+  pass_id: z.string().min(1).nullish(),
   notes: z.string().max(500).nullish(),
   // A visit at the customer's place (kind B, P3-20).
   address: z.string().max(300).nullish(),

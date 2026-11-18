@@ -9,6 +9,7 @@ import {
 } from "@medusajs/framework/workflows-sdk"
 import { refundPaymentWorkflow } from "@medusajs/medusa/core-flows"
 import { providerCommissionOnCancelWorkflow } from "./provider-commission"
+import { returnPassCreditStep } from "./booking-passes"
 import { cancelDecision } from "../lib/booking-cancel-policy"
 import { bookingIdOf } from "../lib/booking-cart-rules"
 import { BOOKING_MODULE } from "../modules/booking"
@@ -188,6 +189,15 @@ export const cancelBookingWorkflow = createWorkflow(
       }))
       refundPaymentWorkflow.runAsStep({ input: refundInput })
     })
+
+    // A booking paid with a pass gets its credit back within the policy
+    // (TASKS P3-29); its order line is $0, so there's no money refund.
+    returnPassCreditStep(
+      transform({ plan }, ({ plan }) => ({
+        booking_id: plan.booking_id,
+        within_policy: plan.outcome === "refunded" || plan.outcome === "not_captured",
+      }))
+    )
 
     // A partner booking's commission: cancelled with a refund, kept without
     // one (TASKS P3-33).

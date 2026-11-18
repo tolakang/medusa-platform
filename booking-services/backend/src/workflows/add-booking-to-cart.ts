@@ -13,6 +13,7 @@ import { hoursPrice, tripPricing, validHours, zonePriceBetween } from "../lib/tr
 import { rentalLabel, rentalPrice, rentalSpan, rentalUnit, rentalUnits } from "../lib/rental-pricing"
 import { isDepartureService, validSeats } from "../lib/departure"
 import { isQuoteOnly, QUOTE_NOT_YOURS_MESSAGE, QUOTE_ONLY_MESSAGE, quoteBookable } from "../lib/quotes"
+import { PASS_ITEM_KEY, PASS_NOT_FOUND_MESSAGE, PASS_SERVICE_MESSAGE, passProblem } from "../lib/passes"
 import { EXTRA_FOR_KEY, EXTRA_NOT_OFFERED_MESSAGE, isExtraProduct, MAX_EXTRA_QUANTITY, offeredExtras } from "../lib/booking-extras"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
@@ -47,6 +48,8 @@ export type AddBookingToCartInput = {
   extras?: { variant_id: string; quantity: number }[] | null
   // An accepted quote (P3-27): its price, calendar and time are booked.
   quote_id?: string | null
+  // Pay with one credit of the customer's pass (P3-29): the line is $0.
+  pass_id?: string | null
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -69,6 +72,8 @@ export const BOOKING_ITEM_METADATA = {
   seats: "booking_seats",
   // The quote it books (P3-27).
   quote_id: "booking_quote_id",
+  // The pass that pays for it (P3-29).
+  pass_id: PASS_ITEM_KEY,
 } as const
 
 // A service done at the customer's place: its product has
@@ -111,6 +116,7 @@ type Prepared = {
   // Extras checked against what the service offers (P3-25).
   extras: { variant_id: string; quantity: number }[]
   quote_id: string | null
+  pass_id: string | null
 }
 
 // Checks before anything is written: the cart is open and the resource
@@ -124,7 +130,7 @@ const prepareBookingStep = createStep(
       data: [cart],
     } = await query.graph({
       entity: "cart",
-      fields: ["id", "customer_id", "completed_at", "region_id", "currency_code"],
+      fields: ["id", "customer_id", "completed_at", "region_id", "currency_code", "items.metadata"],
       filters: { id: input.cart_id },
     })
     if (!cart) {
@@ -161,7 +167,7 @@ const prepareBookingStep = createStep(
       data: [variant],
     } = await query.graph({
       entity: "product_variant",
-      fields: ["id", "product.metadata"],
+      fields: ["id", "product.id", "product.metadata"],
       filters: { id: input.variant_id },
     })
     const visit = isVisitService(variant?.product)
@@ -323,6 +329,26 @@ const prepareBookingStep = createStep(
       throw new MedusaError(MedusaError.Types.INVALID_DATA, TRIP_LENGTH_MESSAGE)
     }
 
+    // Paid with a pass (TASKS P3-29): one credit of the customer's own pass
+    // that covers this service and is valid on the day; the line is $0.
+    let passId: string | null = null
+    if (input.pass_id) {
+      const [pass] = await container.resolve<BookingModuleService>(BOOKING_MODULE).listBookingPasses({ id: input.pass_id })
+      if (!pass || !cart.customer_id || pass.customer_id !== cart.customer_id) {
+        throw new MedusaError(MedusaError.Types.NOT_FOUND, PASS_NOT_FOUND_MESSAGE)
+      }
+      if (seats > 1 || input.quote_id) {
+        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PASS_SERVICE_MESSAGE)
+      }
+      const inCart = (cart.items ?? []).filter((i) => (i?.metadata as Record<string, unknown> | null)?.[PASS_ITEM_KEY] === pass.id).length
+      const problem = passProblem(pass, variant?.product?.id ?? "", starts_at, inCart)
+      if (problem) {
+        throw new MedusaError(MedusaError.Types.NOT_ALLOWED, problem)
+      }
+      unit_price = 0
+      passId = pass.id
+    }
+
     const prepared: Prepared = {
       cart_id: cart.id,
       customer_id: cart.customer_id ?? null,
@@ -341,6 +367,7 @@ const prepareBookingStep = createStep(
       seats,
       extras: extras.map((e) => ({ variant_id: e.variant_id, quantity: e.quantity })),
       quote_id: quoteId,
+      pass_id: passId,
     }
     return new StepResponse(prepared)
   }
@@ -436,6 +463,7 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.whole_days ? { [BOOKING_ITEM_METADATA.whole_days]: true } : {}),
             ...(prepared.seats > 1 ? { [BOOKING_ITEM_METADATA.seats]: prepared.seats } : {}),
             ...(prepared.quote_id ? { [BOOKING_ITEM_METADATA.quote_id]: prepared.quote_id } : {}),
+            ...(prepared.pass_id ? { [BOOKING_ITEM_METADATA.pass_id]: prepared.pass_id } : {}),
           },
         },
         // Its extras, each tied to this booking (P3-25).

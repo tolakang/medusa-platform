@@ -787,6 +787,39 @@ export default async function seedBookingDemo({ container }: { container: Medusa
     })
     logger.info(`Booking demo: quote-only service "${product.title}" and ${crew.name} created.`)
   }
+
+  // ---- Pass (TASKS P3-29): credits for a service, bought like a product ---
+  // No shipping profile (nothing is shipped). Metadata pass_credits /
+  // pass_valid_days / pass_for: 5 haircuts within 180 days.
+  if (await exists("haircut-5-pack")) {
+    logger.info('Booking demo: "haircut-5-pack" already exists; skipped.')
+  } else {
+    await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Haircut 5-pack",
+            handle: "haircut-5-pack",
+            description: "Five haircuts for the price of four, to use within 180 days. Book each one with your pass.",
+            status: ProductStatus.PUBLISHED,
+            metadata: { pass_credits: 5, pass_valid_days: 180, pass_for: ["haircut"] },
+            options: [{ title: "Pass", values: ["5 haircuts"] }],
+            sales_channels: [{ id: salesChannelId }],
+            variants: [
+              {
+                title: "5 haircuts",
+                sku: "PASS-HAIRCUT-5",
+                manage_inventory: false,
+                options: { Pass: "5 haircuts" },
+                prices: [{ amount: 32, currency_code: "usd" }],
+              },
+            ],
+          },
+        ],
+      },
+    })
+    logger.info('Booking demo: pass "Haircut 5-pack" created.')
+  }
 }
 
 // The kind categories, created when missing (by handle). Returns their ids.

@@ -1,6 +1,7 @@
 import { listProducts } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
 import { retrieveCustomer } from "@lib/data/customer"
+import { listMyPasses } from "@lib/data/booking"
 import { isEventProduct, isExtraProduct, isQuoteOnly, isServiceProduct, rentalUnit } from "@lib/util/booking"
 import QuoteRequest from "@modules/products/components/quote-request"
 import BookingPicker from "@modules/products/components/booking-picker"
@@ -48,7 +49,14 @@ export default async function ProductActionsWrapper({
   if (isServiceProduct(product)) {
     // Signed in, a full day can be waited for (TASKS P3-29).
     const customer = await retrieveCustomer().catch(() => null)
-    return <BookingPicker product={product} signedIn={!!customer} />
+    // Passes that cover this service, still valid, with credits (P3-29).
+    const now = new Date().toISOString()
+    const passes = customer
+      ? (await listMyPasses()).filter(
+          (p) => p.credits_left > 0 && p.expires_at > now && p.covers.some((c) => c.handle === product.handle)
+        )
+      : []
+    return <BookingPicker product={product} signedIn={!!customer} passes={passes} />
   }
   return <ProductActions product={product} region={region} />
 }

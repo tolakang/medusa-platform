@@ -70,6 +70,8 @@ export async function addBookingToCart(input: {
   seats?: number
   // Extras with the booking (TASKS P3-25).
   extras?: { variant_id: string; quantity: number }[]
+  // Pay with a pass credit (TASKS P3-29).
+  passId?: string
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -92,6 +94,7 @@ export async function addBookingToCart(input: {
         ...(input.fromZoneId ? { from_zone_id: input.fromZoneId, to_zone_id: input.toZoneId } : {}),
         ...(input.seats && input.seats > 1 ? { seats: input.seats } : {}),
         ...(input.extras?.length ? { extras: input.extras } : {}),
+        ...(input.passId ? { pass_id: input.passId } : {}),
       },
     })
   } catch (e) {
@@ -408,4 +411,25 @@ export async function writeReview(bookingId: string, rating: number, comment: st
     return { error: (e as { message?: string })?.message ?? "Could not save your review." }
   }
   return {}
+}
+
+// Passes (TASKS P3-29).
+export type MyPass = {
+  id: string
+  title: string
+  credits_total: number
+  credits_left: number
+  expires_at: string
+  covers: { handle: string; title: string }[]
+}
+
+export async function listMyPasses(): Promise<MyPass[]> {
+  const headers = await getAuthHeaders()
+  if (!("authorization" in headers)) {
+    return []
+  }
+  return sdk.client
+    .fetch<{ passes: MyPass[] }>("/store/booking/passes", { headers, cache: "no-store" })
+    .then((r) => r.passes)
+    .catch(() => [])
 }

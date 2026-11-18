@@ -14,6 +14,8 @@ import { BookingPayout } from "./models/booking-payout"
 import { BookingQuote } from "./models/booking-quote"
 import { BookingWaitlist } from "./models/booking-waitlist"
 import { BookingReview } from "./models/booking-review"
+import { BookingPass } from "./models/booking-pass"
+import { BookingPassUse } from "./models/booking-pass-use"
 import { BookingProvider } from "./models/booking-provider"
 import { BookingResource } from "./models/booking-resource"
 import { BookingSchedule } from "./models/booking-schedule"
@@ -140,6 +142,8 @@ class BookingModuleService extends MedusaService({
   BookingQuote,
   BookingWaitlist,
   BookingReview,
+  BookingPass,
+  BookingPassUse,
   BookingProvider,
   BookingResource,
   BookingSchedule,
