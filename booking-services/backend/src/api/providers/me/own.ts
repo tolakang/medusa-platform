@@ -1,5 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { packagePieces } from "../../../lib/packages"
 
 // What belongs to the signed-in provider (TASKS P3-32, plan §9.3 "Ownership":
 // a provider sees and changes only their own). Anything else answers "not
@@ -27,6 +28,7 @@ export const OWN_SERVICE_FIELDS = [
   "description",
   "status",
   "thumbnail",
+  "metadata",
   "variants.id",
   "variants.title",
   "variants.metadata",
@@ -94,7 +96,8 @@ export async function ownServices(scope: MedusaContainer, providerId: string, pr
   const minutes = (v: Length) => Number(v.metadata?.duration_minutes) || 0
   // By name, each with its lengths shortest first.
   const products = ((provider as { products?: Service[] } | undefined)?.products ?? [])
-    .filter((p) => !!p)
+    // Their event packages are listed apart (ownPackages, P3-30).
+    .filter((p) => !!p && !packagePieces(p.metadata as Record<string, unknown> | null))
     .map((p) => ({ ...p, variants: [...(p.variants ?? [])].sort((a, b) => minutes(a) - minutes(b)) }))
     .sort((a, b) => String(a.title ?? "").localeCompare(String(b.title ?? "")))
   return productId ? products.filter((p) => p.id === productId) : products
@@ -106,4 +109,27 @@ export async function assertOwnService(scope: MedusaContainer, providerId: strin
     throw new MedusaError(MedusaError.Types.NOT_FOUND, `Service ${productId} was not found.`)
   }
   return service
+}
+
+// A partner's own event packages (TASKS P3-30: "packages from their own
+// pieces"), with their pieces and price.
+export async function ownPackages(scope: MedusaContainer, providerId: string) {
+  const {
+    data: [provider],
+  } = await graph(scope).graph({
+    entity: "booking_provider",
+    fields: ["id", "products.id", "products.title", "products.handle", "products.status", "products.metadata", "products.variants.prices.amount", "products.variants.prices.currency_code"],
+    filters: { id: providerId },
+  })
+  type P = { id: string; title?: string; handle?: string; status?: string; metadata?: Record<string, unknown> | null; variants?: { prices?: { amount: number; currency_code: string }[] }[] }
+  return (((provider as { products?: P[] } | undefined)?.products ?? []) as P[])
+    .filter((p) => !!p && !!packagePieces(p.metadata ?? null))
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      handle: p.handle,
+      status: p.status,
+      pieces: packagePieces(p.metadata ?? null),
+      price: p.variants?.[0]?.prices?.[0] ?? null,
+    }))
 }

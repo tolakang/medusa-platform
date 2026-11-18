@@ -94,3 +94,16 @@ export const PostProviderServiceUpdate = z
   })
   .partial()
 export type PostProviderServiceUpdateType = z.infer<typeof PostProviderServiceUpdate>
+
+// A partner's event package from their own services (TASKS P3-30).
+const hhmmPiece = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "must be HH:MM")
+export const PostProviderPackage = z.object({
+  title: text(120),
+  description: optionalText(2000),
+  price: z.number().min(0).max(1_000_000),
+  pieces: z
+    .array(z.object({ variant_id: z.string().min(1), day: z.number().int().min(0).max(30).default(0), time: hhmmPiece, label: optionalText(80) }))
+    .min(1)
+    .max(10),
+})
+export type PostProviderPackageType = z.infer<typeof PostProviderPackage>

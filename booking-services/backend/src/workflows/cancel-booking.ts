@@ -202,9 +202,10 @@ export const cancelBookingWorkflow = createWorkflow(
     // A booking paid with a pass gets its credit back within the policy
     // (TASKS P3-29); its order line is $0, so there's no money refund.
     returnPassCreditStep(
-      transform({ plan }, ({ plan }) => ({
+      transform({ plan, input }, ({ plan, input }) => ({
         booking_id: plan.booking_id,
-        within_policy: plan.outcome === "refunded" || plan.outcome === "not_captured",
+        // Within the policy, or the shop's own cancellation (no customer).
+        within_policy: plan.outcome === "refunded" || plan.outcome === "not_captured" || input.customer_id === undefined,
       }))
     )
 

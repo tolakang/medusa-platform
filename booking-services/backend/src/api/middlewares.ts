@@ -27,6 +27,7 @@ import {
   PostAdminQuote,
   PostAdminBookingMove,
   PostAdminReview,
+  PostAdminEventMove,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
 import {
@@ -36,6 +37,7 @@ import {
   PostProviderHours,
   PostProviderMe,
   PostProviderService,
+  PostProviderPackage,
   PostProviderServiceUpdate,
   PostProviderWalkIn,
 } from './providers/validators'
@@ -191,6 +193,12 @@ export default defineMiddlewares({
       middlewares: [validateAndTransformBody(PostProviderService)],
     },
     {
+      // A partner's event package (TASKS P3-30).
+      method: ['POST'],
+      matcher: '/providers/me/packages',
+      middlewares: [validateAndTransformBody(PostProviderPackage)],
+    },
+    {
       method: ['POST'],
       matcher: '/providers/me/services/:id',
       middlewares: [validateAndTransformBody(PostProviderServiceUpdate)],
@@ -257,6 +265,12 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/booking/move',
       middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingMove)],
+    },
+    {
+      // Move a whole event package (TASKS P3-30 follow-up).
+      method: ['POST'],
+      matcher: '/admin/booking/events/:id/move',
+      middlewares: [validateAndTransformBody(PostAdminEventMove)],
     },
     {
       method: ['POST'],

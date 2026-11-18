@@ -118,3 +118,7 @@ export const PostAdminReview = z
   })
   .refine((v) => v.status !== undefined || v.reply !== undefined, { message: "Give a status or a reply." })
 export type PostAdminReviewType = z.infer<typeof PostAdminReview>
+
+// Move a whole event package (TASKS P3-30 follow-up).
+export const PostAdminEventMove = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD") })
+export type PostAdminEventMoveType = z.infer<typeof PostAdminEventMove>

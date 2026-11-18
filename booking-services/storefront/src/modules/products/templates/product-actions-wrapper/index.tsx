@@ -49,7 +49,12 @@ export default async function ProductActionsWrapper({
   }
   // A rental picks dates, not a time (TASKS P3-22).
   if (rentalUnit(product)) {
-    return <RentalPicker product={product} />
+    const customer = await retrieveCustomer().catch(() => null)
+    const now = new Date().toISOString()
+    const passes = customer
+      ? (await listMyPasses()).filter((p) => p.credits_left > 0 && p.expires_at > now && p.covers.some((c) => c.handle === product.handle))
+      : []
+    return <RentalPicker product={product} passes={passes} />
   }
   if (isServiceProduct(product)) {
     // Signed in, a full day can be waited for (TASKS P3-29).

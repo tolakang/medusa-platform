@@ -21,6 +21,8 @@ import type BookingModuleService from "../modules/booking/service"
 export type MoveBookingInput = {
   booking_id: string
   by: "customer" | "staff"
+  // No customer email for this move (a whole event moved sends one, P3-30).
+  quiet?: boolean
   // Set when the customer moves it: the booking must be theirs.
   customer_id?: string
   // The calendar to move to; default the booking's own.
@@ -102,6 +104,7 @@ export const BOOKING_MOVED_EVENT = "booking.moved"
 export type BookingMovedData = {
   id: string
   by: "customer" | "staff"
+  quiet?: boolean
   previous: { resource_id: string; starts_at: string; ends_at: string }
 }
 
@@ -112,6 +115,7 @@ export const moveBookingWorkflow = createWorkflow("move-booking", function (inpu
     data: transform({ result, input }, ({ result, input }): BookingMovedData => ({
       id: result.before.id,
       by: input.by,
+      quiet: !!input.quiet,
       previous: {
         resource_id: result.before.resource_id,
         starts_at: new Date(result.before.starts_at).toISOString(),

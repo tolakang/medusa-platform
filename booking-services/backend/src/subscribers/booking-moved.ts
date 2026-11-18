@@ -10,7 +10,7 @@ export default async function bookingMovedHandler({ event: { data }, container }
   await sendBookingJobsWorkflow(container).run({
     input: { jobs: [{ booking_id: data.id, kind: "moved", previous: data.previous }] },
   })
-  if (data.by !== "staff") return
+  if (data.by !== "staff" || data.quiet) return
 
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const {

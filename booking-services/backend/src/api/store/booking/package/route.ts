@@ -40,6 +40,8 @@ import type { PostPackageType } from "../validators"
 // cart together, all tagged with one package id; the cart hooks keep them
 // whole until checkout, which confirms them together.
 type Plan = {
+  seats?: number
+  hours?: number
   variant_id: string
   title: string
   resource_id: string
@@ -84,13 +86,18 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
       "booking_resources.timezone",
       "booking_resources.is_active",
     ],
-    filters: { sku: pieces.map((p) => p.sku) },
+    filters: {
+      $or: [
+        { sku: pieces.map((p) => p.sku).filter(Boolean) },
+        { id: pieces.map((p) => p.variant_id).filter((v): v is string => !!v) },
+      ],
+    },
   })
   const plans: Plan[] = []
   const unavailable: string[] = []
   const address = (body.address ?? "").trim()
   for (const piece of pieces) {
-    const v = variants.find((x) => x.sku === piece.sku)
+    const v = variants.find((x) => (piece.variant_id ? x.id === piece.variant_id : x.sku === piece.sku))
     const title = v ? `${v.product?.title ?? ""}${v.title && v.title !== v.product?.title ? ` (${v.title})` : ""}` : piece.sku
     if (!v) {
       unavailable.push(title)
@@ -112,14 +119,28 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
         ends = zonedTimeToUtc(span.to, "00:00", r!.timezone)
         extra = { start_date: day, end_date: end }
       } else {
-        const minutes = Number((v.metadata as Record<string, unknown> | null)?.duration_minutes) || 60
+        // A trip by the hour lasts its hours; else the variant's length.
+        const minutes = piece.hours ? piece.hours * 60 : Number((v.metadata as Record<string, unknown> | null)?.duration_minutes) || 60
         starts = zonedTimeToUtc(day, piece.time!, r!.timezone)
         ends = new Date(starts.getTime() + minutes * 60_000)
         extra = { starts_at: starts.toISOString(), ends_at: ends.toISOString() }
       }
-      const check = await booking.checkSlot({ resource_id: r!.id, starts_at: starts, ends_at: ends, ignore_cart_id: body.cart_id })
+      const check = await booking.checkSlot({
+        resource_id: r!.id,
+        starts_at: starts,
+        ends_at: ends,
+        ignore_cart_id: body.cart_id,
+        seats: piece.seats ?? 1,
+      })
       if (check.available) {
-        found = { variant_id: v.id, title, resource_id: r!.id, ...extra }
+        found = {
+          variant_id: v.id,
+          title,
+          resource_id: r!.id,
+          ...extra,
+          ...(piece.seats ? { seats: piece.seats } : {}),
+          ...(piece.hours ? { hours: piece.hours } : {}),
+        }
         break
       }
     }
@@ -172,6 +193,8 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
           ...(plan.starts_at ? { starts_at: plan.starts_at, ends_at: plan.ends_at } : {}),
           ...(plan.start_date ? { start_date: plan.start_date, end_date: plan.end_date } : {}),
           ...(address ? { address } : {}),
+          ...(plan.seats ? { seats: plan.seats } : {}),
+          ...(plan.hours ? { hours: plan.hours, dropoff_address: (body.dropoff_address ?? "").trim() || address } : {}),
           notes: (body.notes ?? "").trim() || `Event package: ${pkg.product?.title ?? ""}`,
           package_id,
           package_priced: aLaCarte,

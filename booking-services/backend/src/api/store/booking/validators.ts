@@ -107,6 +107,8 @@ export const PostPackage = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD"),
   address: z.string().max(300).nullish(),
   notes: z.string().max(1000).nullish(),
+  // A trip piece's drop-off (P3-30 follow-up); defaults to the address.
+  dropoff_address: z.string().max(300).nullish(),
   // À la carte: the pieces chosen, by their place in the package (P3-30).
   choices: z.array(z.number().int().min(0).max(19)).max(20).nullish(),
 })
