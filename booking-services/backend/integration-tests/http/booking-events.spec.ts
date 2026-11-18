@@ -103,6 +103,20 @@ medusaIntegrationTestRunner({
         expect(((sent[0].data as any).tickets as any[]).map((t) => t.code).sort()).toEqual(tickets.map((t: any) => t.code).sort())
       })
 
+      it("sells extras with a group of tickets, never on their own (P3-25 follow-up)", async () => {
+        const {
+          data: [helper],
+        } = await query().graph({ entity: "product", fields: ["variants.id"], filters: { handle: "extra-helper" } })
+        const extra = helper.variants![0]!.id
+        const cart = (await api.post("/store/carts", { region_id: regionId, email: "sok@example.com" }, store)).data.cart.id
+        const lone = await call(api.post(`/store/carts/${cart}/line-items`, { variant_id: extra, quantity: 1, metadata: { booking_extra_for: "tkt_nope" } }, store))
+        expect(lone.status).toBe(400)
+        await api.post(`/store/carts/${cart}/line-items`, { variant_id: (await vip()).id, quantity: 2, metadata: { booking_ticket_group: "tkt_g1" } }, store)
+        const ok = await call(api.post(`/store/carts/${cart}/line-items`, { variant_id: extra, quantity: 1, metadata: { booking_extra_for: "tkt_g1" } }, store))
+        expect(ok.status).toBe(200)
+        expect(ok.data.cart.items).toHaveLength(2)
+      })
+
       it("lets a ticket in once at the door, however the code is typed", async () => {
         const { done } = await order((await vip()).id, 1)
         const [ticket] = await ticketsOf(done!.data.order.id, 1)

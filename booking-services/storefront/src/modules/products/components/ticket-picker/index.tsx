@@ -1,6 +1,7 @@
 "use client"
 
-import { addToCart } from "@lib/data/cart"
+import { addTicketsToCart } from "@lib/data/booking"
+import ExtrasChooser, { chosenExtras } from "@modules/products/components/extras-chooser"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text, clx } from "@modules/common/components/ui"
@@ -30,6 +31,8 @@ export default function TicketPicker({ product }: { product: HttpTypes.StoreProd
   const left = (v: HttpTypes.StoreProductVariant) => (v.manage_inventory ? Math.max(v.inventory_quantity ?? 0, 0) : 99)
   const [quantity, setQuantity] = useState(1)
   const [error, setError] = useState<string | null>(null)
+  // Extras with the tickets (P3-25 follow-up).
+  const [extraQty, setExtraQty] = useState<Record<string, number>>({})
   const [adding, startAdding] = useTransition()
   const max = chosen ? Math.min(left(chosen), 10) : 0
   const price = (v: HttpTypes.StoreProductVariant, n = 1) =>
@@ -43,12 +46,9 @@ export default function TicketPicker({ product }: { product: HttpTypes.StoreProd
     }
     setError(null)
     startAdding(async () => {
-      try {
-        await addToCart({ variantId: chosen.id, quantity, countryCode })
-        router.push(`/${countryCode}/cart`)
-      } catch (e) {
-        setError((e as Error)?.message ?? "These tickets can't be added.")
-      }
+      const r = await addTicketsToCart({ countryCode, variantId: chosen.id, quantity, extras: chosenExtras(extraQty) })
+      if (r.error) setError(r.error)
+      else router.push(`/${countryCode}/cart`)
     })
   }
 
@@ -120,6 +120,7 @@ export default function TicketPicker({ product }: { product: HttpTypes.StoreProd
           {error}
         </Text>
       )}
+      <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />
       <Button onClick={add} disabled={!chosen || adding} isLoading={adding} className="w-full h-10" data-testid="ticket-submit">
         {chosen ? `Add ${quantity} ${quantity === 1 ? "ticket" : "tickets"}` : "Choose a section"}
       </Button>
