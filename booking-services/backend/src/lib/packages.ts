@@ -8,12 +8,15 @@
 
 export const PACKAGE_ITEM_KEY = "booking_package_id"
 export const PACKAGE_DATE_KEY = "booking_event_date"
+// How many pieces this package line has in the cart (an à la carte choice).
+export const PACKAGE_PIECES_KEY = "booking_package_pieces"
+export const PACKAGE_CHOICE_MESSAGE = "Choose the parts you want."
 export const PACKAGE_NOT_MESSAGE = "This isn't an event package."
 export const PACKAGE_ALONE_MESSAGE = "Book this package with its event date."
 export const PACKAGE_INCOMPLETE_MESSAGE = "This package is missing some of its parts. Remove it and book it again."
 export const PACKAGE_DATE_MESSAGE = "Choose an event date from tomorrow on, at most a year ahead."
 
-export type PackagePiece = { sku: string; day: number; time?: string; days?: number }
+export type PackagePiece = { sku: string; day: number; time?: string; days?: number; label?: string }
 
 const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/
 
@@ -25,10 +28,11 @@ export function packagePieces(meta: Record<string, unknown> | null | undefined):
     const sku = typeof r?.sku === "string" ? r.sku.trim() : ""
     const day = r?.day === undefined ? 0 : Number(r.day)
     if (!sku || !Number.isInteger(day) || day < 0 || day > 30) return null
+    const label = typeof r.label === "string" && r.label.trim() ? { label: r.label.trim().slice(0, 80) } : {}
     if (typeof r.time === "string" && hhmm.test(r.time)) {
-      pieces.push({ sku, day, time: r.time })
+      pieces.push({ sku, day, time: r.time, ...label })
     } else if (Number.isInteger(Number(r.days)) && Number(r.days) >= 1 && Number(r.days) <= 30) {
-      pieces.push({ sku, day, days: Number(r.days) })
+      pieces.push({ sku, day, days: Number(r.days), ...label })
     } else {
       return null
     }
@@ -58,4 +62,24 @@ export function packageComplete(lines: { package_id: string; is_package: boolean
     if (head !== 1 || want === undefined || mine.length - 1 !== want) return false
   }
   return true
+}
+
+// À la carte (P3-30): Metadata `package_mode: "a_la_carte"` lets the customer
+// choose which pieces (at least `package_min`, default 1); each chosen piece
+// costs its own price and the package line is $0. A ready-made package books
+// every piece, at the package's price.
+export function packageMode(meta: Record<string, unknown> | null | undefined): "fixed" | "a_la_carte" {
+  return meta?.package_mode === "a_la_carte" ? "a_la_carte" : "fixed"
+}
+
+export function chosenPieces(
+  pieces: PackagePiece[],
+  meta: Record<string, unknown> | null | undefined,
+  choices: number[] | null | undefined
+): PackagePiece[] | null {
+  if (packageMode(meta) === "fixed") return pieces
+  const min = Math.max(Number.isInteger(Number(meta?.package_min)) ? Number(meta!.package_min) : 1, 1)
+  const picked = [...new Set(choices ?? [])]
+  if (picked.length < min || picked.some((i) => !Number.isInteger(i) || i < 0 || i >= pieces.length)) return null
+  return picked.sort((a, b) => a - b).map((i) => pieces[i])
 }

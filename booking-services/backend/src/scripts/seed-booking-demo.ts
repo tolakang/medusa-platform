@@ -861,6 +861,48 @@ export default async function seedBookingDemo({ container }: { container: Medusa
     })
     logger.info('Booking demo: package "Small wedding" created.')
   }
+
+  // À la carte (TASKS P3-30): the customer picks the pieces; each costs its
+  // own price and the package line is $0 (package_mode "a_la_carte").
+  if (await exists("build-your-event")) {
+    logger.info('Booking demo: "build-your-event" already exists; skipped.')
+  } else {
+    await createProductsWorkflow(container).run({
+      input: {
+        products: [
+          {
+            title: "Build your event",
+            handle: "build-your-event",
+            description: "Pick what you need for your day: we book every part together on your date, or tell you what isn't free.",
+            status: ProductStatus.PUBLISHED,
+            metadata: {
+              package_mode: "a_la_carte",
+              package_min: 1,
+              package_items: [
+                { sku: "HAIRCUT-60", day: 0, time: "09:00", label: "Hair, 1 hour at 09:00" },
+                { sku: "TENT-20", day: 0, days: 1, label: "Tent for 20 guests, all day" },
+                { sku: "TENT-50", day: 0, days: 1, label: "Tent for 50 guests, all day" },
+                { sku: "TABLE-6", day: 0, time: "18:00", label: "Dinner table for 6 at 18:00" },
+                { sku: "ROOM-DOUBLE", day: 0, days: 1, label: "Double room, one night" },
+              ],
+            },
+            options: [{ title: "Package", values: ["Your choice"] }],
+            sales_channels: [{ id: salesChannelId }],
+            variants: [
+              {
+                title: "Your choice",
+                sku: "PACKAGE-BUILD",
+                manage_inventory: false,
+                options: { Package: "Your choice" },
+                prices: [{ amount: 0, currency_code: "usd" }],
+              },
+            ],
+          },
+        ],
+      },
+    })
+    logger.info('Booking demo: à la carte package "Build your event" created.')
+  }
 }
 
 // The kind categories, created when missing (by handle). Returns their ids.

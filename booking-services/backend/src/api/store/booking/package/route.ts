@@ -7,8 +7,12 @@ import {
   eventDateOk,
   PACKAGE_DATE_KEY,
   PACKAGE_DATE_MESSAGE,
+  PACKAGE_CHOICE_MESSAGE,
   PACKAGE_ITEM_KEY,
   PACKAGE_NOT_MESSAGE,
+  PACKAGE_PIECES_KEY,
+  chosenPieces,
+  packageMode,
   packagePieces,
 } from "../../../../lib/packages"
 import { rentalSpan, rentalUnit } from "../../../../lib/rental-pricing"
@@ -26,7 +30,8 @@ import { defaultTimezone } from "../../../../workflows/booking-resource"
 import { releaseSeriesHoldsWorkflow } from "../../../../workflows/release-series-holds"
 import type { PostPackageType } from "../validators"
 
-// POST /store/booking/package { cart_id, variant_id, date, address?, notes? }
+// POST /store/booking/package { cart_id, variant_id, date, address?, notes?, choices? }
+// (choices: à la carte, the pieces chosen by their place in the package)
 // (TASKS P3-30, kind H): an event package on its date. Every piece in the
 // package's Metadata gets the first calendar with room; if any piece has
 // none, nothing is added and the answer names them (`unavailable`). Then the
@@ -50,9 +55,16 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
   const {
     data: [pkg],
   } = await query.graph({ entity: "product_variant", fields: ["id", "product.title", "product.metadata"], filters: { id: body.variant_id } })
-  const pieces = packagePieces(pkg?.product?.metadata as Record<string, unknown> | null)
-  if (!pkg || !pieces) {
+  const meta = pkg?.product?.metadata as Record<string, unknown> | null
+  const all = packagePieces(meta)
+  if (!pkg || !all) {
     throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PACKAGE_NOT_MESSAGE)
+  }
+  // À la carte: the chosen pieces at their own prices, the package line $0.
+  const aLaCarte = packageMode(meta) === "a_la_carte"
+  const pieces = chosenPieces(all, meta, body.choices)
+  if (!pieces) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, PACKAGE_CHOICE_MESSAGE)
   }
   if (!eventDateOk(body.date, localDate(new Date(), defaultTimezone()))) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, PACKAGE_DATE_MESSAGE)
@@ -128,7 +140,14 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
     await addToCartWorkflow(req.scope).run({
       input: {
         cart_id: body.cart_id,
-        items: [{ variant_id: pkg.id, quantity: 1, metadata: { [PACKAGE_ITEM_KEY]: package_id, [PACKAGE_DATE_KEY]: body.date } }],
+        items: [
+          {
+            variant_id: pkg.id,
+            quantity: 1,
+            ...(aLaCarte ? { unit_price: 0 } : {}),
+            metadata: { [PACKAGE_ITEM_KEY]: package_id, [PACKAGE_DATE_KEY]: body.date, [PACKAGE_PIECES_KEY]: plans.length },
+          },
+        ],
       },
     })
     const {
@@ -149,6 +168,7 @@ export const POST = async (req: MedusaRequest<PostPackageType>, res: MedusaRespo
           ...(address ? { address } : {}),
           notes: (body.notes ?? "").trim() || `Event package: ${pkg.product?.title ?? ""}`,
           package_id,
+          package_priced: aLaCarte,
         },
       })
       added.push({ booking_id: result.booking.id, line_item_id: result.line_item_id })

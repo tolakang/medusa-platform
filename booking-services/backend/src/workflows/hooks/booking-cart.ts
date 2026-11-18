@@ -22,7 +22,7 @@ import {
   isExtraProduct,
 } from "../../lib/booking-extras"
 import { PASS_EMPTY_MESSAGE, PASS_EXPIRED_MESSAGE, PASS_ITEM_KEY } from "../../lib/passes"
-import { PACKAGE_ALONE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE, PACKAGE_ITEM_KEY, packageComplete, packagePieces } from "../../lib/packages"
+import { PACKAGE_ALONE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE, PACKAGE_ITEM_KEY, PACKAGE_PIECES_KEY, packageComplete, packagePieces } from "../../lib/packages"
 import { BOOKING_MODULE } from "../../modules/booking"
 import type BookingModuleService from "../../modules/booking/service"
 
@@ -201,7 +201,9 @@ async function assertPackages(container: MedusaContainer, items: CartItemInput[]
     if (isPackage && !id) refuse(PACKAGE_ALONE_MESSAGE)
     if (!id) continue
     lines.push({ package_id: id, is_package: isPackage })
-    if (isPackage) want.set(id, packages.get(item.variant_id!)!)
+    // À la carte: the pieces chosen (on the line); else every piece.
+    const chosen = Number((item.metadata as Record<string, unknown> | null | undefined)?.[PACKAGE_PIECES_KEY])
+    if (isPackage) want.set(id, Number.isInteger(chosen) && chosen > 0 ? chosen : packages.get(item.variant_id!)!)
   }
   if (checkout && !packageComplete(lines, want)) refuse(PACKAGE_INCOMPLETE_MESSAGE)
 }
@@ -242,8 +244,7 @@ updateLineItemInCartWorkflow.hooks.validate(async ({ input }, { container }) => 
   if (
     pkg &&
     ((input.update?.quantity !== undefined && Number(input.update.quantity) !== Number(item.quantity)) ||
-      (input.update?.metadata !== undefined &&
-        (input.update.metadata as Record<string, unknown> | null)?.[PACKAGE_ITEM_KEY] !== pkg))
+      input.update?.metadata !== undefined)
   ) {
     refuse(PACKAGE_INCOMPLETE_MESSAGE)
   }

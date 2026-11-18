@@ -1,4 +1,4 @@
-import { addDays, eventDateOk, packageComplete, packagePieces } from "../packages"
+import { addDays, chosenPieces, eventDateOk, packageComplete, packagePieces } from "../packages"
 
 describe("event packages (TASKS P3-30)", () => {
   it("reads the pieces from Metadata", () => {
@@ -30,5 +30,16 @@ describe("event packages (TASKS P3-30)", () => {
     expect(packageComplete([line(true), line(false)], want)).toBe(false)
     expect(packageComplete([line(false), line(false)], want)).toBe(false)
     expect(packageComplete([], want)).toBe(true)
+  })
+
+  it("lets the customer choose pieces à la carte, at least the minimum", () => {
+    const pieces = packagePieces({ package_items: [{ sku: "A", time: "09:00", label: "Hair" }, { sku: "B", days: 1 }, { sku: "C", time: "18:00" }] })!
+    expect(pieces[0].label).toBe("Hair")
+    expect(chosenPieces(pieces, {}, [1])).toEqual(pieces)
+    const alc = { package_mode: "a_la_carte", package_min: 2 }
+    expect(chosenPieces(pieces, alc, [2, 0, 2])!.map((p) => p.sku)).toEqual(["A", "C"])
+    expect(chosenPieces(pieces, alc, [0])).toBeNull()
+    expect(chosenPieces(pieces, alc, [0, 3])).toBeNull()
+    expect(chosenPieces(pieces, { package_mode: "a_la_carte" }, [])).toBeNull()
   })
 })
