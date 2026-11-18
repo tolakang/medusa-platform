@@ -1,10 +1,10 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { capturePaymentWorkflow, createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
+import { capturePaymentWorkflow, createDefaultsWorkflow, createProductsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
 import { PACKAGE_PIECE_CANCEL_MESSAGE } from "../../src/workflows/cancel-booking"
 import { sendBalanceRemindersWorkflow } from "../../src/workflows/send-balance-reminders"
 import jwt from "jsonwebtoken"
-import { PACKAGE_ALONE_MESSAGE, PACKAGE_CHOICE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE } from "../../src/lib/packages"
+import { addDays, PACKAGE_ALONE_MESSAGE, PACKAGE_CHOICE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE } from "../../src/lib/packages"
 import { zonedTimeToUtc } from "../../src/modules/booking/utils/slot"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
@@ -243,12 +243,44 @@ medusaIntegrationTestRunner({
         expect((await call(api.post(`/admin/booking/events/${pkg.id}/cancel`, {}, admin))).status).toBe(404)
       })
 
+      it("moves a whole event to another date, every piece the same days later", async () => {
+        const sok = await customer("sok@example.com")
+        const pkg = await payPackage(sok)
+        const before = (await query().graph({ entity: "booking", fields: ["id", "starts_at"], filters: { package_id: pkg.id } })).data
+        const next = addDays(monday, 7)
+        const moved = await api.post(`/admin/booking/events/${pkg.id}/move`, { date: next }, admin)
+        expect(moved.data).toEqual({ moved: 3, date: next })
+        const after = (await query().graph({ entity: "booking", fields: ["id", "starts_at"], filters: { package_id: pkg.id } })).data
+        for (const b of before) {
+          const a = after.find((x) => x.id === b.id)!
+          expect(Date.parse(a.starts_at as unknown as string) - Date.parse(b.starts_at as unknown as string)).toBe(7 * 86_400_000)
+        }
+        const event = (await api.get("/admin/booking/events", admin)).data.events.find((e: any) => e.id === pkg.id)
+        expect(event.event_date).toBe(next)
+        // One email to the customer, not one per piece.
+        let mails: any[] = []
+        for (let i = 0; i < 40 && !mails.length; i++) {
+          mails = (await query().graph({ entity: "notification", fields: ["data"], filters: { template: "booking-package-changed" } })).data
+          if (!mails.length) await new Promise((r) => setTimeout(r, 250))
+        }
+        await new Promise((r) => setTimeout(r, 1000))
+        expect(mails.map((m) => [m.data.kind, m.data.new_date])).toEqual([["moved", next]])
+        expect((await query().graph({ entity: "notification", fields: ["id"], filters: { template: "booking-moved" } })).data).toEqual([])
+      })
+
       it("lets staff cancel an event from the admin", async () => {
         const sok = await customer("sok@example.com")
         const pkg = await payPackage(sok)
         const done = await api.post(`/admin/booking/events/${pkg.id}/cancel`, {}, admin)
         // Not captured yet: nothing to refund.
         expect(done.data).toEqual({ cancelled: 3, refund: "not_captured", refunded_amount: 0 })
+        // The customer is told (P3-30 follow-up).
+        let mails: any[] = []
+        for (let i = 0; i < 40 && !mails.length; i++) {
+          mails = (await query().graph({ entity: "notification", fields: ["to", "data"], filters: { template: "booking-package-changed" } })).data
+          if (!mails.length) await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(mails.map((m) => [m.to, m.data.kind, m.data.title, m.data.event_date])).toEqual([["sok@example.com", "cancelled", "Small wedding", monday]])
         expect((await api.get("/admin/booking/events", admin)).data.events[0].status).toBe("cancelled")
       })
 
@@ -281,6 +313,48 @@ medusaIntegrationTestRunner({
         await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
         const done = await api.post(`/store/carts/${cart}/complete`, {}, sok)
         expect([done.data.type, done.data.order.total]).toEqual(["order", 20])
+      })
+
+      it("takes departure seats and a trip by the hour as pieces (P3-30 follow-up)", async () => {
+        const sok = await customer("sok@example.com")
+        const {
+          data: [channel],
+        } = await query().graph({ entity: "sales_channel", fields: ["id"] })
+        const { result } = await createProductsWorkflow(getContainer()).run({
+          input: {
+            products: [
+              {
+                title: "Wedding guests travel",
+                handle: "wedding-guests-travel",
+                status: "published" as never,
+                metadata: {
+                  package_items: [
+                    { sku: "BUS-SR-PP", day: 0, time: "07:00", seats: 3 },
+                    { sku: "TRUCK-S", day: 1, time: "08:00", hours: 2 },
+                  ],
+                },
+                options: [{ title: "Package", values: ["Travel"] }],
+                sales_channels: [{ id: channel.id }],
+                variants: [{ title: "Travel", sku: "PACKAGE-TRAVEL", manage_inventory: false, options: { Package: "Travel" }, prices: [{ amount: 90, currency_code: "usd" }] }],
+              },
+            ],
+          },
+        })
+        const cart = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
+        const r = await call(
+          api.post(
+            "/store/booking/package",
+            { cart_id: cart, variant_id: result[0].variants[0].id, date: monday, address: "#12, St 310, Siem Reap", dropoff_address: "Wat Bo village" },
+            sok
+          )
+        )
+        expect(r.status).toBe(200)
+        const items = await lines(sok, cart)
+        const bus = items.find((i) => i.product_title === "Bus Siem Reap to Phnom Penh")
+        const truck = items.find((i) => i.product_title === "Moving truck")
+        expect([bus.quantity, bus.unit_price, bus.metadata.booking_seats]).toEqual([3, 0, 3])
+        expect([truck.unit_price, truck.metadata.booking_dropoff_address]).toEqual([0, "Wat Bo village"])
+        expect(Date.parse(truck.metadata.booking_ends_at) - Date.parse(truck.metadata.booking_starts_at)).toBe(2 * 3600_000)
       })
 
       it("adds nothing when a piece has no room that day, and says which", async () => {

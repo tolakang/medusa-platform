@@ -209,6 +209,8 @@ export async function addRentalToCart(input: {
   endDate: string
   // Extras with the rental (P3-25 follow-up).
   extras?: { variant_id: string; quantity: number }[]
+  // Pay with a pass: a credit per day or night (P3-29 follow-up).
+  passId?: string
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -225,6 +227,7 @@ export async function addRentalToCart(input: {
         start_date: input.startDate,
         end_date: input.endDate,
         ...(input.extras?.length ? { extras: input.extras } : {}),
+        ...(input.passId ? { pass_id: input.passId } : {}),
       },
     })
   } catch (e) {

@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Text } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { STATUS_COLOR } from "../../lib/booking-calendar"
@@ -34,6 +34,28 @@ const when = (p: Piece) => {
       ? `${first} (all day)`
       : `${first} – ${last}`
     : `${day.format(new Date(p.starts_at))}, ${new Intl.DateTimeFormat("en-GB", opts).format(new Date(p.starts_at))}–${new Intl.DateTimeFormat("en-GB", opts).format(new Date(p.ends_at))}`
+}
+
+// Move a whole event to another date (P3-30 follow-up): every piece moves by
+// the same days at the same times, or none; the customer gets one email.
+const MoveEvent = ({ event, onDone }: { event: Event; onDone: () => void }) => {
+  const [date, setDate] = useState("")
+  const move = useMutation({
+    mutationFn: () => sdk.client.fetch(`/admin/booking/events/${event.id}/move`, { method: "POST", body: { date } }),
+    onSuccess: () => {
+      setDate("")
+      onDone()
+    },
+  })
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-40" aria-label="New event date" />
+      <Button size="small" variant="secondary" disabled={!date} isLoading={move.isPending} onClick={() => move.mutate()}>
+        Move event
+      </Button>
+      {move.error && <Text size="xsmall" className="text-ui-fg-error">{errorText(move.error)}</Text>}
+    </div>
+  )
 }
 
 const EventsPage = () => {
@@ -96,9 +118,12 @@ const EventsPage = () => {
             ))}
           </ul>
           {(e.status === "confirmed" || e.status === "pending") && confirming !== e.id && (
-            <Button size="small" variant="secondary" className="self-start" onClick={() => setConfirming(e.id)}>
-              Cancel event
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <MoveEvent event={e} onDone={() => client.invalidateQueries({ queryKey: ["booking-events"] })} />
+              <Button size="small" variant="secondary" onClick={() => setConfirming(e.id)}>
+                Cancel event
+              </Button>
+            </div>
           )}
           {confirming === e.id && (
             <div className="flex items-center gap-2">

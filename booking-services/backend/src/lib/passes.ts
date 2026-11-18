@@ -4,6 +4,12 @@
 // covers). Pure parts, unit-tested on their own.
 
 export const PASS_ITEM_KEY = "booking_pass_id"
+// Credits a line takes from its pass (seats, or rental days/nights; 1 when unset).
+export const PASS_CREDITS_KEY = "booking_pass_credits"
+export const passCreditsOf = (meta: Record<string, unknown> | null | undefined) => {
+  const n = Number(meta?.[PASS_CREDITS_KEY])
+  return Number.isInteger(n) && n > 0 ? n : 1
+}
 export const PASS_NOT_FOUND_MESSAGE = "This pass was not found."
 export const PASS_EXPIRED_MESSAGE = "This pass has expired."
 export const PASS_EMPTY_MESSAGE = "This pass has no credits left."
@@ -22,17 +28,18 @@ export function passProduct(meta: Meta): PassProduct | null {
   return { credits, valid_days: Number.isInteger(days) && days >= 1 && days <= 730 ? days : 365, covers }
 }
 
-// Can this pass pay for one more booking of this service? `inCart` = credits
-// this cart already takes from it.
+// Can this pass pay for this booking (`need` credits: its seats, or rental
+// days or nights)? `inCart` = credits this cart already takes from it.
 export function passProblem(
   pass: { credits_left: number; expires_at: Date | string; product_ids: unknown },
   productId: string,
   bookingStartsAt: Date,
-  inCart: number
+  inCart: number,
+  need = 1
 ): string | null {
   const ids = Array.isArray(pass.product_ids) ? (pass.product_ids as string[]) : []
   if (!ids.includes(productId)) return PASS_SERVICE_MESSAGE
   if (new Date(pass.expires_at).getTime() < bookingStartsAt.getTime()) return PASS_EXPIRED_MESSAGE
-  if (pass.credits_left - inCart < 1) return PASS_EMPTY_MESSAGE
+  if (pass.credits_left - inCart < need) return PASS_EMPTY_MESSAGE
   return null
 }

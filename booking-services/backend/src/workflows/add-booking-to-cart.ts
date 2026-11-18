@@ -13,7 +13,7 @@ import { hoursPrice, tripPricing, validHours, zonePriceBetween } from "../lib/tr
 import { rentalLabel, rentalPrice, rentalSpan, rentalUnit, rentalUnits } from "../lib/rental-pricing"
 import { isDepartureService, validSeats } from "../lib/departure"
 import { isQuoteOnly, QUOTE_NOT_YOURS_MESSAGE, QUOTE_ONLY_MESSAGE, quoteBookable } from "../lib/quotes"
-import { PASS_ITEM_KEY, PASS_NOT_FOUND_MESSAGE, PASS_SERVICE_MESSAGE, passProblem } from "../lib/passes"
+import { PASS_CREDITS_KEY, passCreditsOf, PASS_ITEM_KEY, PASS_NOT_FOUND_MESSAGE, PASS_SERVICE_MESSAGE, passProblem } from "../lib/passes"
 import { PACKAGE_ITEM_KEY } from "../lib/packages"
 import { bookingLineDetail, LINE_DETAIL_KEY } from "../lib/line-detail"
 import { seriesDiscount } from "../lib/recurring"
@@ -131,6 +131,7 @@ type Prepared = {
   extras: { variant_id: string; quantity: number }[]
   quote_id: string | null
   pass_id: string | null
+  pass_credits: number
   series_id: string | null
   package_id: string | null
 }
@@ -307,6 +308,8 @@ const prepareBookingStep = createStep(
     }
 
     const rental = rentalUnit(variant?.product)
+    // Days or nights of a rental: the credits it takes from a pass (P3-29).
+    let rentalCount = 1
     let rentalTimes: { starts_at: string; ends_at: string } | null = null
     // A quoted rental (P3-27 follow-up): the quote already set its days and price.
     if (rental && !quoteTimes) {
@@ -333,6 +336,7 @@ const prepareBookingStep = createStep(
         starts_at: zonedTimeToUtc(span.from, "00:00", resource.timezone).toISOString(),
         ends_at: zonedTimeToUtc(span.to, "00:00", resource.timezone).toISOString(),
       }
+      rentalCount = units
       unit_price = rentalPrice(perUnit, units)
       trip_label = `${rentalLabel(rental, units)}: ${input.start_date} to ${input.end_date}`
     }
@@ -349,16 +353,21 @@ const prepareBookingStep = createStep(
     // Paid with a pass (TASKS P3-29): one credit of the customer's own pass
     // that covers this service and is valid on the day; the line is $0.
     let passId: string | null = null
+    let passCredits = 1
     if (input.pass_id) {
       const [pass] = await container.resolve<BookingModuleService>(BOOKING_MODULE).listBookingPasses({ id: input.pass_id })
       if (!pass || !cart.customer_id || pass.customer_id !== cart.customer_id) {
         throw new MedusaError(MedusaError.Types.NOT_FOUND, PASS_NOT_FOUND_MESSAGE)
       }
-      if (seats > 1 || input.quote_id) {
+      if (input.quote_id) {
         throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PASS_SERVICE_MESSAGE)
       }
-      const inCart = (cart.items ?? []).filter((i) => (i?.metadata as Record<string, unknown> | null)?.[PASS_ITEM_KEY] === pass.id).length
-      const problem = passProblem(pass, variant?.product?.id ?? "", starts_at, inCart)
+      // A departure takes a credit per seat, a rental one per day or night.
+      passCredits = Math.max(seats, rentalCount)
+      const inCart = (cart.items ?? [])
+        .filter((i) => (i?.metadata as Record<string, unknown> | null)?.[PASS_ITEM_KEY] === pass.id)
+        .reduce((n, i) => n + passCreditsOf(i?.metadata as Record<string, unknown> | null), 0)
+      const problem = passProblem(pass, variant?.product?.id ?? "", starts_at, inCart, passCredits)
       if (problem) {
         throw new MedusaError(MedusaError.Types.NOT_ALLOWED, problem)
       }
@@ -405,6 +414,7 @@ const prepareBookingStep = createStep(
       extras: extras.map((e) => ({ variant_id: e.variant_id, quantity: e.quantity })),
       quote_id: quoteId,
       pass_id: passId,
+      pass_credits: passCredits,
       series_id: input.series_id ?? null,
       package_id: input.package_id ?? null,
     }
@@ -505,6 +515,7 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.seats > 1 ? { [BOOKING_ITEM_METADATA.seats]: prepared.seats } : {}),
             ...(prepared.quote_id ? { [BOOKING_ITEM_METADATA.quote_id]: prepared.quote_id } : {}),
             ...(prepared.pass_id ? { [BOOKING_ITEM_METADATA.pass_id]: prepared.pass_id } : {}),
+            ...(prepared.pass_id && prepared.pass_credits > 1 ? { [PASS_CREDITS_KEY]: prepared.pass_credits } : {}),
             ...(prepared.package_id ? { [BOOKING_ITEM_METADATA.package_id]: prepared.package_id } : {}),
             // Shown under the item in the order email and staff alert.
             [LINE_DETAIL_KEY]: bookingLineDetail({

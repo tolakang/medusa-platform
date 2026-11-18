@@ -179,6 +179,47 @@ medusaIntegrationTestRunner({
         expect((await api.get("/store/booking/passes", sok)).data.passes[0].credits_left).toBe(5)
       })
 
+      it("takes a credit per seat on a departure, and gives credits back when staff cancel late", async () => {
+        const sok = await customer("sok@example.com")
+        const {
+          data: [bus],
+        } = await query().graph({ entity: "product", fields: ["id", "variants.id", "variants.booking_resources.id"], filters: { handle: "bus-siem-reap-phnom-penh" } })
+        const {
+          data: [cust],
+        } = await query().graph({ entity: "customer", fields: ["id"], filters: { email: "sok@example.com" } })
+        const pass = await service().createBookingPasses({
+          customer_id: cust.id,
+          order_id: "order_test",
+          line_item_id: "li_test_bus",
+          product_id: bus.id,
+          title: "Bus 5-ride pass",
+          credits_total: 5,
+          credits_left: 5,
+          expires_at: new Date(Date.now() + 90 * 86_400_000),
+          product_ids: [bus.id] as unknown as Record<string, unknown>,
+        })
+        const v = bus.variants![0] as unknown as { id: string; booking_resources: { id: string }[] }
+        const { data: dep } = await api.get(`/store/booking/slots?variant_id=${v.id}&date=${monday}`, store)
+        const s = dep.slots[0]
+        const cart = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
+        const added = await call(
+          api.post("/store/booking/cart", { cart_id: cart, variant_id: v.id, resource_id: s.resource_id, starts_at: s.starts_at, ends_at: s.ends_at, seats: 3, pass_id: pass.id }, sok)
+        )
+        expect(added.status).toBe(200)
+        const line = (await api.get(`/store/carts/${cart}`, sok)).data.cart.items[0]
+        expect([line.unit_price, line.metadata.booking_pass_credits]).toEqual([0, 3])
+        const done = await checkout(sok, cart)
+        expect(done.data.order.total).toBe(0)
+        expect(await creditsLeft(sok, 2)).toBe(2)
+
+        // Staff cancel it an hour before (outside the policy): the shop's own
+        // cancel gives the 3 credits back.
+        const soon = new Date(Date.now() + 3600_000)
+        await service().updateBookings({ id: line.metadata.booking_id, starts_at: soon, ends_at: new Date(soon.getTime() + 3600_000) })
+        await cancelBookingWorkflow(getContainer()).run({ input: { booking_id: line.metadata.booking_id } })
+        expect(await creditsLeft(sok, 5)).toBe(5)
+      })
+
       it("refuses someone else's pass, another service, and more bookings than credits", async () => {
         const sok = await customer("sok@example.com")
         const pass = await buyPass(sok)

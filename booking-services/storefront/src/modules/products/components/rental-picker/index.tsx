@@ -1,6 +1,6 @@
 "use client"
 
-import { addRentalToCart, rentalAvailability, type RentalAvailability } from "@lib/data/booking"
+import { addRentalToCart, rentalAvailability, type MyPass, type RentalAvailability } from "@lib/data/booking"
 import ExtrasChooser, { chosenExtras } from "@modules/products/components/extras-chooser"
 import { localDate, orderedServices, rentalUnit, serviceChoiceLabel } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
@@ -13,7 +13,9 @@ import { useEffect, useMemo, useState, useTransition } from "react"
 // inclusive, or check-in and check-out for nights); the shop says how many
 // days or nights, the total and whether one is free, then holds it and adds
 // it to the cart. The backend sets the price from the same dates.
-export default function RentalPicker({ product }: { product: HttpTypes.StoreProduct }) {
+export default function RentalPicker({ product, passes = [] }: { product: HttpTypes.StoreProduct; passes?: MyPass[] }) {
+  // Pay with a pass: a credit per day or night (P3-29 follow-up).
+  const [passId, setPassId] = useState("")
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const unit = rentalUnit(product) ?? "day"
@@ -57,6 +59,7 @@ export default function RentalPicker({ product }: { product: HttpTypes.StoreProd
         startDate: start,
         endDate: end,
         extras: chosenExtras(extraQty),
+        ...(passId ? { passId } : {}),
       })
       if (result.error) {
         setError(result.error)
@@ -141,6 +144,12 @@ export default function RentalPicker({ product }: { product: HttpTypes.StoreProd
         </Text>
       )}
       <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />
+      {passes.length > 0 && (
+        <label className="flex items-center gap-x-2 txt-small" data-testid="rental-use-pass">
+          <input type="checkbox" checked={!!passId} onChange={(e) => setPassId(e.target.checked ? passes[0].id : "")} />
+          Use my pass ({passes[0].title}: {passes[0].credits_left} of {passes[0].credits_total} left; a credit per {unit === "day" ? "day" : "night"})
+        </label>
+      )}
       <Button onClick={book} disabled={!ready || booking} isLoading={booking} className="w-full h-10" data-testid="rental-submit">
         {ready ? `Book ${label(found!.units)}` : "Choose the dates"}
       </Button>
