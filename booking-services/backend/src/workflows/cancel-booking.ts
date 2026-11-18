@@ -24,6 +24,8 @@ import type BookingModuleService from "../modules/booking/service"
 // back) and carries an idempotency key, so a retried cancellation never
 // refunds twice at the provider.
 
+export const PACKAGE_PIECE_CANCEL_MESSAGE = "This is part of an event package: cancel the whole package."
+
 export type CancelBookingInput = {
   booking_id: string
   // Set when the customer cancels: the booking must be theirs.
@@ -63,6 +65,7 @@ const planCancellationStep = createStep(
         "starts_at",
         "customer_id",
         "hold_expires_at",
+        "package_id",
         "order.id",
       ],
       filters: { id: input.booking_id },
@@ -72,6 +75,12 @@ const planCancellationStep = createStep(
     }
     if (input.customer_id !== undefined && booking.customer_id !== input.customer_id) {
       throw new MedusaError(MedusaError.Types.NOT_FOUND, `Booking ${input.booking_id} was not found.`)
+    }
+
+    // A piece of an event package (P3-30): the customer cancels the whole
+    // package (cancel-package), never one piece; staff still can.
+    if (input.customer_id !== undefined && booking.package_id) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PACKAGE_PIECE_CANCEL_MESSAGE)
     }
 
     const decision = cancelDecision(booking, new Date(), service.cancelHours)

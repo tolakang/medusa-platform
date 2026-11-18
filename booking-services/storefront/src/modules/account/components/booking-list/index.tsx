@@ -1,6 +1,6 @@
 "use client"
 
-import { cancelMyBooking, listSlots, moveMyBooking, writeReview, type MyBooking, type Slot } from "@lib/data/booking"
+import { cancelMyBooking, cancelMyPackage, listSlots, moveMyBooking, writeReview, type MyBooking, type Slot } from "@lib/data/booking"
 import { formatBookingRange } from "@lib/util/booking"
 import { Badge, Button, Heading, Text, clx } from "@modules/common/components/ui"
 import { useRouter } from "next/navigation"
@@ -138,11 +138,13 @@ export default function BookingList({
   const [changing, setChanging] = useState<string | null>(null)
   const [reviewing, setReviewing] = useState<string | null>(null)
 
+  // A piece of an event package cancels the whole package (P3-30).
   const cancel = (id: string) => {
+    const packageId = bookings.find((b) => b.id === id)?.package_id
     setConfirming(null)
     setBusy(id)
     start(async () => {
-      const result = await cancelMyBooking(id)
+      const result = packageId ? await cancelMyPackage(packageId) : await cancelMyBooking(id)
       setNotice(result.error ?? REFUND_TEXT[result.refund ?? ""] ?? "Cancelled.")
       setBusy(null)
       router.refresh()
@@ -172,6 +174,7 @@ export default function BookingList({
               {b.resource?.name ?? ""}
               {b.order?.display_id != null ? ` · Order #${b.order.display_id}` : ""}
               {b.series_id ? " · Weekly" : ""}
+              {b.package_id ? " · Event package" : ""}
             </Text>
             {b.address && (
               <Text className="txt-small text-ui-fg-subtle" data-testid="booking-address">
@@ -210,7 +213,7 @@ export default function BookingList({
                   Keep it
                 </Button>
                 <Button onClick={() => cancel(b.id)} data-testid="booking-cancel-confirm">
-                  Yes, cancel
+                  {b.package_id ? "Yes, cancel the whole package" : "Yes, cancel"}
                 </Button>
               </>
             )}
