@@ -2,7 +2,8 @@ import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
 import jwt from "jsonwebtoken"
-import { REVIEW_NOT_YET_MESSAGE, REVIEW_TWICE_MESSAGE } from "../../src/lib/reviews"
+import { REVIEW_NOT_YET_MESSAGE, REVIEW_REQUEST_TEMPLATE, REVIEW_TWICE_MESSAGE } from "../../src/lib/reviews"
+import { sendReviewRequestsWorkflow } from "../../src/workflows/send-review-requests"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import seed from "../../src/scripts/seed"
@@ -111,6 +112,11 @@ medusaIntegrationTestRunner({
         const y = new Date(Date.now() - 24 * 3600_000)
         await service().updateBookings({ id, starts_at: y, ends_at: new Date(y.getTime() + 30 * 60_000) })
 
+        // The hourly job asks for a review once (P3-29 follow-up).
+        const asked = (await sendReviewRequestsWorkflow(getContainer()).run({ input: {} })).result
+        expect(asked.map((n) => [n.template, n.data.service])).toEqual([[REVIEW_REQUEST_TEMPLATE, "Haircut"]])
+        expect((await sendReviewRequestsWorkflow(getContainer()).run({ input: {} })).result).toEqual([])
+
         expect((await call(api.post("/store/booking/reviews", { booking_id: id, rating: 5 }, store))).status).toBe(401)
         const dara = await customer("dara@example.com")
         expect((await write(dara, { rating: 1 })).status).toBe(404)
@@ -127,6 +133,9 @@ medusaIntegrationTestRunner({
 
         const listed = (await api.get("/admin/booking/reviews", admin)).data.reviews
         expect(listed.map((r: any) => [r.service, r.rating, r.status])).toEqual([["Haircut", 4, "published"]])
+        // The shop answers it publicly (P3-29 follow-up).
+        await api.post(`/admin/booking/reviews/${listed[0].id}`, { reply: " Thank you, see you soon! " }, admin)
+        expect((await api.get(`/store/booking/reviews?product_id=${productId}`, store)).data.reviews[0].reply).toBe("Thank you, see you soon!")
         await api.post(`/admin/booking/reviews/${listed[0].id}`, { status: "hidden" }, admin)
         expect((await api.get(`/store/booking/reviews?product_id=${productId}`, store)).data).toMatchObject({ average: null, count: 0, reviews: [] })
       })

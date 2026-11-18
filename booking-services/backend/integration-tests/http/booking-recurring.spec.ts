@@ -1,6 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
+import { createDefaultsWorkflow, createShippingProfilesWorkflow, updateProductsWorkflow } from "@medusajs/medusa/core-flows"
 import jwt from "jsonwebtoken"
 import { RECURRING_SERVICE_MESSAGE } from "../../src/lib/recurring"
 import { BOOKING_MODULE } from "../../src/modules/booking"
@@ -148,7 +148,53 @@ medusaIntegrationTestRunner({
         const cart = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
         const r = await weekly(sok, cart, slot, 4)
         expect([r.status, r.data.conflicts]).toEqual([400, [plusWeeks(slot.starts_at, 2)]])
+        // The message names the clashing week by its local date.
+        const local = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Phnom_Penh", weekday: "short", day: "numeric", month: "short" }).format(
+          new Date(plusWeeks(slot.starts_at, 2))
+        )
+        expect(r.data.message).toBe(`Not free: ${local}. Choose another time.`)
         expect((await api.get(`/store/carts/${cart}`, sok)).data.cart.items).toEqual([])
+      })
+
+      it("repeats every two weeks at a series price, and cancels the rest at once", async () => {
+        const {
+          data: [hair],
+        } = await query().graph({ entity: "product", fields: ["id", "metadata"], filters: { handle: "haircut" } })
+        await updateProductsWorkflow(getContainer()).run({
+          input: { selector: { id: hair.id }, update: { metadata: { ...(hair.metadata ?? {}), series_discount_percent: 25 } } },
+        })
+        const sok = await customer("sok@example.com")
+        const slot = (await slots())[0]
+        const cart = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
+        const r = await call(
+          api.post(
+            "/store/booking/recurring",
+            { cart_id: cart, variant_id: haircut, resource_id: slot.resource_id, starts_at: slot.starts_at, ends_at: slot.ends_at, weeks: 3, every: "2weeks" },
+            sok
+          )
+        )
+        expect(r.data.bookings.map((b: any) => b.starts_at)).toEqual([0, 2, 4].map((w) => plusWeeks(slot.starts_at, w)))
+        // $8 a visit, 25% off as a series.
+        expect((await api.get(`/store/carts/${cart}`, sok)).data.cart.items.map((i: any) => i.unit_price)).toEqual([6, 6, 6])
+        const {
+          data: { payment_collection },
+        } = await api.post("/store/payment-collections", { cart_id: cart }, sok)
+        await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
+        const done = await api.post(`/store/carts/${cart}/complete`, {}, sok)
+        expect(done.data.order.total).toBe(18)
+        for (let i = 0; i < 40; i++) {
+          const { data } = await query().graph({ entity: "booking", fields: ["status"], filters: { series_id: r.data.series_id } })
+          if (data.every((b) => b.status === "confirmed")) break
+          await new Promise((res) => setTimeout(res, 250))
+        }
+
+        // Another customer can't; Sok cancels the rest: all three, a week ahead or more.
+        const dara = await customer("dara@example.com")
+        expect((await call(api.post(`/store/booking/series/${r.data.series_id}/cancel`, {}, dara))).status).toBe(404)
+        const cancelled = await api.post(`/store/booking/series/${r.data.series_id}/cancel`, {}, sok)
+        expect(cancelled.data.cancelled).toBe(3)
+        const { data: rows } = await query().graph({ entity: "booking", fields: ["status"], filters: { series_id: r.data.series_id } })
+        expect(rows.map((b) => b.status)).toEqual(["cancelled", "cancelled", "cancelled"])
       })
 
       it("refuses services that can't repeat and more than 12 weeks", async () => {

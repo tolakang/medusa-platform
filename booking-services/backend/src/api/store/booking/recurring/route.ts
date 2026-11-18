@@ -1,7 +1,7 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { randomUUID } from "crypto"
-import { RECURRING_SERVICE_MESSAGE, recurringService, weeklyOccurrences } from "../../../../lib/recurring"
+import { RECURRING_SERVICE_MESSAGE, recurringService, repeatOccurrences } from "../../../../lib/recurring"
 import { BOOKING_MODULE } from "../../../../modules/booking"
 import type BookingModuleService from "../../../../modules/booking/service"
 import { addBookingToCartWorkflow } from "../../../../workflows/add-booking-to-cart"
@@ -29,7 +29,8 @@ export const POST = async (req: MedusaRequest<PostRecurringType>, res: MedusaRes
     throw new MedusaError(MedusaError.Types.NOT_FOUND, `Booking resource ${body.resource_id} was not found.`)
   }
 
-  const weeks = weeklyOccurrences(new Date(body.starts_at), new Date(body.ends_at), resource.timezone, body.weeks)
+  // `weeks` = how many times; `every` = week (default), 2weeks or month.
+  const weeks = repeatOccurrences(new Date(body.starts_at), new Date(body.ends_at), resource.timezone, body.weeks, body.every ?? "week")
   const conflicts: string[] = []
   for (const w of weeks) {
     const check = await booking.checkSlot({ resource_id: resource.id, starts_at: w.starts_at, ends_at: w.ends_at, ignore_cart_id: body.cart_id })
@@ -38,7 +39,10 @@ export const POST = async (req: MedusaRequest<PostRecurringType>, res: MedusaRes
   if (conflicts.length) {
     res.status(400).json({
       type: "not_allowed",
-      message: `${conflicts.length} of the ${weeks.length} weeks aren't free. Choose another time.`,
+      // The clashing weeks by their local date, so the picker can show them.
+      message: `Not free: ${conflicts
+        .map((iso) => new Intl.DateTimeFormat("en-GB", { timeZone: resource.timezone, weekday: "short", day: "numeric", month: "short" }).format(new Date(iso)))
+        .join(", ")}. Choose another time.`,
       conflicts,
     })
     return

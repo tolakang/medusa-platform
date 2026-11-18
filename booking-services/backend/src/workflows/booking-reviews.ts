@@ -59,15 +59,22 @@ export const writeBookingReviewWorkflow = createWorkflow("write-booking-review",
   return new WorkflowResponse(writeReviewStep(input))
 })
 
+type ReviewChange = { id: string; status?: "published" | "hidden"; reply?: string | null }
+
 const setReviewStatusStep = createStep(
   "set-review-status",
-  async (input: { id: string; status: "published" | "hidden" }, { container }) => {
+  async (input: ReviewChange, { container }) => {
     const [review] = await service(container).listBookingReviews({ id: input.id })
     if (!review) {
       throw new MedusaError(MedusaError.Types.NOT_FOUND, `Review ${input.id} was not found.`)
     }
-    const updated = await service(container).updateBookingReviews({ id: review.id, status: input.status })
-    return new StepResponse(updated, { id: review.id, status: review.status })
+    const reply = input.reply === undefined ? undefined : input.reply?.trim() || null
+    const updated = await service(container).updateBookingReviews({
+      id: review.id,
+      ...(input.status ? { status: input.status } : {}),
+      ...(reply !== undefined ? { reply, replied_at: reply ? new Date() : null } : {}),
+    })
+    return new StepResponse(updated, { id: review.id, status: review.status, reply: review.reply, replied_at: review.replied_at })
   },
   async (before, { container }) => {
     if (before) await service(container).updateBookingReviews(before as never)
@@ -76,7 +83,7 @@ const setReviewStatusStep = createStep(
 
 export const setBookingReviewStatusWorkflow = createWorkflow(
   "set-booking-review-status",
-  function (input: { id: string; status: "published" | "hidden" }) {
+  function (input: ReviewChange) {
     return new WorkflowResponse(setReviewStatusStep(input))
   }
 )

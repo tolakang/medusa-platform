@@ -15,6 +15,9 @@ export const BookingReview = model
     comment: model.text().nullable(),
     author: model.text().nullable(),
     status: model.enum(["published", "hidden"]).default("published"),
+    // The shop's public answer (P3-29 follow-up).
+    reply: model.text().nullable(),
+    replied_at: model.dateTime().nullable(),
   })
   .indexes([
     { name: "IDX_booking_review_booking", on: ["booking_id"], unique: true, where: "deleted_at IS NULL" },

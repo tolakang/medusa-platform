@@ -110,5 +110,11 @@ export const PostAdminBookingMove = z
 export type PostAdminBookingMoveType = z.infer<typeof PostAdminBookingMove>
 
 // Hide or show a review (TASKS P3-29).
-export const PostAdminReview = z.object({ status: z.enum(["published", "hidden"]) })
+export const PostAdminReview = z
+  .object({
+    status: z.enum(["published", "hidden"]).optional(),
+    // The shop's answer; "" or null removes it (P3-29 follow-up).
+    reply: z.string().max(1000).nullish(),
+  })
+  .refine((v) => v.status !== undefined || v.reply !== undefined, { message: "Give a status or a reply." })
 export type PostAdminReviewType = z.infer<typeof PostAdminReview>
