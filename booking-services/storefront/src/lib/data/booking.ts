@@ -395,7 +395,7 @@ export async function leaveWaitlist(id: string): Promise<{ error?: string }> {
 export type ServiceReviews = {
   average: number | null
   count: number
-  reviews: { id: string; rating: number; comment: string | null; author: string | null; created_at: string }[]
+  reviews: { id: string; rating: number; comment: string | null; author: string | null; reply?: string | null; created_at: string }[]
 }
 
 export async function listServiceReviews(productId: string): Promise<ServiceReviews> {
@@ -444,6 +444,8 @@ export async function addRecurringToCart(input: {
   variantId: string
   slot: Slot
   weeks: number
+  // How often (P3-29 follow-up).
+  every?: "week" | "2weeks" | "month"
   address?: string
   notes?: string
 }): Promise<{ error?: string }> {
@@ -462,6 +464,7 @@ export async function addRecurringToCart(input: {
         starts_at: input.slot.starts_at,
         ends_at: input.slot.ends_at,
         weeks: input.weeks,
+        ...(input.every && input.every !== "week" ? { every: input.every } : {}),
         ...(input.address ? { address: input.address } : {}),
         ...(input.notes ? { notes: input.notes } : {}),
       },
@@ -517,4 +520,25 @@ export async function cancelMyPackage(packageId: string): Promise<{ refund?: str
   } catch (e) {
     return { error: (e as { message?: string })?.message ?? "Could not cancel this package." }
   }
+}
+
+// Cancel the rest of a weekly series (TASKS P3-29 follow-up).
+export async function cancelMySeries(seriesId: string): Promise<{ cancelled?: number; refunded_amount?: number; error?: string }> {
+  try {
+    return await sdk.client.fetch<{ cancelled: number; refunded_amount: number }>(`/store/booking/series/${seriesId}/cancel`, {
+      method: "POST",
+      headers: await getAuthHeaders(),
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not cancel the series." }
+  }
+}
+
+// A service's average rating for its card (P3-29 follow-up): cached for five
+// minutes, so a page of cards doesn't ask on every view.
+export async function reviewSummary(productId: string): Promise<{ average: number | null; count: number }> {
+  return sdk.client
+    .fetch<ServiceReviews>("/store/booking/reviews", { query: { product_id: productId }, next: { revalidate: 300 } })
+    .then((r) => ({ average: r.average, count: r.count }))
+    .catch(() => ({ average: null, count: 0 }))
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { cancelMyBooking, cancelMyPackage, listSlots, moveMyBooking, writeReview, type MyBooking, type Slot } from "@lib/data/booking"
+import { cancelMyBooking, cancelMyPackage, cancelMySeries, listSlots, moveMyBooking, writeReview, type MyBooking, type Slot } from "@lib/data/booking"
 import { formatBookingRange } from "@lib/util/booking"
 import { Badge, Button, Heading, Text, clx } from "@modules/common/components/ui"
 import { useRouter } from "next/navigation"
@@ -197,6 +197,24 @@ export default function BookingList({
                 </Button>
               )}
             {!canCancel && b.reviewed && <Text className="txt-small text-ui-fg-subtle">Reviewed</Text>}
+            {canCancel && b.series_id && b.status === "confirmed" && confirming !== b.id && (
+              <Button
+                variant="secondary"
+                isLoading={pending && busy === `series:${b.series_id}`}
+                data-testid="booking-cancel-series"
+                onClick={() => {
+                  setBusy(`series:${b.series_id}`)
+                  start(async () => {
+                    const r = await cancelMySeries(b.series_id!)
+                    setNotice(r.error ?? `Cancelled ${r.cancelled} visits of the series.`)
+                    setBusy(null)
+                    router.refresh()
+                  })
+                }}
+              >
+                Cancel the rest
+              </Button>
+            )}
             {canCancel && confirming !== b.id && (
               <Button
                 variant="secondary"

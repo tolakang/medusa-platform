@@ -13,7 +13,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   }
   const { data } = await req.scope.resolve(ContainerRegistrationKeys.QUERY).graph({
     entity: "booking_review",
-    fields: ["id", "rating", "comment", "author", "created_at"],
+    fields: ["id", "rating", "comment", "author", "reply", "replied_at", "created_at"],
     filters: { product_id: productId, status: "published" },
   })
   const sorted = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

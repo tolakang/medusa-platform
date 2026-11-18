@@ -4,6 +4,8 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
+import { reviewSummary } from "@lib/data/booking"
+import { isServiceProduct } from "@lib/util/booking"
 
 export default async function ProductPreview({
   product,
@@ -26,6 +28,8 @@ export default async function ProductPreview({
   const { cheapestPrice } = getProductPrice({
     product,
   })
+  // A service's rating from customers who had it (P3-29 follow-up).
+  const rating = isServiceProduct(product) ? await reviewSummary(product.id!) : null
 
   return (
     <LocalizedClientLink href={`/products/${product.handle}`} className="group">
@@ -37,9 +41,16 @@ export default async function ProductPreview({
           isFeatured={isFeatured}
         />
         <div className="flex txt-compact-medium mt-4 justify-between">
-          <Text className="text-ui-fg-subtle" data-testid="product-title">
-            {product.title}
-          </Text>
+          <div className="flex flex-col">
+            <Text className="text-ui-fg-subtle" data-testid="product-title">
+              {product.title}
+            </Text>
+            {rating?.count ? (
+              <Text className="txt-small text-ui-fg-muted" data-testid="product-rating" aria-label={`Rated ${rating.average} out of 5`}>
+                ★ {rating.average?.toFixed(1)} ({rating.count})
+              </Text>
+            ) : null}
+          </div>
           <div className="flex items-center gap-x-2">
             {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
           </div>

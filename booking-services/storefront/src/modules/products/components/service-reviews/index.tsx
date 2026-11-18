@@ -21,6 +21,11 @@ export default async function ServiceReviews({ productId }: { productId: string 
               {stars(r.rating)}
             </p>
             {r.comment && <p className="txt-medium mt-1 whitespace-pre-wrap">{r.comment}</p>}
+            {r.reply && (
+              <p className="txt-small mt-2 border-l-2 border-ui-border-strong pl-3 whitespace-pre-wrap" data-testid="review-reply">
+                <span className="txt-small-plus">Reply from the shop:</span> {r.reply}
+              </p>
+            )}
             <p className="txt-small text-ui-fg-subtle mt-1">
               {r.author ?? "A customer"} · {new Date(r.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
             </p>

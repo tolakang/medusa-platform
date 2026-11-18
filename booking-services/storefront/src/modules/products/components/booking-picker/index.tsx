@@ -41,6 +41,7 @@ export default function BookingPicker({
   const [passId, setPassId] = useState("")
   // Every week (P3-29): 1 = once.
   const [weeks, setWeeks] = useState(1)
+  const [every, setEvery] = useState<"week" | "2weeks" | "month">("week")
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const services = useMemo(
@@ -119,6 +120,7 @@ export default function BookingPicker({
               variantId,
               slot: chosen,
               weeks,
+              every,
               ...(visit ? { address: address.trim(), notes: problem.trim() } : {}),
             })
           : await addBookingToCart({
@@ -409,7 +411,19 @@ export default function BookingPicker({
               if (e.target.checked) setPassId("")
             }}
           />
-          Repeat every week for
+          Repeat
+          <select
+            className="rounded-md border border-ui-border-base px-1"
+            value={every}
+            disabled={weeks === 1}
+            onChange={(e) => setEvery(e.target.value as "week" | "2weeks" | "month")}
+            aria-label="How often"
+          >
+            <option value="week">every week</option>
+            <option value="2weeks">every 2 weeks</option>
+            <option value="month">every month</option>
+          </select>
+          ×
           <select
             className="rounded-md border border-ui-border-base px-1"
             value={weeks > 1 ? weeks : 4}
@@ -419,7 +433,7 @@ export default function BookingPicker({
           >
             {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
               <option key={n} value={n}>
-                {n} weeks
+                {n} times
               </option>
             ))}
           </select>
@@ -438,7 +452,7 @@ export default function BookingPicker({
             ? trip
               ? "Add both addresses" + (trip === "zones" ? " and the areas" : "")
               : "Add the address and the job"
-            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}${weeks > 1 ? ` × ${weeks} weeks` : ""}`}
+            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}${weeks > 1 ? ` × ${weeks}` : ""}`}
       </Button>
       {depositPercent(product) !== null && (
         <Text className="txt-small text-ui-fg-subtle" data-testid="booking-deposit">

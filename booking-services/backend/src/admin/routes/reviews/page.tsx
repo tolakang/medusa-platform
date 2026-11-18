@@ -1,6 +1,7 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Text, Textarea } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { sdk } from "../../lib/sdk"
 
 // Reviews (TASKS P3-29): customers' reviews of bookings they had, newest
@@ -14,7 +15,48 @@ type Review = {
   comment: string | null
   author: string | null
   status: "published" | "hidden"
+  reply: string | null
   created_at: string
+}
+
+// The shop's public answer under a review (P3-29 follow-up).
+const Reply = ({ review, onSaved }: { review: Review; onSaved: () => void }) => {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState(review.reply ?? "")
+  const save = useMutation({
+    mutationFn: () => sdk.client.fetch(`/admin/booking/reviews/${review.id}`, { method: "POST", body: { reply: text.trim() || null } }),
+    onSuccess: () => {
+      setOpen(false)
+      onSaved()
+    },
+  })
+  if (!open) {
+    return (
+      <div className="flex flex-col gap-y-1">
+        {review.reply && (
+          <Text size="small" className="border-l-2 border-ui-border-strong pl-2">
+            Your reply: {review.reply}
+          </Text>
+        )}
+        <Button size="small" variant="transparent" className="self-start px-0" onClick={() => setOpen(true)}>
+          {review.reply ? "Edit reply" : "Reply"}
+        </Button>
+      </div>
+    )
+  }
+  return (
+    <div className="flex flex-col gap-y-2">
+      <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Thank the customer, or answer them. Shown under the review." />
+      <div className="flex gap-x-2">
+        <Button size="small" isLoading={save.isPending} onClick={() => save.mutate()}>
+          Save reply
+        </Button>
+        <Button size="small" variant="secondary" onClick={() => setOpen(false)}>
+          Close
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
@@ -55,6 +97,7 @@ const ReviewsPage = () => {
             <Text size="xsmall" className="text-ui-fg-subtle">
               {r.author ?? "A customer"} · {new Date(r.created_at).toLocaleDateString()}
             </Text>
+            <Reply review={r} onSaved={() => client.invalidateQueries({ queryKey: ["booking-reviews"] })} />
           </div>
           <Button
             size="small"
