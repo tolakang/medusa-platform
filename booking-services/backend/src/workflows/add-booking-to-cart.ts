@@ -15,6 +15,7 @@ import { isDepartureService, validSeats } from "../lib/departure"
 import { isQuoteOnly, QUOTE_NOT_YOURS_MESSAGE, QUOTE_ONLY_MESSAGE, quoteBookable } from "../lib/quotes"
 import { PASS_ITEM_KEY, PASS_NOT_FOUND_MESSAGE, PASS_SERVICE_MESSAGE, passProblem } from "../lib/passes"
 import { PACKAGE_ITEM_KEY } from "../lib/packages"
+import { bookingLineDetail, LINE_DETAIL_KEY } from "../lib/line-detail"
 import { EXTRA_FOR_KEY, EXTRA_NOT_OFFERED_MESSAGE, isExtraProduct, MAX_EXTRA_QUANTITY, offeredExtras } from "../lib/booking-extras"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
@@ -488,13 +489,27 @@ export const addBookingToCartWorkflow = createWorkflow(
             ...(prepared.quote_id ? { [BOOKING_ITEM_METADATA.quote_id]: prepared.quote_id } : {}),
             ...(prepared.pass_id ? { [BOOKING_ITEM_METADATA.pass_id]: prepared.pass_id } : {}),
             ...(prepared.package_id ? { [BOOKING_ITEM_METADATA.package_id]: prepared.package_id } : {}),
+            // Shown under the item in the order email and staff alert.
+            [LINE_DETAIL_KEY]: bookingLineDetail({
+              starts_at: prepared.starts_at,
+              ends_at: prepared.ends_at,
+              timezone: prepared.timezone,
+              resource_name: prepared.whole_days ? null : prepared.resource_name,
+              whole_days: prepared.whole_days,
+              trip_label: prepared.trip_label,
+              seats: prepared.seats,
+              address: prepared.address,
+              dropoff_address: prepared.dropoff_address,
+              pass: !!prepared.pass_id,
+              package_piece: !!prepared.package_id,
+            }),
           },
         },
         // Its extras, each tied to this booking (P3-25).
         ...prepared.extras.map((e) => ({
           variant_id: e.variant_id,
           quantity: e.quantity,
-          metadata: { [EXTRA_FOR_KEY]: hold.id },
+          metadata: { [EXTRA_FOR_KEY]: hold.id, [LINE_DETAIL_KEY]: "With your booking" },
         })),
       ],
     }))

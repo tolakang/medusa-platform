@@ -3,6 +3,7 @@
 import {
   formatMoney,
   addressLine,
+  itemDetail,
   itemLabel,
   ORDER_ALREADY_LINKED_CUSTOMER_TEMPLATE,
   ORDER_CANCELED_CUSTOMER_TEMPLATE,
@@ -29,7 +30,7 @@ function orderPlacedStaff(order: OrderNotificationData) {
   const name = [address?.first_name, address?.last_name].filter(Boolean).join(" ")
   const items = (order.items ?? [])
     .filter(Boolean)
-    .map((item) => `• ${item!.quantity ?? 1} × ${itemLabel(item!)}`)
+    .map((item) => `• ${item!.quantity ?? 1} × ${itemLabel(item!)}${itemDetail(item!) ? `\n   ${itemDetail(item!)!.replace(/\n/g, "\n   ")}` : ""}`)
   const delivery = (order.shipping_methods ?? [])
     .map((method) => method?.name)
     .filter(Boolean)
@@ -70,7 +71,7 @@ function orderConfirmedCustomer(order: OrderNotificationData) {
   const address = order.shipping_address
   const items = (order.items ?? [])
     .filter(Boolean)
-    .map((item) => `• ${item!.quantity ?? 1} × ${itemLabel(item!)}`)
+    .map((item) => `• ${item!.quantity ?? 1} × ${itemLabel(item!)}${itemDetail(item!) ? `\n   ${itemDetail(item!)!.replace(/\n/g, "\n   ")}` : ""}`)
   const delivery = (order.shipping_methods ?? [])
     .map((method) => method?.name)
     .filter(Boolean)
