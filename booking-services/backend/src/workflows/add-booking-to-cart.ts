@@ -57,6 +57,9 @@ export type AddBookingToCartInput = {
   // line is $0, the package line carries the price. Never from the store's
   // own cart route.
   package_id?: string | null
+  // An à la carte piece keeps its own price (P3-30); a ready-made package's
+  // pieces are $0.
+  package_priced?: boolean
 }
 
 // Line item metadata keys the later booking hooks read (P3-05, P3-07).
@@ -361,7 +364,7 @@ const prepareBookingStep = createStep(
     }
 
     // A package piece: the package line carries the price (P3-30).
-    if (input.package_id) {
+    if (input.package_id && !input.package_priced) {
       unit_price = 0
     }
 

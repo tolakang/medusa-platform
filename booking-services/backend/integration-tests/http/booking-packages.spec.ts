@@ -3,7 +3,7 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { capturePaymentWorkflow, createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
 import { PACKAGE_PIECE_CANCEL_MESSAGE } from "../../src/workflows/cancel-booking"
 import jwt from "jsonwebtoken"
-import { PACKAGE_ALONE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE } from "../../src/lib/packages"
+import { PACKAGE_ALONE_MESSAGE, PACKAGE_CHOICE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE } from "../../src/lib/packages"
 import { zonedTimeToUtc } from "../../src/modules/booking/utils/slot"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
@@ -200,6 +200,35 @@ medusaIntegrationTestRunner({
         // Not captured yet: nothing to refund.
         expect(done.data).toEqual({ cancelled: 3, refund: "not_captured", refunded_amount: 0 })
         expect((await api.get("/admin/booking/events", admin)).data.events[0].status).toBe("cancelled")
+      it("books the pieces chosen à la carte at their own prices, together", async () => {
+        const sok = await customer("sok@example.com")
+        const {
+          data: [p],
+        } = await query().graph({ entity: "product", fields: ["variants.id"], filters: { handle: "build-your-event" } })
+        const variant = p.variants![0]!.id
+        const cart = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
+        const choose = (choices: number[]) => call(api.post("/store/booking/package", { cart_id: cart, variant_id: variant, date: monday, choices }, sok))
+        expect([(await choose([])).status, (await choose([])).data.message]).toEqual([400, PACKAGE_CHOICE_MESSAGE])
+        expect((await choose([9])).status).toBe(400)
+
+        // Hair and the dinner table.
+        expect((await choose([0, 3])).status).toBe(200)
+        const items = await lines(sok, cart)
+        expect(items.map((i) => [i.product_title, i.unit_price]).sort()).toEqual(
+          [["Build your event", 0], ["Haircut", 15], ["Table reservation", 5]].sort()
+        )
+        const head = items.find((i) => i.product_title === "Build your event")
+        expect(head.metadata.booking_package_pieces).toBe(2)
+        // The package line can't be edited.
+        const edit = await call(api.post(`/store/carts/${cart}/line-items/${head.id}`, { quantity: 1, metadata: { booking_package_pieces: 1 } }, sok))
+        expect(edit.status).toBe(400)
+
+        const {
+          data: { payment_collection },
+        } = await api.post("/store/payment-collections", { cart_id: cart }, sok)
+        await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
+        const done = await api.post(`/store/carts/${cart}/complete`, {}, sok)
+        expect([done.data.type, done.data.order.total]).toEqual(["order", 20])
       })
 
       it("adds nothing when a piece has no room that day, and says which", async () => {

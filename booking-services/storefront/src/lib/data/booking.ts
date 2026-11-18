@@ -480,6 +480,8 @@ export async function addPackageToCart(input: {
   date: string
   address?: string
   notes?: string
+  // À la carte: the pieces chosen (P3-30).
+  choices?: number[]
 }): Promise<{ error?: string }> {
   const cart = await getOrSetCart(input.countryCode)
   if (!cart) {
@@ -495,6 +497,7 @@ export async function addPackageToCart(input: {
         date: input.date,
         ...(input.address ? { address: input.address } : {}),
         ...(input.notes ? { notes: input.notes } : {}),
+        ...(input.choices ? { choices: input.choices } : {}),
       },
     })
   } catch (e) {

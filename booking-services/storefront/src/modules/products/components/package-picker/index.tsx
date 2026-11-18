@@ -9,7 +9,9 @@ import { useParams, useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 // An event package (TASKS P3-30, kind H): pick the event date; every piece is
-// booked together on it, or none (the shop says which piece isn't free).
+// booked together on it, or none (the shop says which piece isn't free). À la
+// carte (Metadata package_mode "a_la_carte"): the customer ticks the pieces,
+// each at its own price.
 export default function PackagePicker({ product }: { product: HttpTypes.StoreProduct }) {
   const { countryCode } = useParams() as { countryCode: string }
   const router = useRouter()
@@ -22,11 +24,32 @@ export default function PackagePicker({ product }: { product: HttpTypes.StorePro
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const [tomorrow] = useState(() => localDate(null, 1))
+  const meta = (product.metadata ?? {}) as Record<string, unknown>
+  const aLaCarte = meta.package_mode === "a_la_carte"
+  const items = (Array.isArray(meta.package_items) ? meta.package_items : []) as { label?: string; sku: string }[]
+  const [chosen, setChosen] = useState<number[]>([])
   const field = "w-full rounded-md border border-ui-border-base bg-ui-bg-field px-3 py-2 txt-medium"
 
   return (
     <div className="flex flex-col gap-y-3" data-testid="package-picker">
-      {price != null && <p className="text-xl-semi">{convertToLocale({ amount: price, currency_code: currency })}</p>}
+      {aLaCarte ? (
+        <fieldset className="flex flex-col gap-y-2" data-testid="package-choices">
+          <legend className="txt-medium-plus mb-1">Choose what you need</legend>
+          {items.map((it, i) => (
+            <label key={i} className="flex items-center gap-x-2 txt-small">
+              <input
+                type="checkbox"
+                checked={chosen.includes(i)}
+                onChange={(e) => setChosen((c) => (e.target.checked ? [...c, i] : c.filter((x) => x !== i)))}
+              />
+              {it.label ?? it.sku}
+            </label>
+          ))}
+          <Text className="txt-xsmall text-ui-fg-subtle">Each part at its own price; the cart shows the total.</Text>
+        </fieldset>
+      ) : (
+        price != null && <p className="text-xl-semi">{convertToLocale({ amount: price, currency_code: currency })}</p>
+      )}
       <label className="flex flex-col gap-y-1 txt-small">
         Event date
         <input className={field} type="date" min={tomorrow} value={date} onChange={(e) => setDate(e.target.value)} />
@@ -46,13 +69,20 @@ export default function PackagePicker({ product }: { product: HttpTypes.StorePro
       )}
       <Button
         className="w-full h-10"
-        disabled={!date || !variant}
+        disabled={!date || !variant || (aLaCarte && !chosen.length)}
         isLoading={pending}
         data-testid="package-submit"
         onClick={() =>
           start(async () => {
             setError(null)
-            const r = await addPackageToCart({ countryCode, variantId: variant!.id, date, address: address.trim(), notes: notes.trim() })
+            const r = await addPackageToCart({
+              countryCode,
+              variantId: variant!.id,
+              date,
+              address: address.trim(),
+              notes: notes.trim(),
+              ...(aLaCarte ? { choices: chosen } : {}),
+            })
             if (r.error) setError(r.error)
             else router.push(`/${countryCode}/cart`)
           })
