@@ -23,6 +23,7 @@ medusaIntegrationTestRunner({
   testSuite: ({ api, getContainer }) => {
     describe("waitlist (TASKS P3-29)", () => {
       let store: { headers: Record<string, string> }
+      let admin: { headers: Record<string, string> }
       let haircut: string
       let stylist: string
       const query = () => getContainer().resolve(ContainerRegistrationKeys.QUERY)
@@ -60,6 +61,14 @@ medusaIntegrationTestRunner({
         const v = product.variants!.find((x) => x!.title === "30 min")! as unknown as { id: string; booking_resources: { id: string }[] }
         haircut = v.id
         stylist = v.booking_resources[0].id
+        const email = "admin@booking.test"
+        const user = await container.resolve(Modules.USER).createUsers({ email })
+        await container.resolve(Modules.AUTH).createAuthIdentities({
+          provider_identities: [{ provider: "emailpass", entity_id: email }],
+          app_metadata: { user_id: user.id },
+        })
+        await container.resolve(Modules.AUTH).updateProvider("emailpass", { entity_id: email, password: "supersecret1" })
+        admin = { headers: { authorization: `Bearer ${(await api.post("/auth/user/emailpass", { email, password: "supersecret1" })).data.token}` } }
       })
 
       it("waits for a full day and emails everyone once when a time frees up", async () => {
@@ -78,6 +87,15 @@ medusaIntegrationTestRunner({
         await api.post("/store/booking/waitlist", { variant_id: haircut, date: monday }, dara)
         const mine = (await api.get("/store/booking/waitlist", sok)).data.waitlist
         expect(mine.map((w: any) => [w.date, w.status, w.service, w.handle])).toEqual([[monday, "waiting", "Haircut", "haircut"]])
+
+        // Staff see both waiting (P3-29 follow-up).
+        const staffView = (await api.get("/admin/booking/waitlist", admin)).data.waitlist
+        expect(staffView.map((w: any) => [w.date, w.service, w.status, w.customer.email]).sort()).toEqual(
+          [
+            [monday, "Haircut (30 min)", "waiting", "dara@example.com"],
+            [monday, "Haircut (30 min)", "waiting", "sok@example.com"],
+          ]
+        )
 
         // Still full: nothing sent.
         expect((await notifyWaitlistWorkflow(getContainer()).run({ input: {} })).result).toEqual([])

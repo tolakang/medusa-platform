@@ -153,6 +153,11 @@ medusaIntegrationTestRunner({
         expect((await call(api.get("/store/booking/passes", store))).status).toBe(401)
         const pass = await buyPass(sok)
         expect(pass).toMatchObject({ title: "Haircut 5-pack", credits_total: 5, credits_left: 5, covers: [{ handle: "haircut", title: "Haircut" }] })
+        // Staff see it in the admin (P3-29 follow-up).
+        const listed = (await api.get("/admin/booking/passes", admin)).data.passes
+        expect(listed.map((p: any) => [p.title, p.credits_left, p.credits_total, p.customer.email, typeof p.order_display_id])).toEqual([
+          ["Haircut 5-pack", 5, 5, "sok@example.com", "number"],
+        ])
         const days = (Date.parse(pass.expires_at) - Date.now()) / 86_400_000
         expect(days > 179 && days <= 180).toBe(true)
 

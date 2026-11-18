@@ -11,6 +11,7 @@ import { EVENT_TICKETS_TEMPLATE, eventTicketsEmail, type EventTicketsData } from
 import { BALANCE_TEMPLATE, balanceReminderEmail, type BalanceReminderData } from "../../lib/deposits"
 import { QUOTE_TEMPLATE, quoteEmail, type QuoteEmailData } from "../../lib/quotes"
 import { WAITLIST_TEMPLATE, waitlistEmail, type WaitlistEmailData } from "../../lib/waitlist"
+import { REVIEW_REQUEST_TEMPLATE, reviewRequestEmail, type ReviewRequestData } from "../../lib/reviews"
 import { BOOKING_MOVED_TEMPLATE, bookingMovedEmail, type BookingMovedEmailData } from "../../lib/booking-move"
 import { escapeHtml } from "@medusa-platform/medusa-core/lib/order-notification"
 
@@ -41,6 +42,10 @@ export function renderEmail(
   // A free time for someone on the waitlist (TASKS P3-29).
   if (template === WAITLIST_TEMPLATE && (data as WaitlistEmailData | null)?.times?.length) {
     return waitlistEmail(data as WaitlistEmailData, escapeHtml)
+  }
+  // Asking for a review after a booking (P3-29 follow-up).
+  if (template === REVIEW_REQUEST_TEMPLATE && (data as ReviewRequestData | null)?.service) {
+    return reviewRequestEmail(data as ReviewRequestData, escapeHtml)
   }
   return renderCoreEmail(template, data)
 }

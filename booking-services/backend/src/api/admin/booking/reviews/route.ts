@@ -7,7 +7,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data } = await query.graph({
     entity: "booking_review",
-    fields: ["id", "booking_id", "product_id", "rating", "comment", "author", "status", "created_at"],
+    fields: ["id", "booking_id", "product_id", "rating", "comment", "author", "status", "reply", "replied_at", "created_at"],
     pagination: { order: { created_at: "DESC" }, take: 200 },
   })
   const ids = [...new Set(data.map((r) => r.product_id))]

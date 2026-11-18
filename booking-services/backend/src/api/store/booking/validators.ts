@@ -93,6 +93,8 @@ export const PostRecurring = z.object({
   starts_at: instant,
   ends_at: instant,
   weeks: z.number().int().min(2).max(12),
+  // How often (P3-29 follow-up): every week (default), two weeks or month.
+  every: z.enum(["week", "2weeks", "month"]).optional(),
   address: z.string().max(300).nullish(),
   notes: z.string().max(1000).nullish(),
 })

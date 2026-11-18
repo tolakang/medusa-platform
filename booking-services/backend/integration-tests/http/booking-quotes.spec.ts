@@ -3,6 +3,8 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
 import jwt from "jsonwebtoken"
 import { QUOTE_ONLY_MESSAGE, QUOTE_TEMPLATE } from "../../src/lib/quotes"
+import { expireQuotesWorkflow } from "../../src/workflows/expire-quotes"
+import { updateProductsWorkflow } from "@medusajs/medusa/core-flows"
 import seed from "../../src/scripts/seed"
 import seedBookingDemo from "../../src/scripts/seed-booking-demo"
 
@@ -123,6 +125,63 @@ medusaIntegrationTestRunner({
           if (status !== "accepted") await new Promise((r) => setTimeout(r, 250))
         }
         expect(status).toBe("accepted")
+      })
+
+      it("marks a priced quote expired after its date (the hourly job)", async () => {
+        const sok = await customer("sok@example.com")
+        const id = (await ask(sok)).data.quote.id
+        await price(id)
+        const [quote] = (await api.get("/store/booking/quotes", sok)).data.quotes
+        expect((await expireQuotesWorkflow(getContainer()).run({ input: {} })).result).toEqual([])
+        const after = new Date(Date.parse(quote.valid_until) + 60_000).toISOString()
+        expect((await expireQuotesWorkflow(getContainer()).run({ input: { now: after } })).result).toEqual([id])
+        const listed = (await api.get("/admin/booking/quotes?status=expired", admin)).data.quotes
+        expect(listed.map((q: any) => [q.id, q.status])).toEqual([[id, "expired"]])
+      })
+
+      it("takes a deposit on a quoted price, and quotes a rental by its days", async () => {
+        // The move takes a 50% deposit.
+        const {
+          data: [mv],
+        } = await query().graph({ entity: "product", fields: ["id", "metadata"], filters: { handle: "full-house-move" } })
+        await updateProductsWorkflow(getContainer()).run({ input: { selector: { id: mv.id }, update: { metadata: { ...(mv.metadata ?? {}), deposit_percent: 50 } } } })
+        const sok = await customer("sok@example.com")
+        const id = (await ask(sok)).data.quote.id
+        await price(id, 180)
+        const cart = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
+        await api.post(`/store/booking/quotes/${id}/accept`, { cart_id: cart }, sok)
+        const {
+          data: { payment_collection },
+        } = await api.post("/store/payment-collections", { cart_id: cart }, sok)
+        const session = await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
+        expect(Number(session.data.payment_collection.amount)).toBe(90)
+
+        // A double room priced on request for two nights.
+        const {
+          data: [room],
+        } = await query().graph({
+          entity: "product",
+          fields: ["id", "metadata", "variants.id", "variants.title", "variants.booking_resources.id"],
+          filters: { handle: "guesthouse-room" },
+        })
+        await updateProductsWorkflow(getContainer()).run({ input: { selector: { id: room.id }, update: { metadata: { ...(room.metadata ?? {}), quote_only: true } } } })
+        const dbl = room.variants!.find((v) => v!.title === "Double room") as unknown as { id: string; booking_resources: { id: string }[] }
+        const asked = await api.post(
+          "/store/booking/quotes",
+          { variant_id: dbl.id, details: "Two nights for our guests, late arrival.", wished_starts_at: nine },
+          sok
+        )
+        const midnight = new Date(Date.parse(`${monday}T00:00:00+07:00`)).toISOString()
+        await api.post(
+          `/admin/booking/quotes/${asked.data.quote.id}`,
+          { amount: 45, currency_code: "usd", resource_id: dbl.booking_resources[0].id, starts_at: midnight, duration_minutes: 2 * 24 * 60 },
+          admin
+        )
+        const cart2 = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
+        const booked = await call(api.post(`/store/booking/quotes/${asked.data.quote.id}/accept`, { cart_id: cart2 }, sok))
+        expect(booked.status).toBe(200)
+        const line = (await api.get(`/store/carts/${cart2}`, sok)).data.cart.items[0]
+        expect([line.unit_price, line.metadata.booking_starts_at]).toEqual([45, midnight])
       })
 
       it("refuses a quote-only service without a quote, and a declined quote", async () => {

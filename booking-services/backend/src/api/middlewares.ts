@@ -285,6 +285,12 @@ export default defineMiddlewares({
       middlewares: [validateAndTransformBody(PostAdminQuote)],
     },
     {
+      // A signed-in customer cancels the rest of a weekly series (P3-29).
+      method: ['POST'],
+      matcher: '/store/booking/series/:id/cancel',
+      middlewares: [authenticate('customer', ['session', 'bearer'])],
+    },
+    {
       // A signed-in customer cancels their event package (TASKS P3-30).
       method: ['POST'],
       matcher: '/store/booking/package/:id/cancel',

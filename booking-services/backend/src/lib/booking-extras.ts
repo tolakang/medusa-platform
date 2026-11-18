@@ -49,3 +49,7 @@ export function extrasProblem(
   }
   return null
 }
+
+// A group of event tickets that extras can go with (P3-25 follow-up): the
+// ticket line's metadata carries it, each extra's EXTRA_FOR_KEY points at it.
+export const TICKET_GROUP_KEY = "booking_ticket_group"

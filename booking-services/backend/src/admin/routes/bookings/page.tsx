@@ -32,6 +32,7 @@ type Resource = {
   timezone: string
   is_active: boolean
   telegram_chat_id?: string | null
+  whole_days?: boolean
 }
 
 const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
@@ -125,6 +126,30 @@ const TelegramChat = ({ resource }: { resource: Resource }) => {
       {save.isSuccess && <Text size="xsmall" className="text-ui-fg-subtle">Saved.</Text>}
       {save.error && <Text size="xsmall" className="text-ui-fg-error">{errorText(save.error)}</Text>}
     </div>
+  )
+}
+
+// Booked by whole days, like a rental (TASKS P3-22 follow-up): no opening
+// hours, a booking takes whole local days. Changes how new bookings are made;
+// existing bookings keep their times.
+const WholeDays = ({ resource }: { resource: Resource }) => {
+  const queryClient = useQueryClient()
+  const toggle = useMutation({
+    mutationFn: (whole_days: boolean) =>
+      sdk.client.fetch(`/admin/booking/resources/${resource.id}`, { method: "POST", body: { whole_days } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["booking-resources"] }),
+  })
+  return (
+    <label className="flex items-center gap-x-2">
+      <input
+        type="checkbox"
+        checked={!!resource.whole_days}
+        disabled={toggle.isPending}
+        onChange={(e) => toggle.mutate(e.target.checked)}
+      />
+      <Text size="small">Booked by whole days (a rental: no hours, whole days only)</Text>
+      {toggle.error && <Text size="xsmall" className="text-ui-fg-error">{errorText(toggle.error)}</Text>}
+    </label>
   )
 }
 
@@ -261,6 +286,7 @@ const BookingsPage = () => {
           <Button variant="secondary" onClick={() => setDate(shiftDate(date, view, 1))}>Next</Button>
         </div>
         {resource && <TelegramChat resource={resource} />}
+        {resource && <WholeDays resource={resource} />}
         <Text size="xsmall" className="text-ui-fg-subtle">
           New and moved bookings on this calendar are sent to that chat (the person first messages the staff bot);
           without one, they go to the staff group with the calendar&apos;s name.

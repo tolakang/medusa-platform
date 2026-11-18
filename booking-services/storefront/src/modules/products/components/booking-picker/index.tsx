@@ -1,6 +1,6 @@
 "use client"
 
-import { addBookingToCart, addRecurringToCart, listExtras, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
+import { addBookingToCart, addRecurringToCart, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
 import {
   durationMinutes,
   formatSlotTime,
@@ -11,7 +11,6 @@ import {
   MAX_TRIP_HOURS,
   maxSeats,
   minHours,
-  offeredExtras,
   orderedServices,
   serviceChoiceLabel,
   tripPricing,
@@ -21,6 +20,7 @@ import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text, clx } from "@modules/common/components/ui"
 import JoinWaitlist from "@modules/products/components/join-waitlist"
+import ExtrasChooser, { chosenExtras } from "@modules/products/components/extras-chooser"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState, useTransition } from "react"
 
@@ -41,6 +41,7 @@ export default function BookingPicker({
   const [passId, setPassId] = useState("")
   // Every week (P3-29): 1 = once.
   const [weeks, setWeeks] = useState(1)
+  const [every, setEvery] = useState<"week" | "2weeks" | "month">("week")
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const services = useMemo(
@@ -50,8 +51,10 @@ export default function BookingPicker({
   const [variantId, setVariantId] = useState(services[0]?.id ?? "")
   const [date, setDate] = useState(() => localDate(null))
   const [slots, setSlots] = useState<Slot[]>([])
-  const [chosen, setChosen] = useState<Slot | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // The chosen time and any error belong to one service, day and length:
+  // they are kept with that key and read only while it's current, so a new
+  // day or service starts clean without resetting state in an effect.
+  const [picked, setPicked] = useState<{ key: string; slot: Slot | null; error: string | null }>({ key: "", slot: null, error: null })
   const [loading, startLoading] = useTransition()
   const [booking, startBooking] = useTransition()
   // A visit at the customer's place (kind B, P3-20): where and what.
@@ -78,14 +81,7 @@ export default function BookingPicker({
   const departure = isDepartureService(product)
   const [seats, setSeats] = useState(1)
   // Extras the service offers (P3-25), each with a quantity.
-  const [extras, setExtras] = useState<HttpTypes.StoreProduct[]>([])
   const [extraQty, setExtraQty] = useState<Record<string, number>>({})
-  const extraHandles = offeredExtras(product).join(",")
-  useEffect(() => {
-    if (extraHandles) {
-      listExtras(extraHandles.split(","), countryCode).then(setExtras)
-    }
-  }, [extraHandles, countryCode])
   const visitReady = trip ? tripReady : !visit || (address.trim().length >= 5 && problem.trim().length > 0)
 
   useEffect(() => {
@@ -94,16 +90,21 @@ export default function BookingPicker({
     }
   }, [trip, variantId])
 
+  const slotKey = `${variantId}|${date}|${tripMinutes}`
+  const chosen = picked.key === slotKey ? picked.slot : null
+  const error = picked.key === slotKey ? picked.error : null
+  const setChosen = (slot: Slot | null) => setPicked((p) => ({ key: slotKey, slot, error: p.key === slotKey ? p.error : null }))
+  const setError = (e: string | null) => setPicked((p) => ({ key: slotKey, slot: p.key === slotKey ? p.slot : null, error: e }))
+
   useEffect(() => {
     if (!variantId || !date || tripMinutes === null) {
       return
     }
-    setChosen(null)
-    setError(null)
+    const key = `${variantId}|${date}|${tripMinutes}`
     startLoading(async () => {
       const result = await listSlots(variantId, date, tripMinutes)
       setSlots(result.slots)
-      setError(result.error ?? null)
+      setPicked({ key, slot: null, error: result.error ?? null })
     })
   }, [variantId, date, tripMinutes])
 
@@ -119,6 +120,7 @@ export default function BookingPicker({
               variantId,
               slot: chosen,
               weeks,
+              every,
               ...(visit ? { address: address.trim(), notes: problem.trim() } : {}),
             })
           : await addBookingToCart({
@@ -135,9 +137,7 @@ export default function BookingPicker({
           : {}),
         ...(departure ? { seats } : {}),
         ...(passId ? { passId } : {}),
-        extras: Object.entries(extraQty)
-          .filter(([, q]) => q > 0)
-          .map(([variant_id, quantity]) => ({ variant_id, quantity })),
+        extras: chosenExtras(extraQty),
       })
       if (result.error) {
         setError(result.error)
@@ -348,52 +348,7 @@ export default function BookingPicker({
           </label>
         </>
       )}
-      {extras.length > 0 && (
-        <div className="flex flex-col gap-y-2" data-testid="booking-extras">
-          <Text className="txt-compact-small-plus">Extras</Text>
-          {extras.map((x) => {
-            const v = x.variants?.[0]
-            if (!v) return null
-            const q = extraQty[v.id] ?? 0
-            return (
-              <div key={x.id} className="flex items-center justify-between gap-2 border border-ui-border-base rounded-md px-3 py-2">
-                <span className="flex flex-col">
-                  <span className="txt-small-plus">{x.title}</span>
-                  <span className="txt-xsmall text-ui-fg-subtle">
-                    {v.calculated_price?.calculated_amount != null
-                      ? `${convertToLocale({ amount: v.calculated_price.calculated_amount, currency_code: v.calculated_price.currency_code ?? "usd" })} each`
-                      : ""}
-                    {x.description ? ` · ${x.description}` : ""}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label={`Fewer ${x.title}`}
-                    disabled={q === 0}
-                    onClick={() => setExtraQty({ ...extraQty, [v.id]: Math.max(q - 1, 0) })}
-                    className="border border-ui-border-base rounded-md w-8 h-8 disabled:opacity-40"
-                  >
-                    −
-                  </button>
-                  <span className="w-6 text-center txt-small" data-testid="extra-quantity">
-                    {q}
-                  </span>
-                  <button
-                    type="button"
-                    aria-label={`More ${x.title}`}
-                    disabled={q >= 20}
-                    onClick={() => setExtraQty({ ...extraQty, [v.id]: Math.min(q + 1, 20) })}
-                    className="border border-ui-border-base rounded-md w-8 h-8 disabled:opacity-40"
-                  >
-                    +
-                  </button>
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
+      <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />
       {error && (
         <Text className="txt-small text-ui-fg-error" data-testid="booking-error">
           {error}
@@ -409,7 +364,19 @@ export default function BookingPicker({
               if (e.target.checked) setPassId("")
             }}
           />
-          Repeat every week for
+          Repeat
+          <select
+            className="rounded-md border border-ui-border-base px-1"
+            value={every}
+            disabled={weeks === 1}
+            onChange={(e) => setEvery(e.target.value as "week" | "2weeks" | "month")}
+            aria-label="How often"
+          >
+            <option value="week">every week</option>
+            <option value="2weeks">every 2 weeks</option>
+            <option value="month">every month</option>
+          </select>
+          ×
           <select
             className="rounded-md border border-ui-border-base px-1"
             value={weeks > 1 ? weeks : 4}
@@ -419,7 +386,7 @@ export default function BookingPicker({
           >
             {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
               <option key={n} value={n}>
-                {n} weeks
+                {n} times
               </option>
             ))}
           </select>
@@ -438,7 +405,7 @@ export default function BookingPicker({
             ? trip
               ? "Add both addresses" + (trip === "zones" ? " and the areas" : "")
               : "Add the address and the job"
-            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}${weeks > 1 ? ` × ${weeks} weeks` : ""}`}
+            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}${weeks > 1 ? ` × ${weeks}` : ""}`}
       </Button>
       {depositPercent(product) !== null && (
         <Text className="txt-small text-ui-fg-subtle" data-testid="booking-deposit">

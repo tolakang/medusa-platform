@@ -16,6 +16,7 @@ import { isQuoteOnly, QUOTE_NOT_YOURS_MESSAGE, QUOTE_ONLY_MESSAGE, quoteBookable
 import { PASS_ITEM_KEY, PASS_NOT_FOUND_MESSAGE, PASS_SERVICE_MESSAGE, passProblem } from "../lib/passes"
 import { PACKAGE_ITEM_KEY } from "../lib/packages"
 import { bookingLineDetail, LINE_DETAIL_KEY } from "../lib/line-detail"
+import { seriesDiscount } from "../lib/recurring"
 import { EXTRA_FOR_KEY, EXTRA_NOT_OFFERED_MESSAGE, isExtraProduct, MAX_EXTRA_QUANTITY, offeredExtras } from "../lib/booking-extras"
 import { zonedTimeToUtc } from "../modules/booking/utils/slot"
 
@@ -307,7 +308,8 @@ const prepareBookingStep = createStep(
 
     const rental = rentalUnit(variant?.product)
     let rentalTimes: { starts_at: string; ends_at: string } | null = null
-    if (rental) {
+    // A quoted rental (P3-27 follow-up): the quote already set its days and price.
+    if (rental && !quoteTimes) {
       const units = rentalUnits(rental, input.start_date, input.end_date)
       if (units === null) {
         throw new MedusaError(MedusaError.Types.INVALID_DATA, RENTAL_DATES_MESSAGE)
@@ -362,6 +364,21 @@ const prepareBookingStep = createStep(
       }
       unit_price = 0
       passId = pass.id
+    }
+
+    // A series price (P3-29): Metadata series_discount_percent off each visit.
+    const discount = input.series_id ? seriesDiscount(variant?.product?.metadata as Record<string, unknown> | null) : null
+    if (discount && unit_price === null) {
+      const { data: priced } = (await query.graph({
+        entity: "product_variant",
+        fields: ["id", "calculated_price.calculated_amount"],
+        filters: { id: input.variant_id },
+        context: { calculated_price: QueryContext({ region_id: cart.region_id, currency_code: cart.currency_code }) },
+      })) as unknown as { data: { calculated_price?: { calculated_amount?: number | null } }[] }
+      const full = priced[0]?.calculated_price?.calculated_amount
+      if (full != null) {
+        unit_price = MathBN.convert(MathBN.div(MathBN.mult(full, 100 - discount), 100), 2).toNumber()
+      }
     }
 
     // A package piece: the package line carries the price (P3-30).

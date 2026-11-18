@@ -23,3 +23,21 @@ export function ratingSummary(ratings: number[]): { average: number | null; coun
   if (!ratings.length) return { average: null, count: 0 }
   return { average: Math.round((ratings.reduce((a, b) => a + b, 0) / ratings.length) * 10) / 10, count: ratings.length }
 }
+
+// Asking for a review (P3-29 follow-up): once per booking, from an hour to
+// two days after it ended.
+export const REVIEW_REQUEST_TEMPLATE = "booking-review-request"
+
+export type ReviewRequestData = { customer_name?: string | null; service: string; url?: string | null }
+
+export function reviewRequestEmail(data: ReviewRequestData, escape: (s: string) => string) {
+  const html = `<!doctype html>
+<html><body style="font-family:Arial,sans-serif;color:#111">
+<h2>How was it?</h2>
+<p>${data.customer_name ? `Hello ${escape(data.customer_name)},` : "Hello,"}</p>
+<p>Thank you for coming for <strong>${escape(data.service)}</strong>. A few words and a star rating help others choose${
+    data.url ? `: <a href="${escape(data.url)}">write a review</a>` : " (in your account, under Bookings)"
+  }.</p>
+</body></html>`
+  return { subject: `How was your ${data.service}?`, html }
+}
