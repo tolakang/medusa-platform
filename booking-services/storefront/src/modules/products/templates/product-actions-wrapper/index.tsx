@@ -2,7 +2,8 @@ import { listProducts } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
 import { retrieveCustomer } from "@lib/data/customer"
 import { listMyPasses } from "@lib/data/booking"
-import { isEventProduct, isExtraProduct, isQuoteOnly, isServiceProduct, rentalUnit } from "@lib/util/booking"
+import { isEventProduct, isExtraProduct, isPackageProduct, isQuoteOnly, isServiceProduct, rentalUnit } from "@lib/util/booking"
+import PackagePicker from "@modules/products/components/package-picker"
 import QuoteRequest from "@modules/products/components/quote-request"
 import BookingPicker from "@modules/products/components/booking-picker"
 import RentalPicker from "@modules/products/components/rental-picker"
@@ -32,6 +33,10 @@ export default async function ProductActionsWrapper({
   // An extra is added with a booking (TASKS P3-25), not on its own.
   if (isExtraProduct(product)) {
     return <p className="txt-small text-ui-fg-subtle">This is an extra: add it when you book the service it goes with.</p>
+  }
+  // An event package on one date (TASKS P3-30).
+  if (isPackageProduct(product)) {
+    return <PackagePicker product={product} />
   }
   // Priced on request (TASKS P3-27).
   if (isQuoteOnly(product)) {

@@ -470,3 +470,34 @@ export async function addRecurringToCart(input: {
   revalidateTag(await getCacheTag("carts"), { expire: 0 })
   return {}
 }
+
+// An event package on its date (TASKS P3-30): all pieces or none.
+export async function addPackageToCart(input: {
+  countryCode: string
+  variantId: string
+  date: string
+  address?: string
+  notes?: string
+}): Promise<{ error?: string }> {
+  const cart = await getOrSetCart(input.countryCode)
+  if (!cart) {
+    return { error: "Could not open your cart." }
+  }
+  try {
+    await sdk.client.fetch("/store/booking/package", {
+      method: "POST",
+      headers: await getAuthHeaders(),
+      body: {
+        cart_id: cart.id,
+        variant_id: input.variantId,
+        date: input.date,
+        ...(input.address ? { address: input.address } : {}),
+        ...(input.notes ? { notes: input.notes } : {}),
+      },
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "This package can't be booked on that date." }
+  }
+  revalidateTag(await getCacheTag("carts"), { expire: 0 })
+  return {}
+}

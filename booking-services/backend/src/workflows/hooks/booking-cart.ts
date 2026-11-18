@@ -22,6 +22,7 @@ import {
   isExtraProduct,
 } from "../../lib/booking-extras"
 import { PASS_EMPTY_MESSAGE, PASS_EXPIRED_MESSAGE, PASS_ITEM_KEY } from "../../lib/passes"
+import { PACKAGE_ALONE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE, PACKAGE_ITEM_KEY, packageComplete, packagePieces } from "../../lib/packages"
 import { BOOKING_MODULE } from "../../modules/booking"
 import type BookingModuleService from "../../modules/booking/service"
 
@@ -165,6 +166,46 @@ async function assertBookingItems(
   }
 }
 
+// Event packages (TASKS P3-30): a package product is only in a cart with its
+// event (POST /store/booking/package sets PACKAGE_ITEM_KEY on it); at
+// checkout each package has its line and every piece, so a package confirms
+// all its pieces or none, and pieces are never paid for without it.
+const packageIdOf = (item: CartItemInput) => {
+  const id = (item.metadata as Record<string, unknown> | null | undefined)?.[PACKAGE_ITEM_KEY]
+  return typeof id === "string" ? id : null
+}
+
+async function packageProducts(container: MedusaContainer, variantIds: string[]) {
+  if (!variantIds.length) return new Map<string, number>()
+  const { data } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
+    entity: "product_variant",
+    fields: ["id", "product.metadata"],
+    filters: { id: variantIds },
+  })
+  const pieces = new Map<string, number>()
+  for (const v of data) {
+    const p = packagePieces(v.product?.metadata as Record<string, unknown> | null)
+    if (p) pieces.set(v.id, p.length)
+  }
+  return pieces
+}
+
+async function assertPackages(container: MedusaContainer, items: CartItemInput[], checkout: boolean) {
+  const variants = [...new Set(items.map((i) => i.variant_id).filter(Boolean) as string[])]
+  const packages = await packageProducts(container, variants)
+  const lines: { package_id: string; is_package: boolean }[] = []
+  const want = new Map<string, number>()
+  for (const item of items) {
+    const isPackage = !!item.variant_id && packages.has(item.variant_id)
+    const id = packageIdOf(item)
+    if (isPackage && !id) refuse(PACKAGE_ALONE_MESSAGE)
+    if (!id) continue
+    lines.push({ package_id: id, is_package: isPackage })
+    if (isPackage) want.set(id, packages.get(item.variant_id!)!)
+  }
+  if (checkout && !packageComplete(lines, want)) refuse(PACKAGE_INCOMPLETE_MESSAGE)
+}
+
 // Adding to the cart: new items must be valid bookings (or not services),
 // and a booking can't be added twice.
 addToCartWorkflow.hooks.validate(async ({ input }, { container }) => {
@@ -179,6 +220,7 @@ addToCartWorkflow.hooks.validate(async ({ input }, { container }) => {
   }
   await assertBookingItems(container, input.cart_id, added, { checkout: false })
   await assertExtras(container, [...existing, ...added])
+  await assertPackages(container, added, false)
 })
 
 // Changing an item: a booking stays one place with its booked time.
@@ -194,6 +236,16 @@ updateLineItemInCartWorkflow.hooks.validate(async ({ input }, { container }) => 
   })
   if (problem) {
     refuse(problem)
+  }
+  // A package's line stays one, with its package (P3-30).
+  const pkg = packageIdOf(item)
+  if (
+    pkg &&
+    ((input.update?.quantity !== undefined && Number(input.update.quantity) !== Number(item.quantity)) ||
+      (input.update?.metadata !== undefined &&
+        (input.update.metadata as Record<string, unknown> | null)?.[PACKAGE_ITEM_KEY] !== pkg))
+  ) {
+    refuse(PACKAGE_INCOMPLETE_MESSAGE)
   }
   // An extra stays with its booking (P3-25).
   const update = input.update?.metadata as BookingItemMetadata
@@ -231,4 +283,5 @@ completeCartWorkflow.hooks.validate(async ({ input }, { container }) => {
   await assertBookingItems(container, input.id, items, { checkout: true })
   await assertExtras(container, items)
   await assertPassCredits(container, items)
+  await assertPackages(container, items, true)
 })

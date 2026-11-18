@@ -25,6 +25,10 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const booked = itemBooking(item)
+  // An event package (TASKS P3-30): its line and its pieces stay together.
+  const meta = (item.metadata ?? {}) as Record<string, unknown>
+  const packageId = typeof meta.booking_package_id === "string" ? meta.booking_package_id : null
+  const eventDate = typeof meta.booking_event_date === "string" ? meta.booking_event_date : null
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
@@ -72,6 +76,17 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {eventDate && (
+          <Text className="txt-small text-ui-fg-subtle" data-testid="product-package">
+            Event package on{" "}
+            {new Date(`${eventDate}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
+          </Text>
+        )}
+        {packageId && !eventDate && (
+          <Text className="txt-small text-ui-fg-subtle" data-testid="product-package-piece">
+            Part of your event package
+          </Text>
+        )}
         {extraFor(item) && (
           <Text className="txt-small text-ui-fg-subtle" data-testid="product-extra">
             Extra with your booking
@@ -98,7 +113,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           <div className="flex gap-2 items-center w-28">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             {/* A booking is one place (TASKS F-045): no quantity to change. */}
-            {!booked && (
+            {!booked && !packageId && (
             <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}

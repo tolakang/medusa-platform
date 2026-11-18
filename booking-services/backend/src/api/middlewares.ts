@@ -13,7 +13,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment, setDepositBeforePayment } from './booking-payment'
-import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostQuoteRequest, PostRecurring, PostReview, PostWaitlist } from './store/booking/validators'
+import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostPackage, PostQuoteRequest, PostRecurring, PostReview, PostWaitlist } from './store/booking/validators'
 import {
   PostAdminBookingProvider,
   PostAdminBookingResource,
@@ -283,6 +283,12 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/booking/quotes/:id',
       middlewares: [validateAndTransformBody(PostAdminQuote)],
+    },
+    {
+      // An event package on its date into the cart (TASKS P3-30).
+      method: ['POST'],
+      matcher: '/store/booking/package',
+      middlewares: [validateAndTransformBody(PostPackage)],
     },
     {
       // The same time every week into the cart (TASKS P3-29).

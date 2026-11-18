@@ -1,0 +1,61 @@
+// Event packages (TASKS P3-30, kind H): a product whose Metadata
+// `package_items` lists its pieces; the customer picks the event date and
+// every piece is booked together, or none. Pure parts, unit-tested.
+//
+// A piece: { sku, day?, time } for a time-slot service (day = days after the
+// event date, default 0; time = local "HH:MM"), or { sku, day?, days } for a
+// rental by whole days (days >= 1).
+
+export const PACKAGE_ITEM_KEY = "booking_package_id"
+export const PACKAGE_DATE_KEY = "booking_event_date"
+export const PACKAGE_NOT_MESSAGE = "This isn't an event package."
+export const PACKAGE_ALONE_MESSAGE = "Book this package with its event date."
+export const PACKAGE_INCOMPLETE_MESSAGE = "This package is missing some of its parts. Remove it and book it again."
+export const PACKAGE_DATE_MESSAGE = "Choose an event date from tomorrow on, at most a year ahead."
+
+export type PackagePiece = { sku: string; day: number; time?: string; days?: number }
+
+const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/
+
+export function packagePieces(meta: Record<string, unknown> | null | undefined): PackagePiece[] | null {
+  const raw = meta?.package_items
+  if (!Array.isArray(raw) || !raw.length || raw.length > 20) return null
+  const pieces: PackagePiece[] = []
+  for (const r of raw as Record<string, unknown>[]) {
+    const sku = typeof r?.sku === "string" ? r.sku.trim() : ""
+    const day = r?.day === undefined ? 0 : Number(r.day)
+    if (!sku || !Number.isInteger(day) || day < 0 || day > 30) return null
+    if (typeof r.time === "string" && hhmm.test(r.time)) {
+      pieces.push({ sku, day, time: r.time })
+    } else if (Number.isInteger(Number(r.days)) && Number(r.days) >= 1 && Number(r.days) <= 30) {
+      pieces.push({ sku, day, days: Number(r.days) })
+    } else {
+      return null
+    }
+  }
+  return pieces
+}
+
+export function addDays(date: string, n: number): string {
+  const d = new Date(`${date}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+// Tomorrow (in the shop's zone) up to a year ahead.
+export function eventDateOk(date: string, today: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date > today && date <= addDays(today, 365)
+}
+
+// A cart's package lines are whole: for each package id, the package line
+// and every piece it lists. `pieces` = the number the package's Metadata has.
+export function packageComplete(lines: { package_id: string; is_package: boolean }[], pieces: Map<string, number>): boolean {
+  const ids = new Set(lines.map((l) => l.package_id))
+  for (const id of ids) {
+    const mine = lines.filter((l) => l.package_id === id)
+    const head = mine.filter((l) => l.is_package).length
+    const want = pieces.get(id)
+    if (head !== 1 || want === undefined || mine.length - 1 !== want) return false
+  }
+  return true
+}
