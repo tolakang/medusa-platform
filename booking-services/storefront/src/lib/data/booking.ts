@@ -31,6 +31,8 @@ export type MyBooking = {
   seats?: number
   // A weekly series (P3-29).
   series_id?: string | null
+  // A piece of an event package (P3-30).
+  package_id?: string | null
   resource: { id?: string; name: string; timezone: string } | null
   order: { id: string; display_id: number | null } | null
   // The service booked, for changing the time (P3-28).
@@ -500,4 +502,16 @@ export async function addPackageToCart(input: {
   }
   revalidateTag(await getCacheTag("carts"), { expire: 0 })
   return {}
+}
+
+// Cancel a whole event package (TASKS P3-30).
+export async function cancelMyPackage(packageId: string): Promise<{ refund?: string; refunded_amount?: number; error?: string }> {
+  try {
+    return await sdk.client.fetch<{ refund: string; refunded_amount: number }>(`/store/booking/package/${packageId}/cancel`, {
+      method: "POST",
+      headers: await getAuthHeaders(),
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not cancel this package." }
+  }
 }

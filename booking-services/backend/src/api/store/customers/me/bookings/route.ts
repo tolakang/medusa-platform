@@ -19,6 +19,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "dropoff_address",
       "seats",
       "series_id",
+      "package_id",
       "hold_expires_at",
       "resource.id",
       "resource.name",

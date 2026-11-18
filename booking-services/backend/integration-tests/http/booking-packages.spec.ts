@@ -1,6 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
+import { capturePaymentWorkflow, createDefaultsWorkflow, createShippingProfilesWorkflow } from "@medusajs/medusa/core-flows"
+import { PACKAGE_PIECE_CANCEL_MESSAGE } from "../../src/workflows/cancel-booking"
 import jwt from "jsonwebtoken"
 import { PACKAGE_ALONE_MESSAGE, PACKAGE_INCOMPLETE_MESSAGE } from "../../src/lib/packages"
 import { zonedTimeToUtc } from "../../src/modules/booking/utils/slot"
@@ -138,6 +139,67 @@ medusaIntegrationTestRunner({
           await new Promise((res) => setTimeout(res, 250))
         }
         expect(rows.map((b) => b.status)).toEqual(["confirmed", "confirmed", "confirmed"])
+      })
+
+      // Book and pay the package on monday; returns its id, the order and payment.
+      const payPackage = async (who: any) => {
+        const cart = (await api.post("/store/carts", { region_id: regionId }, who)).data.cart.id
+        const r = await book(who, cart)
+        const {
+          data: { payment_collection },
+        } = await api.post("/store/payment-collections", { cart_id: cart }, who)
+        await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, who)
+        const done = await api.post(`/store/carts/${cart}/complete`, {}, who)
+        let rows: any[] = []
+        for (let i = 0; i < 40; i++) {
+          rows = (await query().graph({ entity: "booking", fields: ["id", "status"], filters: { package_id: r.data.package_id } })).data
+          if (rows.length === 3 && rows.every((b) => b.status === "confirmed")) break
+          await new Promise((res) => setTimeout(res, 250))
+        }
+        const {
+          data: [order],
+        } = await query().graph({ entity: "order", fields: ["payment_collections.payments.id"], filters: { id: done.data.order.id } })
+        return { id: r.data.package_id as string, pieces: rows.map((b) => b.id), payment: order.payment_collections![0]!.payments![0]!.id }
+      }
+
+      it("shows the event with its pieces in the admin, and cancels it whole with a refund", async () => {
+        const sok = await customer("sok@example.com")
+        const pkg = await payPackage(sok)
+        await capturePaymentWorkflow(getContainer()).run({ input: { payment_id: pkg.payment } })
+
+        const events = (await api.get("/admin/booking/events", admin)).data.events
+        expect(events.map((e: any) => [e.id, e.title, e.event_date, e.status, e.order.email, e.pieces.length])).toEqual([
+          [pkg.id, "Small wedding", monday, "confirmed", "sok@example.com", 3],
+        ])
+        // Soonest first: the tent from midnight, hair at 09:00, the table at 18:00.
+        expect(events[0].pieces.map((p: any) => [p.title, p.resource])).toEqual([
+          ["Wedding tent (50 guests)", "Wedding tent: 50 guests"],
+          ["Haircut (60 min)", "Sophea"],
+          ["Table reservation (6 people)", "Table for 6"],
+        ])
+
+        // The customer can't cancel one piece alone.
+        const one = await call(api.post("/store/booking/cancel", { booking_id: pkg.pieces[0] }, sok))
+        expect([one.status, one.data.message]).toEqual([400, PACKAGE_PIECE_CANCEL_MESSAGE])
+        // Another customer can't cancel it.
+        const dara = await customer("dara@example.com")
+        expect((await call(api.post(`/store/booking/package/${pkg.id}/cancel`, {}, dara))).status).toBe(404)
+
+        // A week ahead: all cancelled, the package's $150 refunded.
+        const done = await api.post(`/store/booking/package/${pkg.id}/cancel`, {}, sok)
+        expect(done.data).toEqual({ cancelled: 3, refund: "refunded", refunded_amount: 150 })
+        const { data: rows } = await query().graph({ entity: "booking", fields: ["status"], filters: { package_id: pkg.id } })
+        expect(rows.map((b) => b.status)).toEqual(["cancelled", "cancelled", "cancelled"])
+        expect((await call(api.post(`/admin/booking/events/${pkg.id}/cancel`, {}, admin))).status).toBe(404)
+      })
+
+      it("lets staff cancel an event from the admin", async () => {
+        const sok = await customer("sok@example.com")
+        const pkg = await payPackage(sok)
+        const done = await api.post(`/admin/booking/events/${pkg.id}/cancel`, {}, admin)
+        // Not captured yet: nothing to refund.
+        expect(done.data).toEqual({ cancelled: 3, refund: "not_captured", refunded_amount: 0 })
+        expect((await api.get("/admin/booking/events", admin)).data.events[0].status).toBe("cancelled")
       })
 
       it("adds nothing when a piece has no room that day, and says which", async () => {
