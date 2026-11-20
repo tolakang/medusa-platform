@@ -12,6 +12,7 @@ import { providerCommissionOnCancelWorkflow } from "./provider-commission"
 import { returnPassCreditStep } from "./booking-passes"
 import { cancelDecision } from "../lib/booking-cancel-policy"
 import { bookingIdOf } from "../lib/booking-cart-rules"
+import { EXTRA_FOR_KEY } from "../lib/booking-extras"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 
@@ -130,7 +131,12 @@ const planCancellationStep = createStep(
     const item = (order.items ?? []).find(
       (i) => bookingIdOf(i?.metadata as Record<string, unknown> | null) === booking.id
     )
-    const amount = num(item?.total as Money)
+    // The booking's line and the extras bought with it (P3-25): the extras
+    // don't happen without the booking (review finding).
+    const extras = (order.items ?? []).filter(
+      (i) => (i?.metadata as Record<string, unknown> | null)?.[EXTRA_FOR_KEY] === booking.id
+    )
+    const amount = num(item?.total as Money) + extras.reduce((s, i) => s + num(i?.total as Money), 0)
     // Captured minus already refunded, per payment; refund from the one with
     // the most left (an order normally has one).
     const payments = (order.payment_collections ?? [])
@@ -188,17 +194,6 @@ export const cancelBookingWorkflow = createWorkflow(
     const plan = planCancellationStep(input)
     const booking = markBookingCancelledStep(plan)
 
-    when("refund-cancelled-booking", plan, (p) => p.refund !== null).then(() => {
-      const refundInput = transform({ plan, input }, ({ plan, input }) => ({
-        payment_id: plan.refund!.payment_id,
-        amount: plan.refund!.amount,
-        idempotency_key: plan.refund!.idempotency_key,
-        note: plan.refund!.note,
-        created_by: input.created_by,
-      }))
-      refundPaymentWorkflow.runAsStep({ input: refundInput })
-    })
-
     // A booking paid with a pass gets its credit back within the policy
     // (TASKS P3-29); its order line is $0, so there's no money refund.
     returnPassCreditStep(
@@ -216,6 +211,19 @@ export const cancelBookingWorkflow = createWorkflow(
         booking_id: plan.booking_id,
         refunded_amount: plan.refund?.amount ?? 0,
       })),
+    })
+
+    // The refund runs last: money can't be rolled back, so every step that
+    // can fail comes before it (review finding).
+    when("refund-cancelled-booking", plan, (p) => p.refund !== null).then(() => {
+      const refundInput = transform({ plan, input }, ({ plan, input }) => ({
+        payment_id: plan.refund!.payment_id,
+        amount: plan.refund!.amount,
+        idempotency_key: plan.refund!.idempotency_key,
+        note: plan.refund!.note,
+        created_by: input.created_by,
+      }))
+      refundPaymentWorkflow.runAsStep({ input: refundInput })
     })
 
     const result = transform({ booking, plan }, ({ booking, plan }) => ({

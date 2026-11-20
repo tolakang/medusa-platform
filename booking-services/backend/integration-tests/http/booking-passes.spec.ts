@@ -220,6 +220,38 @@ medusaIntegrationTestRunner({
         expect(await creditsLeft(sok, 5)).toBe(5)
       })
 
+      it("never lets two orders spend the same last credit (review finding)", async () => {
+        const sok = await customer("sok@example.com")
+        const pass = await buyPass(sok)
+        await service().updateBookingPasses({ id: pass.id, credits_left: 1 })
+        const free = await slots()
+        // Two carts each pass their own check with the one credit...
+        const a = await bookWithPass(sok, pass.id, free[0])
+        const b = await bookWithPass(sok, pass.id, free[2])
+        expect([a.added.status, b.added.status]).toEqual([200, 200])
+        await checkout(sok, a.cart)
+        await checkout(sok, b.cart)
+        // ...but only one booking is paid by it: the other is refused at
+        // checkout (if the credit was taken by then) or cancelled after its
+        // order (if both checked out together); never confirmed for free.
+        let statuses: string[] = []
+        for (let i = 0; i < 40; i++) {
+          const ids = [a.added.data.booking.id, b.added.data.booking.id]
+          statuses = (await query().graph({ entity: "booking", fields: ["status"], filters: { id: ids } })).data.map((x) => x.status)
+          if (statuses.includes("confirmed") && !statuses.every((x) => x === "confirmed")) break
+          await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(statuses.filter((x) => x === "confirmed")).toHaveLength(1)
+        // The take itself is atomic: two at once on one credit, one wins.
+        await service().updateBookingPasses({ id: pass.id, credits_left: 1 })
+        const both = await Promise.all([
+          service().takePassCredits({ pass_id: pass.id, credits: 1 }),
+          service().takePassCredits({ pass_id: pass.id, credits: 1 }),
+        ])
+        expect(both.filter(Boolean)).toHaveLength(1)
+        expect((await api.get("/store/booking/passes", sok)).data.passes[0].credits_left).toBe(0)
+      })
+
       it("refuses someone else's pass, another service, and more bookings than credits", async () => {
         const sok = await customer("sok@example.com")
         const pass = await buyPass(sok)

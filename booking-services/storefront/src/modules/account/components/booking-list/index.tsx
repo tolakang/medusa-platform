@@ -18,7 +18,13 @@ const REFUND_TEXT: Record<string, string> = {
 // cutoff applies; the backend says when it's too late.
 function ChangeTime({ booking, onDone }: { booking: MyBooking; onDone: (notice: string) => void }) {
   const minutes = Math.round((Date.parse(booking.ends_at) - Date.parse(booking.starts_at)) / 60_000)
-  const [date, setDate] = useState(booking.starts_at.slice(0, 10))
+  // The booking's local day in its calendar's zone (review finding: the UTC
+  // day could be the day before).
+  const [date, setDate] = useState(() =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: booking.resource?.timezone ?? undefined, year: "numeric", month: "2-digit", day: "2-digit" }).format(
+      new Date(booking.starts_at)
+    )
+  )
   const [slots, setSlots] = useState<Slot[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
@@ -197,25 +203,37 @@ export default function BookingList({
                 </Button>
               )}
             {!canCancel && b.reviewed && <Text className="txt-small text-ui-fg-subtle">Reviewed</Text>}
-            {canCancel && b.series_id && b.status === "confirmed" && confirming !== b.id && (
-              <Button
-                variant="secondary"
-                isLoading={pending && busy === `series:${b.series_id}`}
-                data-testid="booking-cancel-series"
-                onClick={() => {
-                  setBusy(`series:${b.series_id}`)
-                  start(async () => {
-                    const r = await cancelMySeries(b.series_id!)
-                    setNotice(r.error ?? `Cancelled ${r.cancelled} visits of the series.`)
-                    setBusy(null)
-                    router.refresh()
-                  })
-                }}
-              >
+            {/* Cancel the rest of a series, after a "Yes" like every other
+                cancel (review finding: it fired on one click). */}
+            {canCancel && b.series_id && b.status === "confirmed" && confirming !== b.id && confirming !== `series:${b.id}` && (
+              <Button variant="secondary" data-testid="booking-cancel-series" onClick={() => setConfirming(`series:${b.id}`)}>
                 Cancel the rest
               </Button>
             )}
-            {canCancel && confirming !== b.id && (
+            {canCancel && b.series_id && confirming === `series:${b.id}` && (
+              <>
+                <Button variant="secondary" onClick={() => setConfirming(null)}>
+                  Keep them
+                </Button>
+                <Button
+                  isLoading={pending && busy === `series:${b.series_id}`}
+                  data-testid="booking-cancel-series-confirm"
+                  onClick={() => {
+                    setConfirming(null)
+                    setBusy(`series:${b.series_id}`)
+                    start(async () => {
+                      const r = await cancelMySeries(b.series_id!)
+                      setNotice(r.error ?? `Cancelled ${r.cancelled} visits of the series.`)
+                      setBusy(null)
+                      router.refresh()
+                    })
+                  }}
+                >
+                  Yes, cancel every visit not yet started
+                </Button>
+              </>
+            )}
+            {canCancel && confirming !== b.id && confirming !== `series:${b.id}` && (
               <Button
                 variant="secondary"
                 isLoading={pending && busy === b.id}

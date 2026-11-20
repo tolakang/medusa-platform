@@ -348,7 +348,9 @@ export default function BookingPicker({
           </label>
         </>
       )}
-      <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />
+      {/* A series is booked without extras (review finding: they were
+          dropped silently), so the list hides while Repeat is on. */}
+      {weeks === 1 && <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />}
       {error && (
         <Text className="txt-small text-ui-fg-error" data-testid="booking-error">
           {error}

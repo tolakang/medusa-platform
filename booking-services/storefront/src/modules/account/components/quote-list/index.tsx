@@ -13,8 +13,10 @@ const LABELS: Record<MyQuote["status"], string> = {
   declined: "Declined",
   expired: "Expired",
 }
-const when = (iso: string) =>
-  new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+// In the calendar's zone, so server and browser render the same (review
+// finding: a hydration mismatch, and times not in the shop's local time).
+const when = (iso: string, timeZone?: string | null) =>
+  new Date(iso).toLocaleString("en-GB", { timeZone: timeZone ?? undefined, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
 
 export default function QuoteList({ quotes }: { quotes: MyQuote[] }) {
   const { countryCode } = useParams() as { countryCode: string }
@@ -29,7 +31,9 @@ export default function QuoteList({ quotes }: { quotes: MyQuote[] }) {
     setBusy(id)
     const r = await fn()
     setBusy(null)
-    if (r?.error) setError((e) => ({ ...e, [id]: r.error! }))
+    // A new try clears the last error (review finding).
+    setError((e) => ({ ...e, [id]: r?.error ?? "" }))
+    if (r?.error) return
     else router.refresh()
   }
   return (
@@ -46,10 +50,10 @@ export default function QuoteList({ quotes }: { quotes: MyQuote[] }) {
           {q.status === "quoted" && q.amount !== null && q.starts_at && (
             <div className="mt-3 flex flex-col gap-y-2">
               <p className="txt-medium">
-                <strong>{convertToLocale({ amount: q.amount, currency_code: q.currency_code ?? "usd" })}</strong> · {when(q.starts_at)}
+                <strong>{convertToLocale({ amount: q.amount, currency_code: q.currency_code ?? "usd" })}</strong> · {when(q.starts_at, q.timezone)}
               </p>
               {q.reply && <p className="txt-small">{q.reply}</p>}
-              {q.valid_until && <p className="txt-small text-ui-fg-subtle">Valid until {new Date(q.valid_until).toLocaleDateString("en-GB")}</p>}
+              {q.valid_until && <p className="txt-small text-ui-fg-subtle">Valid until {new Date(q.valid_until).toLocaleDateString("en-GB", { timeZone: q.timezone ?? undefined })}</p>}
               <div className="flex gap-x-2">
                 <Button size="small" isLoading={busy === q.id} onClick={() => act(q.id, () => acceptQuote(countryCode, q.id))} data-testid="quote-accept">
                   Accept and book

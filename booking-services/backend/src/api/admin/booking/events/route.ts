@@ -1,5 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { PACKAGE_DATE_KEY, PACKAGE_ITEM_KEY } from "../../../../lib/packages"
 
 // GET /admin/booking/events?from=&to= (TASKS P3-30): event packages with a
@@ -9,6 +9,10 @@ import { PACKAGE_DATE_KEY, PACKAGE_ITEM_KEY } from "../../../../lib/packages"
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const from = typeof req.query.from === "string" ? new Date(req.query.from) : new Date()
   const to = typeof req.query.to === "string" ? new Date(req.query.to) : new Date(from.getTime() + 90 * 86_400_000)
+  // Valid dates, at most a year apart (review finding: the window was unbounded).
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from || to.getTime() - from.getTime() > 366 * 86_400_000) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, "from and to must be dates, from before to, at most a year apart.")
+  }
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data: pieces } = await query.graph({
     entity: "booking",

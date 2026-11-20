@@ -197,6 +197,34 @@ class BookingModuleService extends MedusaService({
     return (await this.checkSlot_(input, sharedContext)).available
   }
 
+  // Takes `credits` from a pass, all or nothing, with the pass row locked
+  // (SELECT ... FOR UPDATE), so two orders can't both spend its last credit
+  // (review finding). Returns false when it hasn't enough left.
+  @InjectManager()
+  async takePassCredits(
+    input: { pass_id: string; credits: number },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<boolean> {
+    return await this.takePassCredits_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async takePassCredits_(
+    input: { pass_id: string; credits: number },
+    @MedusaContext() sharedContext: Context<EntityManager> = {}
+  ): Promise<boolean> {
+    const rows = (await sharedContext.transactionManager!.execute(
+      "SELECT credits_left FROM booking_pass WHERE id = ? AND deleted_at IS NULL FOR UPDATE",
+      [input.pass_id]
+    )) as { credits_left: number }[]
+    const left = Number(rows[0]?.credits_left)
+    if (!rows.length || !(left >= input.credits)) {
+      return false
+    }
+    await this.updateBookingPasses({ id: input.pass_id, credits_left: left - input.credits }, sharedContext)
+    return true
+  }
+
   // Moves a booking to another time and/or resource (TASKS P3-28), with the
   // same lock and check as a new hold; the booking doesn't count against
   // itself. The 24-hour reminder is sent again for the new time.

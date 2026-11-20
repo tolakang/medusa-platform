@@ -1,6 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { createDefaultsWorkflow, createShippingProfilesWorkflow, updateProductsWorkflow } from "@medusajs/medusa/core-flows"
+import { capturePaymentWorkflow, createDefaultsWorkflow, createShippingProfilesWorkflow, updateProductsWorkflow } from "@medusajs/medusa/core-flows"
 import { BALANCE_METADATA_KEY, BALANCE_TEMPLATE } from "../../src/lib/deposits"
 import seed from "../../src/scripts/seed"
 import seedBookingDemo from "../../src/scripts/seed-booking-demo"
@@ -181,6 +181,52 @@ medusaIntegrationTestRunner({
         expect(Number(tickets.session.amount)).toBe(Math.round(total * 0.4 * 100) / 100)
         const balance = await balanceOf(tickets.done.data.order.id)
         expect([Number(balance.amount), balance.metadata.due_at]).toEqual([Math.round(total * 0.6 * 100) / 100, null])
+      })
+
+      it("refunds a cancelled booking's extras with it (review finding)", async () => {
+        // The truck without its deposit, with one extra helper ($10).
+        const {
+          data: [mv],
+        } = await query().graph({ entity: "product", fields: ["id", "metadata"], filters: { handle: "moving-truck" } })
+        // Product metadata merges, so the key is set to null to drop it.
+        await updateProductsWorkflow(getContainer()).run({
+          input: { selector: { id: mv.id }, update: { metadata: { ...(mv.metadata ?? {}), deposit_percent: null } } },
+        })
+        const {
+          data: [helper],
+        } = await query().graph({ entity: "product", fields: ["variants.id"], filters: { handle: "extra-helper" } })
+        let bookingId = ""
+        const { done } = await checkout(async (cart) => {
+          const t = await truck()
+          const r = await api.post(
+            "/store/booking/cart",
+            {
+              cart_id: cart,
+              variant_id: t.id,
+              resource_id: t.resource,
+              starts_at: at(0),
+              ends_at: at(120),
+              address: "#12, St 310, Siem Reap",
+              dropoff_address: "Wat Bo village, house 8",
+              hours: 2,
+              extras: [{ variant_id: helper.variants![0]!.id, quantity: 1 }],
+            },
+            store
+          )
+          bookingId = r.data.booking.id
+        })
+        expect(done.data.order.total).toBe(40)
+        const {
+          data: [order],
+        } = await query().graph({ entity: "order", fields: ["payment_collections.payments.id"], filters: { id: done.data.order.id } })
+        await capturePaymentWorkflow(getContainer()).run({ input: { payment_id: order.payment_collections![0]!.payments![0]!.id } })
+        for (let i = 0; i < 40; i++) {
+          const { data } = await query().graph({ entity: "booking", fields: ["status"], filters: { id: bookingId } })
+          if (data[0]?.status === "confirmed") break
+          await new Promise((r) => setTimeout(r, 250))
+        }
+        const cancelled = await api.post(`/admin/booking/bookings/${bookingId}/cancel`, {}, admin)
+        expect(cancelled.data.refunded_amount).toBe(40)
       })
 
       it("reminds once before the booking, and not after the balance is paid", async () => {

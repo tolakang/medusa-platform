@@ -63,8 +63,13 @@ const MoveForm = ({
   }).formatToParts(new Date(booking.starts_at))
   const part = (t: string) => local.find((p) => p.type === t)?.value ?? ""
   const [to, setTo] = useState(current.id)
-  const [day, setDay] = useState(`${part("year")}-${part("month")}-${part("day")}`)
-  const [time, setTime] = useState(`${part("hour")}:${part("minute")}`)
+  const startDay = `${part("year")}-${part("month")}-${part("day")}`
+  const startTime = `${part("hour")}:${part("minute")}`
+  const [day, setDay] = useState(startDay)
+  const [time, setTime] = useState(startTime)
+  // Only a changed day or time is sent (review finding: a calendar in another
+  // zone would otherwise shift the booking by the zones' difference).
+  const timeChanged = day !== startDay || time !== startTime
   const target = resources.find((r) => r.id === to) ?? current
   const move = useMutation({
     mutationFn: () =>
@@ -72,7 +77,7 @@ const MoveForm = ({
         method: "POST",
         body: {
           ...(to !== current.id ? { resource_id: to } : {}),
-          starts_at: walkInTimes(day, time, 1, target.timezone).starts_at,
+          ...(timeChanged ? { starts_at: walkInTimes(day, time, 1, target.timezone).starts_at } : {}),
         },
       }),
     onSuccess: onDone,
@@ -90,6 +95,7 @@ const MoveForm = ({
       <div className="flex gap-2">
         <Input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
         <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        <Text size="xsmall" className="self-center text-ui-fg-subtle">{target.timezone}</Text>
       </div>
       <div className="flex gap-2">
         <Button size="small" isLoading={move.isPending} onClick={() => move.mutate()}>Move</Button>
