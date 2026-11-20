@@ -11,13 +11,20 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   if (!productId) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "product_id is required.")
   }
-  const { data } = await req.scope.resolve(ContainerRegistrationKeys.QUERY).graph({
-    entity: "booking_review",
-    fields: ["id", "rating", "comment", "author", "reply", "replied_at", "created_at"],
-    filters: { product_id: productId, status: "published" },
-  })
-  const sorted = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  res.json({ ...ratingSummary(data.map((r) => r.rating)), reviews: sorted.slice(0, 50) })
+  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const filters = { product_id: productId, status: "published" as const }
+  // The newest 50 from the database; the average over every rating (only
+  // the rating column), so a much-reviewed service stays fast.
+  const [{ data: latest }, { data: ratings }] = await Promise.all([
+    query.graph({
+      entity: "booking_review",
+      fields: ["id", "rating", "comment", "author", "reply", "replied_at", "created_at"],
+      filters,
+      pagination: { order: { created_at: "DESC" }, take: 50 },
+    }),
+    query.graph({ entity: "booking_review", fields: ["rating"], filters }),
+  ])
+  res.json({ ...ratingSummary(ratings.map((r) => r.rating)), reviews: latest })
 }
 
 // POST /store/booking/reviews { booking_id, rating, comment? }: the signed-in

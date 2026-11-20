@@ -2,6 +2,7 @@ import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Badge, Button, Container, Heading, Input, Label, Select, Text, Textarea } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
+import { walkInTimes } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
 
 // Quotes (TASKS P3-27): requests for quote-only services. Staff pick a
@@ -27,20 +28,26 @@ type Quote = {
   reply: string | null
   valid_until: string | null
 }
-type Resource = { id: string; name: string; product_variants?: { id: string }[] }
+type Resource = { id: string; name: string; timezone: string; product_variants?: { id: string }[] }
 
 const COLORS = { requested: "orange", quoted: "blue", accepted: "green", declined: "grey", expired: "grey" } as const
 const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
-// A datetime-local value in the browser's zone.
-const local = (iso: string) => {
-  const d = new Date(iso)
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+// A datetime-local value in the calendar's zone (review finding: the
+// browser's zone moved quotes by hours for staff elsewhere).
+const local = (iso: string, timeZone: string) => {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+      .formatToParts(new Date(iso))
+      .map((x) => [x.type, x.value])
+  )
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
 }
 
 const PriceForm = ({ quote, resources, onDone }: { quote: Quote; resources: Resource[]; onDone: () => void }) => {
   const offered = resources.filter((r) => (r.product_variants ?? []).some((v) => v.id === quote.variant_id))
   const [resourceId, setResourceId] = useState(quote.resource_id ?? offered[0]?.id ?? "")
-  const [startsAt, setStartsAt] = useState(local(quote.starts_at ?? quote.wished_starts_at))
+  const zoneOf = (id: string) => resources.find((r) => r.id === id)?.timezone ?? "UTC"
+  const [startsAt, setStartsAt] = useState(local(quote.starts_at ?? quote.wished_starts_at, zoneOf(resourceId)))
   const [hours, setHours] = useState("4")
   const [amount, setAmount] = useState(quote.amount?.toString() ?? "")
   const [reply, setReply] = useState(quote.reply ?? "")
@@ -52,7 +59,7 @@ const PriceForm = ({ quote, resources, onDone }: { quote: Quote; resources: Reso
           amount: Number(amount),
           currency_code: quote.currency_code ?? "usd",
           resource_id: resourceId,
-          starts_at: new Date(startsAt).toISOString(),
+          starts_at: walkInTimes(startsAt.slice(0, 10), startsAt.slice(11, 16), 1, zoneOf(resourceId)).starts_at,
           duration_minutes: Math.round(Number(hours) * 60),
           reply: reply.trim() || null,
         },
@@ -86,6 +93,7 @@ const PriceForm = ({ quote, resources, onDone }: { quote: Quote; resources: Reso
       <div className="flex flex-col gap-y-1">
         <Label size="small">Starts</Label>
         <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+        <Text size="xsmall" className="text-ui-fg-subtle">{zoneOf(resourceId)}</Text>
       </div>
       <div className="flex flex-col gap-y-1">
         <Label size="small">Hours</Label>

@@ -3,13 +3,14 @@ import { createStep, createWorkflow, StepResponse, transform, when, WorkflowResp
 import { emitEventStep, refundPaymentWorkflow } from "@medusajs/medusa/core-flows"
 import { cancelDecision } from "../lib/booking-cancel-policy"
 import { PACKAGE_ITEM_KEY } from "../lib/packages"
+import { EXTRA_FOR_KEY } from "../lib/booking-extras"
 import { BOOKING_MODULE } from "../modules/booking"
 import type BookingModuleService from "../modules/booking/service"
 import type { RefundOutcome } from "./cancel-booking"
 
 // TASKS P3-30: cancel an event package, all its pieces together. The policy
 // (BOOKING_CANCEL_HOURS, P3-08) is read from the earliest piece: cancelled in
-// time, the package line's amount is refunded from the order's captured
+// time, the package's lines still on are refunded from the order's captured
 // payment (the pieces are $0). The refund runs last, with an idempotency key.
 
 export const PACKAGE_NOT_FOUND_MESSAGE = "This event package was not found."
@@ -72,8 +73,15 @@ const planPackageCancelStep = createStep(
       ],
       filters: { id: orderId },
     })
+    // The package line and the pieces still on (an à la carte piece staff
+    // already cancelled was refunded then: review finding), with their extras.
+    const live = new Set(pieces.map((p) => p.id))
     const amount = (order?.items ?? [])
-      .filter((i) => (i?.metadata as Record<string, unknown> | null)?.[PACKAGE_ITEM_KEY] === input.package_id)
+      .filter((i) => {
+        const m = (i?.metadata ?? {}) as Record<string, unknown>
+        if (m[PACKAGE_ITEM_KEY] === input.package_id) return !m.booking_id || live.has(m.booking_id as string)
+        return typeof m[EXTRA_FOR_KEY] === "string" && live.has(m[EXTRA_FOR_KEY] as string)
+      })
       .reduce((s, i) => s + num(i?.total as Money), 0)
     const payment = (order?.payment_collections ?? [])
       .flatMap((c) => c?.payments ?? [])
@@ -122,6 +130,15 @@ export const cancelPackageWorkflow = createWorkflow(
   function (input: { package_id: string; customer_id?: string; created_by?: string; by?: "customer" | "staff" }) {
     const plan = planPackageCancelStep(input)
     const cancelled = markPackageCancelledStep(plan)
+    emitEventStep({
+      eventName: PACKAGE_CANCELLED_EVENT,
+      data: transform({ plan, input }, ({ plan, input }): PackageCancelledData => ({
+        package_id: plan.package_id,
+        by: input.by ?? (input.customer_id ? "customer" : "staff"),
+        refunded_amount: plan.refund?.amount ?? 0,
+      })),
+    })
+    // The refund runs last (review finding): nothing after it can fail.
     when("refund-cancelled-package", plan, (p) => p.refund !== null).then(() => {
       refundPaymentWorkflow.runAsStep({
         input: transform({ plan, input }, ({ plan, input }) => ({
@@ -132,14 +149,6 @@ export const cancelPackageWorkflow = createWorkflow(
           created_by: input.created_by,
         })),
       })
-    })
-    emitEventStep({
-      eventName: PACKAGE_CANCELLED_EVENT,
-      data: transform({ plan, input }, ({ plan, input }): PackageCancelledData => ({
-        package_id: plan.package_id,
-        by: input.by ?? (input.customer_id ? "customer" : "staff"),
-        refunded_amount: plan.refund?.amount ?? 0,
-      })),
     })
     return new WorkflowResponse(
       transform({ plan, cancelled }, ({ plan, cancelled }) => ({

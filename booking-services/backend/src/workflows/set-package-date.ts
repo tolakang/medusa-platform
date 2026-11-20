@@ -1,5 +1,5 @@
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
-import { createStep, createWorkflow, StepResponse, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
+import { createStep, createWorkflow, StepResponse, transform, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
 import { PACKAGE_DATE_KEY, PACKAGE_ITEM_KEY } from "../lib/packages"
 import { notifyPackageChangedWorkflow } from "./notify-package-changed"
 
@@ -36,6 +36,14 @@ const setPackageDateStep = createStep(
 
 export const setPackageDateWorkflow = createWorkflow("set-package-date", function (input: { package_id: string; date: string }) {
   const previous = setPackageDateStep(input)
-  notifyPackageChangedWorkflow.runAsStep({ input: { package_id: input.package_id, kind: "moved", new_date: input.date } })
+  // The email says the old date (the step returns it) and the new one.
+  notifyPackageChangedWorkflow.runAsStep({
+    input: transform({ previous, input }, ({ previous, input }) => ({
+      package_id: input.package_id,
+      kind: "moved" as const,
+      new_date: input.date,
+      old_date: previous || null,
+    })),
+  })
   return new WorkflowResponse(previous)
 })

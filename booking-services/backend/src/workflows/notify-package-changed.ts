@@ -6,7 +6,14 @@ import { PACKAGE_CHANGED_TEMPLATE, type PackageChangedData } from "../lib/packag
 
 // TASKS P3-30 follow-up: one email to the customer when staff cancel or move
 // their event package (title and date from the order's package line).
-type Input = { package_id: string; kind: "cancelled" | "moved"; new_date?: string | null; refunded_amount?: number | null }
+type Input = {
+  package_id: string
+  kind: "cancelled" | "moved"
+  new_date?: string | null
+  // The date before a move (the line already has the new one by then).
+  old_date?: string | null
+  refunded_amount?: number | null
+}
 type Notice = { to: string; channel: string; template: string; data: PackageChangedData; idempotency_key: string }
 
 const buildPackageNoticeStep = createStep("build-package-notice", async (input: Input, { container }) => {
@@ -24,7 +31,7 @@ const buildPackageNoticeStep = createStep("build-package-notice", async (input: 
     const m = (i?.metadata ?? {}) as Record<string, unknown>
     return m[PACKAGE_ITEM_KEY] === input.package_id && !m.booking_id
   })
-  const eventDate = ((head?.metadata ?? {}) as Record<string, unknown>)[PACKAGE_DATE_KEY]
+  const eventDate = input.old_date ?? ((head?.metadata ?? {}) as Record<string, unknown>)[PACKAGE_DATE_KEY]
   if (typeof eventDate !== "string") return new StepResponse([] as Notice[])
   const name = [order.customer?.first_name, order.customer?.last_name].filter(Boolean).join(" ")
   return new StepResponse<Notice[]>([

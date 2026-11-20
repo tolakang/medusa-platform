@@ -33,7 +33,8 @@ export type MoveBookingInput = {
   ends_at?: string | null
 }
 
-type Before = { id: string; resource_id: string; starts_at: Date; ends_at: Date }
+// The undo also restores the reminder flag the move cleared (review finding).
+type Before = { id: string; resource_id: string; starts_at: Date; ends_at: Date; reminder_sent_at: Date | null }
 
 const moveBookingStep = createStep(
   "move-booking",
@@ -44,7 +45,7 @@ const moveBookingStep = createStep(
       data: [booking],
     } = await query.graph({
       entity: "booking",
-      fields: ["id", "status", "starts_at", "ends_at", "customer_id", "resource.id", "resource.product_variants.id"],
+      fields: ["id", "status", "starts_at", "ends_at", "reminder_sent_at", "customer_id", "resource.id", "resource.product_variants.id"],
       filters: { id: input.booking_id },
     })
     if (!booking || (input.customer_id !== undefined && booking.customer_id !== input.customer_id)) {
@@ -85,6 +86,7 @@ const moveBookingStep = createStep(
       resource_id: booking.resource!.id,
       starts_at: new Date(booking.starts_at),
       ends_at: new Date(booking.ends_at),
+      reminder_sent_at: booking.reminder_sent_at ? new Date(booking.reminder_sent_at) : null,
     }
     const moved = await service.moveBooking({ id: booking.id, resource_id: resourceId, starts_at: startsAt, ends_at: endsAt, now })
     return new StepResponse({ moved, before }, before)

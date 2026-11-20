@@ -22,7 +22,10 @@ const dueReviewRequestsStep = createStep("due-review-requests", async (input: { 
   })
   const paid = ended.filter((b) => b.order?.email)
   if (!paid.length) return new StepResponse([] as Notice[])
-  const keys = paid.map((b) => `booking_review_request_${b.id}`)
+  // Once per order (review finding: the key was per booking, so a series
+  // got one a week): keyed by the order.
+  const keyOf = (orderId: string) => `booking_review_request_order_${orderId}`
+  const keys = [...new Set(paid.map((b) => keyOf(b.order!.id)))]
   const [{ data: sent }, { data: reviewed }, { data: customers }] = await Promise.all([
     query.graph({ entity: "notification", fields: ["idempotency_key"], filters: { idempotency_key: keys } }),
     query.graph({ entity: "booking_review", fields: ["booking_id"], filters: { booking_id: paid.map((b) => b.id) } }),
@@ -32,13 +35,17 @@ const dueReviewRequestsStep = createStep("due-review-requests", async (input: { 
       filters: { id: [...new Set(paid.map((b) => b.customer_id).filter(Boolean) as string[])] },
     }),
   ])
-  const done = new Set([...sent.map((n) => n.idempotency_key), ...reviewed.map((r) => `booking_review_request_${r.booking_id}`)])
+  const reviewedBookings = new Set(reviewed.map((r) => r.booking_id))
+  const done = new Set([
+    ...sent.map((n) => n.idempotency_key),
+    ...paid.filter((b) => reviewedBookings.has(b.id)).map((b) => keyOf(b.order!.id)),
+  ])
   const shop = process.env.STOREFRONT_URL?.replace(/\/+$/, "")
   const notices: Notice[] = []
   // One email per order, for its first booking that ended.
   const seenOrders = new Set<string>()
   for (const b of paid) {
-    const key = `booking_review_request_${b.id}`
+    const key = keyOf(b.order!.id)
     if (done.has(key) || seenOrders.has(b.order!.id)) continue
     seenOrders.add(b.order!.id)
     const item = (b.order?.items ?? []).find((i) => (i?.metadata as Record<string, unknown> | null)?.booking_id === b.id)

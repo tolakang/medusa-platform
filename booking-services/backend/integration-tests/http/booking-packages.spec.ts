@@ -264,8 +264,43 @@ medusaIntegrationTestRunner({
           if (!mails.length) await new Promise((r) => setTimeout(r, 250))
         }
         await new Promise((r) => setTimeout(r, 1000))
-        expect(mails.map((m) => [m.data.kind, m.data.new_date])).toEqual([["moved", next]])
+        // It says the old date and the new one (review finding: both were new).
+        expect(mails.map((m) => [m.data.kind, m.data.event_date, m.data.new_date])).toEqual([["moved", monday, next]])
         expect((await query().graph({ entity: "notification", fields: ["id"], filters: { template: "booking-moved" } })).data).toEqual([])
+      })
+
+      it("moves a two-day event one day later, its own pieces not in the way (review finding)", async () => {
+        const sok = await customer("sok@example.com")
+        const {
+          data: [channel],
+        } = await query().graph({ entity: "sales_channel", fields: ["id"] })
+        const { result } = await createProductsWorkflow(getContainer()).run({
+          input: {
+            products: [
+              {
+                title: "Two-day tent",
+                handle: "two-day-tent",
+                status: "published" as never,
+                metadata: { package_items: [{ sku: "TENT-50", day: 0, days: 1 }, { sku: "TENT-50", day: 1, days: 1 }] },
+                options: [{ title: "Package", values: ["Two days"] }],
+                sales_channels: [{ id: channel.id }],
+                variants: [{ title: "Two days", sku: "PACKAGE-TENT-2", manage_inventory: false, options: { Package: "Two days" }, prices: [{ amount: 100, currency_code: "usd" }] }],
+              },
+            ],
+          },
+        })
+        // Only one 50-guest tent, so each day's piece blocks the next day.
+        const {
+          data: [tent],
+        } = await query().graph({ entity: "product_variant", fields: ["booking_resources.id"], filters: { sku: "TENT-50" } })
+        await service().updateBookingResources({ id: (tent as any).booking_resources[0].id, capacity: 1 })
+        const cart = (await api.post("/store/carts", { region_id: regionId }, sok)).data.cart.id
+        const booked = await call(api.post("/store/booking/package", { cart_id: cart, variant_id: result[0].variants[0].id, date: monday }, sok))
+        expect(booked.status).toBe(200)
+        const moved = await call(api.post(`/admin/booking/events/${booked.data.package_id}/move`, { date: addDays(monday, 1) }, admin))
+        expect([moved.status, moved.data.moved]).toEqual([200, 2])
+        // A bad window is refused, not a crash.
+        expect((await call(api.get("/admin/booking/events?from=nope", admin))).status).toBe(400)
       })
 
       it("lets staff cancel an event from the admin", async () => {
@@ -313,6 +348,24 @@ medusaIntegrationTestRunner({
         await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
         const done = await api.post(`/store/carts/${cart}/complete`, {}, sok)
         expect([done.data.type, done.data.order.total]).toEqual(["order", 20])
+
+        // Staff cancel the table ($5 refunded), then the customer the rest:
+        // only the hair's $15 more (review finding: it refunded $20 again).
+        const {
+          data: [order],
+        } = await query().graph({ entity: "order", fields: ["payment_collections.payments.id"], filters: { id: done.data.order.id } })
+        await capturePaymentWorkflow(getContainer()).run({ input: { payment_id: order.payment_collections![0]!.payments![0]!.id } })
+        let pieces: any[] = []
+        for (let i = 0; i < 40; i++) {
+          pieces = (await query().graph({ entity: "booking", fields: ["id", "status", "resource.name"], filters: { package_id: head.metadata.booking_package_id } })).data
+          if (pieces.length === 2 && pieces.every((p) => p.status === "confirmed")) break
+          await new Promise((r) => setTimeout(r, 250))
+        }
+        const table = pieces.find((p) => p.resource?.name === "Table for 6")
+        const staffCancel = await api.post(`/admin/booking/bookings/${table.id}/cancel`, {}, admin)
+        expect(staffCancel.data.refunded_amount).toBe(5)
+        const rest = await api.post(`/store/booking/package/${head.metadata.booking_package_id}/cancel`, {}, sok)
+        expect([rest.data.cancelled, rest.data.refunded_amount]).toEqual([1, 15])
       })
 
       it("takes departure seats and a trip by the hour as pieces (P3-30 follow-up)", async () => {

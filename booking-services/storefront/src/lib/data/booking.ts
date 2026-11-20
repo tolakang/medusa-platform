@@ -273,6 +273,8 @@ export type MyQuote = {
   ends_at: string | null
   reply: string | null
   valid_until: string | null
+  // The calendar's (or shop's) time zone.
+  timezone?: string | null
 }
 
 export async function listMyQuotes(): Promise<MyQuote[] | null> {
@@ -564,22 +566,35 @@ export async function addTicketsToCart(input: {
   }
   const headers = await getAuthHeaders()
   const group = `tkt_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
+  // Lines this call added, taken back out if a later one fails (review
+  // finding: tickets could stay without their extras).
+  const added: string[] = []
+  const lineOf = (c: { cart: HttpTypes.StoreCart }, variantId: string, key: string, value: string) =>
+    c.cart.items?.find((i) => i.variant_id === variantId && (i.metadata as Record<string, unknown> | null)?.[key] === value)?.id
   try {
-    await sdk.store.cart.createLineItem(
+    const first = await sdk.store.cart.createLineItem(
       cart.id,
-      { variant_id: input.variantId, quantity: input.quantity, ...(input.extras?.length ? { metadata: { booking_ticket_group: group } } : {}) },
+      { variant_id: input.variantId, quantity: input.quantity, metadata: { booking_ticket_group: group } },
       {},
       headers
     )
+    const ticketLine = lineOf(first, input.variantId, "booking_ticket_group", group)
+    if (ticketLine) added.push(ticketLine)
     for (const x of input.extras ?? []) {
-      await sdk.store.cart.createLineItem(
+      const next = await sdk.store.cart.createLineItem(
         cart.id,
         { variant_id: x.variant_id, quantity: x.quantity, metadata: { booking_extra_for: group, line_detail: "With your tickets" } },
         {},
         headers
       )
+      const extraLine = lineOf(next, x.variant_id, "booking_extra_for", group)
+      if (extraLine) added.push(extraLine)
     }
   } catch (e) {
+    for (const id of added.reverse()) {
+      await sdk.store.cart.deleteLineItem(cart.id, id, {}, headers).catch(() => undefined)
+    }
+    revalidateTag(await getCacheTag("carts"), { expire: 0 })
     return { error: (e as { message?: string })?.message ?? "These tickets can't be added." }
   }
   revalidateTag(await getCacheTag("carts"), { expire: 0 })

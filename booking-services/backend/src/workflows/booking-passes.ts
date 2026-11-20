@@ -69,17 +69,29 @@ const takePassCreditsStep = createStep(
     const { order } = await loadOrder(container, input.order_id)
     const booking = service(container)
     const taken: { use_id: string; pass_id: string; credits: number }[] = []
+    const unpaid: string[] = []
     for (const item of order?.items ?? []) {
       const passId = item.metadata?.[PASS_ITEM_KEY]
       const bookingId = item.metadata?.booking_id
       if (typeof passId !== "string" || typeof bookingId !== "string") continue
       if ((await booking.listBookingPassUses({ booking_id: bookingId })).length) continue
       const credits = passCreditsOf(item.metadata)
-      const [pass] = await booking.listBookingPasses({ id: passId })
-      if (!pass || pass.credits_left < credits) continue
-      await booking.updateBookingPasses({ id: pass.id, credits_left: pass.credits_left - credits })
-      const use = await booking.createBookingPassUses({ pass_id: pass.id, booking_id: bookingId, credits })
-      taken.push({ use_id: use.id, pass_id: pass.id, credits })
+      // Atomic: the pass row is locked while its credits are taken.
+      if (!(await booking.takePassCredits({ pass_id: passId, credits }))) {
+        // Another order spent the last credits meanwhile: this $0 booking
+        // isn't paid, so it is cancelled instead of kept for free (review
+        // finding), and the shop is told in the log.
+        unpaid.push(bookingId)
+        continue
+      }
+      const use = await booking.createBookingPassUses({ pass_id: passId, booking_id: bookingId, credits })
+      taken.push({ use_id: use.id, pass_id: passId, credits })
+    }
+    if (unpaid.length) {
+      await booking.updateBookings(unpaid.map((id) => ({ id, status: "cancelled" as const, hold_expires_at: null })))
+      ;(container.resolve(ContainerRegistrationKeys.LOGGER) as { warn: (m: string) => void }).warn(
+        `Pass bookings cancelled, the pass had no credits left: ${unpaid.join(", ")} (order ${input.order_id}).`
+      )
     }
     return new StepResponse(taken.length, taken)
   },

@@ -3,6 +3,7 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createDefaultsWorkflow, createShippingProfilesWorkflow, updateProductsWorkflow } from "@medusajs/medusa/core-flows"
 import jwt from "jsonwebtoken"
 import { RECURRING_SERVICE_MESSAGE } from "../../src/lib/recurring"
+import { sendReviewRequestsWorkflow } from "../../src/workflows/send-review-requests"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import seed from "../../src/scripts/seed"
@@ -132,6 +133,23 @@ medusaIntegrationTestRunner({
         await api.post(`/store/payment-collections/${payment_collection.id}/payment-sessions`, { provider_id: "pp_system_default" }, sok)
         const done = await api.post(`/store/carts/${cart}/complete`, {}, sok)
         expect([done.data.type, done.data.order.total]).toEqual(["order", 32])
+
+        // One review request for the whole series, not one a week (review
+        // finding): two of its visits ended yesterday, the job runs twice.
+        let ids: string[] = []
+        for (let i = 0; i < 40; i++) {
+          const { data } = await query().graph({ entity: "booking", fields: ["id", "status"], filters: { series_id: r.data.series_id } })
+          ids = data.filter((b) => b.status === "confirmed").map((b) => b.id)
+          if (ids.length === 4) break
+          await new Promise((res) => setTimeout(res, 250))
+        }
+        for (const [n, id] of ids.slice(0, 2).entries()) {
+          const s0 = new Date(Date.now() - (30 - n) * 3600_000)
+          await getContainer().resolve<any>(BOOKING_MODULE).updateBookings({ id, starts_at: s0, ends_at: new Date(s0.getTime() + 30 * 60_000) })
+        }
+        const first = (await sendReviewRequestsWorkflow(getContainer()).run({ input: {} })).result
+        const second = (await sendReviewRequestsWorkflow(getContainer()).run({ input: {} })).result
+        expect([first.length, second.length]).toEqual([1, 0])
       })
 
       it("adds nothing when a week is taken, and says which", async () => {

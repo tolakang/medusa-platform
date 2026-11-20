@@ -56,11 +56,11 @@ export default function PackagePicker({ product }: { product: HttpTypes.StorePro
       </label>
       <label className="flex flex-col gap-y-1 txt-small">
         Event address (if a piece comes to you)
-        <input className={field} value={address} onChange={(e) => setAddress(e.target.value)} />
+        <input className={field} maxLength={300} value={address} onChange={(e) => setAddress(e.target.value)} />
       </label>
       <label className="flex flex-col gap-y-1 txt-small">
         Notes for the shop
-        <textarea className={field} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <textarea className={field} rows={2} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       {error && (
         <Text className="txt-small text-ui-fg-error" data-testid="package-error">
