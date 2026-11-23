@@ -316,6 +316,33 @@ medusaIntegrationTestRunner({
         )
         expect(other.headers["access-control-allow-origin"]).toBeUndefined()
       })
+
+      it("copies a reset link for a vendor sign-in, and checks the password rule", async () => {
+        const { created } = await signUp("lina@crafts.test", { name: "Lina Crafts" })
+        const vendorId = created.data.vendor.id
+        const adminId = created.data.vendor_admin.id
+        const res = await call(api.post(`/admin/vendors/${vendorId}/admins/${adminId}/reset-link`, {}, admin))
+        expect(res.status).toBe(200)
+        const link = new URL(res.data.link)
+        expect(link.origin + link.pathname).toBe(`${PORTAL}/reset-password`)
+        // Another vendor's id doesn't reach this sign-in.
+        const other = await signUp("sok@crafts.test", { name: "Sok Crafts" })
+        expect(
+          (await call(api.post(`/admin/vendors/${other.created.data.vendor.id}/admins/${adminId}/reset-link`, {}, admin)))
+            .status
+        ).toBe(404)
+
+        const token = link.searchParams.get("token")!
+        const short = await call(
+          api.post("/auth/vendor/emailpass/update", { email: "lina@crafts.test", password: "short" }, bearer(token))
+        )
+        expect(short.status).toBe(400)
+        const ok = await call(
+          api.post("/auth/vendor/emailpass/update", { email: "lina@crafts.test", password: "new-vendor-pass-1" }, bearer(token))
+        )
+        expect(ok.status).toBe(200)
+        expect(typeof (await login("lina@crafts.test", "new-vendor-pass-1"))).toBe("string")
+      })
     })
   },
 })

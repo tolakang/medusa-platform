@@ -175,6 +175,13 @@ export default defineMiddlewares({
       middlewares: [requireStrongPassword],
     },
     {
+      // The same password rule when a vendor sets a new one with a reset
+      // link (design critique, 2026-11-23).
+      method: ['POST'],
+      matcher: '/auth/vendor/emailpass/update',
+      middlewares: [requireStrongPassword],
+    },
+    {
       // REVIEW_FIXES B17: the same password rule when an admin sets a new one.
       method: ['POST'],
       matcher: '/auth/user/emailpass/update',

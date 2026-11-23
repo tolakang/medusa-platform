@@ -86,9 +86,14 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {mode === "login" && (
+          <a href="/forgot-password" className="mt-4 block py-2 text-center text-sm text-ui-fg-interactive">
+            Forgot password?
+          </a>
+        )}
         <button
           type="button"
-          className="mt-4 w-full text-center text-sm text-ui-fg-interactive"
+          className="mt-2 w-full py-2 text-center text-sm text-ui-fg-interactive"
           onClick={() => setMode(mode === "login" ? "signup" : "login")}
         >
           {mode === "login" ? "New vendor? Open a shop" : "Back to sign in"}

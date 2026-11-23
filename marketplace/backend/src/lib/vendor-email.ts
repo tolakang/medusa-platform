@@ -11,7 +11,7 @@ export const VENDOR_ACTOR_METADATA = { actor: "vendor" }
 // VENDOR_PORTAL_URL, or the first VENDOR_CORS origin (the portal's origin, as
 // for the admin).
 export function vendorPortalLink(
-  page: "verify-account",
+  page: "verify-account" | "reset-password",
   params: Record<string, string>,
   env: NodeJS.ProcessEnv = process.env
 ): string | null {
