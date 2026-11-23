@@ -122,3 +122,13 @@ export type PostAdminReviewType = z.infer<typeof PostAdminReview>
 // Move a whole event package (TASKS P3-30 follow-up).
 export const PostAdminEventMove = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD") })
 export type PostAdminEventMoveType = z.infer<typeof PostAdminEventMove>
+
+// Change a paid rental's dates or a trip's hours (owner, 2026-11-23).
+export const PostAdminBookingChange = z
+  .object({
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    hours: z.number().int().min(1).max(24).optional(),
+  })
+  .refine((v) => (v.start_date && v.end_date) || v.hours, { message: "Give the new dates, or the hours." })
+export type PostAdminBookingChangeType = z.infer<typeof PostAdminBookingChange>

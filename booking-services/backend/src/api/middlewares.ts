@@ -28,6 +28,7 @@ import {
   PostAdminBookingMove,
   PostAdminReview,
   PostAdminEventMove,
+  PostAdminBookingChange,
 } from './admin/booking/validators'
 import { providerCors, requireProvider } from './provider-auth'
 import {
@@ -271,6 +272,12 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/booking/events/:id/move',
       middlewares: [validateAndTransformBody(PostAdminEventMove)],
+    },
+    {
+      // Change a paid rental's dates or a trip's hours (owner, 2026-11-23).
+      method: ['POST'],
+      matcher: '/admin/booking/bookings/:id/change',
+      middlewares: [validateAndTransformBody(PostAdminBookingChange)],
     },
     {
       method: ['POST'],
