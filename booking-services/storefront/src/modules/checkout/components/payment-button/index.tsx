@@ -75,7 +75,7 @@ const StripePaymentButton = ({
   const onPaymentCompleted = async () => {
     await placeOrder()
       .catch((err) => {
-        setErrorMessage(err.message)
+        setErrorMessage(paymentError(err))
       })
       .finally(() => {
         setSubmitting(false)
@@ -178,7 +178,7 @@ const ManualTestPaymentButton = ({ notReady, label }: { notReady: boolean; label
   const onPaymentCompleted = async () => {
     await placeOrder()
       .catch((err) => {
-        setErrorMessage(err.message)
+        setErrorMessage(paymentError(err))
       })
       .finally(() => {
         setSubmitting(false)
@@ -253,7 +253,7 @@ const PaywayPaymentButton = ({
           throw placeErr
         }
       }
-      setErrorMessage(err instanceof Error ? err.message : String(err))
+      setErrorMessage(paymentError(err))
       setSubmitting(false)
     }
   }
@@ -278,3 +278,12 @@ const PaywayPaymentButton = ({
 }
 
 export default PaymentButton
+
+// A failed payment in plain words, keeping the provider's reason when there
+// is a readable one (design critique, 2026-11-23). Production hides server
+// action messages behind a generic Next.js text, so that one is dropped.
+function paymentError(err: unknown): string {
+  const reason = err instanceof Error ? err.message : String(err ?? "")
+  const base = "The payment didn't go through. Your cart is saved: try again or choose another payment method."
+  return !reason || /Server Components render|digest/i.test(reason) ? base : `${base} (${reason})`
+}

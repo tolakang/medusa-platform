@@ -1,3 +1,4 @@
+import { SHOP_NAME } from "@lib/shop"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
@@ -25,7 +26,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     notFound()
   }
   return {
-    title: `${shop.vendor.name} | Medusa Store`,
+    title: `${shop.vendor.name} | ${SHOP_NAME}`,
     description: `Products from ${shop.vendor.name}`,
   }
 }

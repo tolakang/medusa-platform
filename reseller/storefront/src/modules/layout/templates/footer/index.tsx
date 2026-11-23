@@ -1,3 +1,4 @@
+import { SHOP_NAME } from "@lib/shop"
 import { listCategories } from "@lib/data/categories";
 import { listCollections } from "@lib/data/collections";
 import { Text, clx } from "@modules/common/components/ui";
@@ -20,7 +21,7 @@ export default async function Footer() {
               href="/"
               className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
             >
-              Medusa Store
+              {SHOP_NAME}
             </LocalizedClientLink>
           </div>
           <div className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
@@ -147,7 +148,7 @@ export default async function Footer() {
         </div>
         <div className="flex w-full mb-16 justify-between text-ui-fg-muted">
           <Text className="txt-compact-small">
-            © {new Date().getFullYear()} Medusa Store. All rights reserved.
+            © {new Date().getFullYear()} {SHOP_NAME}. All rights reserved.
           </Text>
           <MedusaCTA />
         </div>

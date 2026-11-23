@@ -1,3 +1,4 @@
+import { SHOP_NAME } from "@/lib/shop"
 import { getCollectionByHandle, listCollections } from "@/lib/data/collections"
 import { listRegions } from "@/lib/data/regions"
 import CollectionTemplate from "@/modules/collections/templates"
@@ -27,7 +28,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const metadata = {
-    title: `${collection.title} | Medusa Store`,
+    title: `${collection.title} | ${SHOP_NAME}`,
     description: `${collection.title} collection`,
   } as Metadata
 

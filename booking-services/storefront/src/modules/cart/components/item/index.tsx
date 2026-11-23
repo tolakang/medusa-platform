@@ -117,7 +117,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
             <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              className="w-14 h-10 p-4"
+              className="w-16 h-11 p-4"
               data-testid="product-select-button"
             >
               {/* TODO: Update this with the v2 way of managing inventory */}
@@ -132,9 +132,6 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
                 )
               )}
 
-              <option value={1} key={1}>
-                1
-              </option>
             </CartItemSelect>
             )}
             {updating && <Spinner />}

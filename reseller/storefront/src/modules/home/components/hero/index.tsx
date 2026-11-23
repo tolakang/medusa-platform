@@ -1,3 +1,4 @@
+import { SHOP_NAME } from "@lib/shop"
 import { Github } from "@medusajs/icons";
 import { Button, Heading } from "@modules/common/components/ui";
 const Hero = () => {
@@ -9,13 +10,13 @@ const Hero = () => {
             level="h1"
             className="text-3xl leading-10 text-ui-fg-base font-normal"
           >
-            Ecommerce Starter Template
+            {SHOP_NAME}
           </Heading>
           <Heading
             level="h2"
             className="text-3xl leading-10 text-ui-fg-subtle font-normal"
           >
-            Powered by Medusa and Next.js
+            Browse the shop and order online.
           </Heading>
         </span>
         <a href="https://github.com/medusajs/dtc-starter" target="_blank">

@@ -56,6 +56,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             type={inputType}
             name={name}
+            id={props.id ?? name}
             placeholder=" "
             required={required}
             className={clx(
