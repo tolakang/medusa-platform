@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Input, Select, Table, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { errorText, STATUS_COLOR } from "../../lib/marketplace"
@@ -32,11 +32,36 @@ const VendorsPage = () => {
         query: status === "all" ? {} : { status },
       }),
   })
+  const prompt = usePrompt()
   const update = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown>; done: string }) =>
       sdk.client.fetch(`/admin/vendors/${id}`, { method: "POST", body }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["marketplace-vendors"] }),
+    onSuccess: (_, { id, done }) => {
+      toast.success(done)
+      setRates(({ [id]: _saved, ...rest }) => rest)
+      queryClient.invalidateQueries({ queryKey: ["marketplace-vendors"] })
+    },
+    onError: (e) => toast.error(errorText(e)),
   })
+  const busyId = update.isPending ? update.variables?.id : undefined
+  // Suspending closes the vendor's shop and signs them out, so it asks first.
+  const suspend = async (v: Vendor) => {
+    const ok = await prompt({
+      title: `Suspend ${v.name}?`,
+      description: "Their products stop selling and their team is signed out of the vendor portal. You can reactivate them later.",
+      variant: "danger",
+      confirmText: "Suspend",
+      cancelText: "Back",
+    })
+    if (ok) update.mutate({ id: v.id, body: { status: "suspended" }, done: `${v.name} suspended` })
+  }
+  /** "" = the marketplace default; otherwise 0 to 100. */
+  const rateValue = (raw: string) => {
+    const t = raw.trim()
+    if (t === "") return null
+    const n = Number(t)
+    return Number.isFinite(n) && n >= 0 && n <= 100 ? n : undefined
+  }
 
   return (
     <Container className="flex flex-col gap-y-4">
@@ -44,8 +69,8 @@ const VendorsPage = () => {
         <div>
           <Heading>Vendors</Heading>
           <Text className="text-ui-fg-subtle">
-            New vendors wait here until you approve them. Commission: empty = the marketplace
-            default (MARKETPLACE_DEFAULT_COMMISSION_RATE).
+            New vendors wait here until you approve them. Commission is a percentage from 0 to 100;
+            leave it empty to use the marketplace's default rate.
           </Text>
         </div>
         <Select value={status} onValueChange={setStatus}>
@@ -59,7 +84,6 @@ const VendorsPage = () => {
         </Select>
       </div>
       {error && <Text className="text-ui-fg-error">{errorText(error)}</Text>}
-      {update.error && <Text className="text-ui-fg-error">{errorText(update.error)}</Text>}
       {isLoading ? (
         <Text>Loading…</Text>
       ) : !data?.vendors.length ? (
@@ -81,7 +105,7 @@ const VendorsPage = () => {
                 <Table.Cell>
                   <div className="flex flex-col">
                     <Text size="small" weight="plus">{v.name}</Text>
-                    <Text size="small" className="text-ui-fg-subtle">{v.handle} · {v.email}</Text>
+                    <Text size="small" className="text-ui-fg-subtle">{v.email} · shop address: {v.handle}</Text>
                   </div>
                 </Table.Cell>
                 <Table.Cell>
@@ -94,8 +118,14 @@ const VendorsPage = () => {
                   <div className="flex items-center gap-2">
                     <Input
                       size="small"
-                      className="w-20"
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.1"
+                      className="w-24"
                       placeholder="default"
+                      aria-label={`Commission % for ${v.name}`}
+                      aria-invalid={rates[v.id] !== undefined && rateValue(rates[v.id]) === undefined}
                       value={rates[v.id] ?? (v.commission_rate === null ? "" : String(v.commission_rate))}
                       onChange={(e) => setRates((r) => ({ ...r, [v.id]: e.target.value }))}
                     />
@@ -103,13 +133,16 @@ const VendorsPage = () => {
                       <Button
                         size="small"
                         variant="secondary"
-                        isLoading={update.isPending}
-                        onClick={() =>
+                        disabled={!!busyId || rateValue(rates[v.id]) === undefined}
+                        isLoading={busyId === v.id && "commission_rate" in (update.variables?.body ?? {})}
+                        onClick={() => {
+                          const rate = rateValue(rates[v.id])
                           update.mutate({
                             id: v.id,
-                            body: { commission_rate: rates[v.id].trim() === "" ? null : Number(rates[v.id]) },
+                            body: { commission_rate: rate },
+                            done: `${v.name}: commission ${rate === null ? "set to the default" : `${rate}%`}`,
                           })
-                        }
+                        }}
                       >
                         Save
                       </Button>
@@ -120,8 +153,11 @@ const VendorsPage = () => {
                   {v.status !== "active" && (
                     <Button
                       size="small"
-                      isLoading={update.isPending}
-                      onClick={() => update.mutate({ id: v.id, body: { status: "active" } })}
+                      disabled={!!busyId}
+                      isLoading={busyId === v.id && update.variables?.body.status === "active"}
+                      onClick={() =>
+                        update.mutate({ id: v.id, body: { status: "active" }, done: `${v.name} ${v.status === "pending" ? "approved" : "reactivated"}` })
+                      }
                     >
                       {v.status === "pending" ? "Approve" : "Reactivate"}
                     </Button>
@@ -131,8 +167,9 @@ const VendorsPage = () => {
                       size="small"
                       variant="danger"
                       className="ml-2"
-                      isLoading={update.isPending}
-                      onClick={() => update.mutate({ id: v.id, body: { status: "suspended" } })}
+                      disabled={!!busyId}
+                      isLoading={busyId === v.id && update.variables?.body.status === "suspended"}
+                      onClick={() => suspend(v)}
                     >
                       Suspend
                     </Button>

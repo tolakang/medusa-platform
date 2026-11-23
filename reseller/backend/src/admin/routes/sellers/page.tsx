@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Input, Table, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Label, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -42,14 +42,25 @@ const changes = (seller: Seller, draft: Draft) => {
     const domain = draft.domain.trim().toLowerCase()
     body.domain = domain === "" ? null : domain
   }
-  if (draft.rate !== undefined) {
-    const rate = draft.rate.trim()
-    body.commission_rate = rate === "" ? null : Number(rate)
-  }
+  if (draft.rate !== undefined) body.commission_rate = rateValue(draft.rate)
   if (body.domain === seller.domain) delete body.domain
   if (body.commission_rate === seller.commission_rate) delete body.commission_rate
   return body
 }
+
+/** "" = the shop's default; otherwise 0 to 100; undefined = not a valid rate. */
+const rateValue = (raw: string) => {
+  const t = raw.trim()
+  if (t === "") return null
+  const n = Number(t)
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : undefined
+}
+
+const copy = (text: string, what: string) =>
+  navigator.clipboard.writeText(text).then(
+    () => toast.success(`${what} copied`),
+    () => toast.error("Couldn't copy. Select it and copy by hand.")
+  )
 
 const EMPTY_INVITE = { name: "", handle: "", email: "", domain: "", rate: "" }
 
@@ -66,17 +77,32 @@ const SellersPage = () => {
   })
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["reseller-sellers"] })
 
+  const prompt = usePrompt()
   const update = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown>; done: string }) =>
       sdk.client.fetch(`/admin/sellers/${id}`, { method: "POST", body }),
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { id, done }) => {
+      toast.success(done)
       setDrafts((d) => {
         const { [id]: _done, ...rest } = d
         return rest
       })
       refresh()
     },
+    onError: (e) => toast.error(errorText(e)),
   })
+  const busyId = update.isPending ? update.variables?.id : undefined
+  // Suspending signs the seller out at once, so it asks first.
+  const suspend = async (s: Seller) => {
+    const ok = await prompt({
+      title: `Suspend ${s.name}?`,
+      description: "Their shop stops showing, their orders stop earning commission and they're signed out of the seller portal at once. You can reactivate them later.",
+      variant: "danger",
+      confirmText: "Suspend",
+      cancelText: "Back",
+    })
+    if (ok) update.mutate({ id: s.id, body: { status: "suspended" }, done: `${s.name} suspended` })
+  }
 
   const create = useMutation({
     mutationFn: () =>
@@ -87,15 +113,17 @@ const SellersPage = () => {
           handle: invite.handle.trim(),
           email: invite.email.trim(),
           domain: invite.domain.trim() === "" ? null : invite.domain.trim().toLowerCase(),
-          commission_rate: invite.rate.trim() === "" ? null : Number(invite.rate),
+          commission_rate: rateValue(invite.rate),
           status: "active",
         },
       }),
     onSuccess: ({ seller, invite_code }) => {
+      toast.success(`${seller.name} invited`)
       setInvited({ name: seller.name, code: invite_code })
       setInvite(EMPTY_INVITE)
       refresh()
     },
+    onError: (e) => toast.error(errorText(e)),
   })
 
   const sellers = [...(data?.sellers ?? [])].sort(
@@ -111,65 +139,95 @@ const SellersPage = () => {
           <Heading>Invite a seller</Heading>
           <Text className="text-ui-fg-subtle">
             The seller is active at once. Give them the invite code: they set their password with
-            it in the seller portal. Domain: the host of their shop, such as shop.example.com (add
-            it to STORE_CORS too). Commission: empty = the shop's default
-            (RESELLER_DEFAULT_COMMISSION_RATE).
+            it in the seller portal. Their shop's domain (such as shop.example.com) also has to be
+            allowed by your developer before it works. Leave commission empty for the shop's
+            default rate.
           </Text>
         </div>
         <form
-          className="grid grid-cols-1 gap-2 md:grid-cols-6"
+          className="grid grid-cols-1 items-end gap-2 md:grid-cols-6"
           onSubmit={(e) => {
             e.preventDefault()
-            setInvited(null)
             create.mutate()
           }}
         >
-          <Input
-            size="small"
-            placeholder="Name"
-            value={invite.name}
-            onChange={(e) => setInvite((i) => ({ ...i, name: e.target.value }))}
-          />
-          <Input
-            size="small"
-            placeholder="handle (e.g. lina-shop)"
-            value={invite.handle}
-            onChange={(e) => setInvite((i) => ({ ...i, handle: e.target.value }))}
-          />
-          <Input
-            size="small"
-            type="email"
-            placeholder="Email (their sign-in)"
-            value={invite.email}
-            onChange={(e) => setInvite((i) => ({ ...i, email: e.target.value }))}
-          />
-          <Input
-            size="small"
-            placeholder="Domain (optional)"
-            value={invite.domain}
-            onChange={(e) => setInvite((i) => ({ ...i, domain: e.target.value }))}
-          />
-          <Input
-            size="small"
-            placeholder="Commission % (default)"
-            value={invite.rate}
-            onChange={(e) => setInvite((i) => ({ ...i, rate: e.target.value }))}
-          />
+          <div className="flex flex-col gap-1">
+            <Label size="small" htmlFor="invite-name">Name</Label>
+            <Input
+              id="invite-name"
+              size="small"
+              placeholder="Lina Shop"
+              value={invite.name}
+              onChange={(e) => setInvite((i) => ({ ...i, name: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label size="small" htmlFor="invite-handle">Shop address</Label>
+            <Input
+              id="invite-handle"
+              size="small"
+              placeholder="lina-shop"
+              value={invite.handle}
+              onChange={(e) => setInvite((i) => ({ ...i, handle: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label size="small" htmlFor="invite-email">Email (their sign-in)</Label>
+            <Input
+              id="invite-email"
+              size="small"
+              type="email"
+              placeholder="lina@example.com"
+              value={invite.email}
+              onChange={(e) => setInvite((i) => ({ ...i, email: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label size="small" htmlFor="invite-domain">Domain (optional)</Label>
+            <Input
+              id="invite-domain"
+              size="small"
+              placeholder="shop.example.com"
+              value={invite.domain}
+              onChange={(e) => setInvite((i) => ({ ...i, domain: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label size="small" htmlFor="invite-rate">Commission % (optional)</Label>
+            <Input
+              id="invite-rate"
+              size="small"
+              type="number"
+              min={0}
+              max={100}
+              step="0.1"
+              placeholder="default"
+              value={invite.rate}
+              onChange={(e) => setInvite((i) => ({ ...i, rate: e.target.value }))}
+            />
+          </div>
           <Button
             size="small"
             type="submit"
-            disabled={!invite.name.trim() || !invite.handle.trim() || !invite.email.trim()}
+            disabled={!invite.name.trim() || !invite.handle.trim() || !invite.email.trim() || rateValue(invite.rate) === undefined}
             isLoading={create.isPending}
           >
             Invite
           </Button>
         </form>
-        {create.error && <Text className="text-ui-fg-error">{errorText(create.error)}</Text>}
         {invited && (
-          <Text>
-            {invited.name} is invited. Invite code:{" "}
-            <span className="font-mono font-semibold">{invited.code}</span>
-          </Text>
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-ui-border-base bg-ui-bg-subtle px-3 py-2">
+            <Text>
+              {invited.name} is invited. Invite code:{" "}
+              <span className="font-mono font-semibold">{invited.code}</span>
+            </Text>
+            <Button size="small" variant="secondary" type="button" onClick={() => copy(invited.code, "Invite code")}>
+              Copy code
+            </Button>
+            <Button size="small" variant="transparent" type="button" onClick={() => setInvited(null)}>
+              Done
+            </Button>
+          </div>
         )}
       </Container>
 
@@ -182,7 +240,6 @@ const SellersPage = () => {
           </Text>
         </div>
         {error && <Text className="text-ui-fg-error">{errorText(error)}</Text>}
-        {update.error && <Text className="text-ui-fg-error">{errorText(update.error)}</Text>}
         {isLoading ? (
           <Text>Loading…</Text>
         ) : !sellers.length ? (
@@ -203,14 +260,15 @@ const SellersPage = () => {
               {sellers.map((s) => {
                 const draft = drafts[s.id] ?? {}
                 const body = changes(s, draft)
-                const busy = update.isPending && update.variables?.id === s.id
+                const busy = busyId === s.id
+                const badRate = draft.rate !== undefined && rateValue(draft.rate) === undefined
                 return (
                   <Table.Row key={s.id}>
                     <Table.Cell>
                       <div className="flex flex-col">
                         <Text size="small" weight="plus">{s.name}</Text>
                         <Text size="small" className="text-ui-fg-subtle">
-                          {s.handle} · {s.email}
+                          {s.email} · shop address: {s.handle}
                         </Text>
                       </div>
                     </Table.Cell>
@@ -222,6 +280,7 @@ const SellersPage = () => {
                         size="small"
                         className="w-48"
                         placeholder="none"
+                        aria-label={`Domain for ${s.name}`}
                         value={draft.domain ?? s.domain ?? ""}
                         onChange={(e) => setDraft(s.id, { domain: e.target.value })}
                       />
@@ -230,8 +289,14 @@ const SellersPage = () => {
                       <div className="flex items-center gap-2">
                         <Input
                           size="small"
-                          className="w-20"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step="0.1"
+                          className="w-24"
                           placeholder="default"
+                          aria-label={`Commission % for ${s.name}`}
+                          aria-invalid={badRate}
                           value={draft.rate ?? (s.commission_rate === null ? "" : String(s.commission_rate))}
                           onChange={(e) => setDraft(s.id, { rate: e.target.value })}
                         />
@@ -239,8 +304,9 @@ const SellersPage = () => {
                           <Button
                             size="small"
                             variant="secondary"
-                            isLoading={busy}
-                            onClick={() => update.mutate({ id: s.id, body })}
+                            disabled={!!busyId || badRate}
+                            isLoading={busy && update.variables?.body.status === undefined}
+                            onClick={() => update.mutate({ id: s.id, body, done: `${s.name} saved` })}
                           >
                             Save
                           </Button>
@@ -248,14 +314,19 @@ const SellersPage = () => {
                       </div>
                     </Table.Cell>
                     <Table.Cell>
-                      <Text size="small" className="font-mono">{s.invite_code}</Text>
+                      <Button size="small" variant="transparent" className="font-mono" onClick={() => copy(s.invite_code, "Invite code")}>
+                        {s.invite_code}
+                      </Button>
                     </Table.Cell>
                     <Table.Cell className="text-right">
                       {s.status !== "active" && (
                         <Button
                           size="small"
-                          isLoading={busy}
-                          onClick={() => update.mutate({ id: s.id, body: { status: "active" } })}
+                          disabled={!!busyId}
+                          isLoading={busy && update.variables?.body.status === "active"}
+                          onClick={() =>
+                            update.mutate({ id: s.id, body: { status: "active" }, done: `${s.name} ${s.status === "pending" ? "activated" : "reactivated"}` })
+                          }
                         >
                           {s.status === "pending" ? "Activate" : "Reactivate"}
                         </Button>
@@ -265,8 +336,9 @@ const SellersPage = () => {
                           size="small"
                           variant="danger"
                           className="ml-2"
-                          isLoading={busy}
-                          onClick={() => update.mutate({ id: s.id, body: { status: "suspended" } })}
+                          disabled={!!busyId}
+                          isLoading={busy && update.variables?.body.status === "suspended"}
+                          onClick={() => suspend(s)}
                         >
                           Suspend
                         </Button>

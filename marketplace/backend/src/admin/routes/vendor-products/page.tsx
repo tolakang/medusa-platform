@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Select, Table, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { adminLink, errorText, STATUS_COLOR } from "../../lib/marketplace"
@@ -30,11 +30,27 @@ const VendorProductsPage = () => {
         query: status === "all" ? {} : { status },
       }),
   })
+  const prompt = usePrompt()
   const review = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: "publish" | "reject" }) =>
+    mutationFn: ({ id, action }: { id: string; action: "publish" | "reject"; title: string }) =>
       sdk.client.fetch(`/admin/vendor-products/${id}/review`, { method: "POST", body: { action } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["marketplace-vendor-products"] }),
+    onSuccess: (_, { action, title }) => {
+      toast.success(`${title} ${action === "publish" ? "published" : "rejected"}`)
+      queryClient.invalidateQueries({ queryKey: ["marketplace-vendor-products"] })
+    },
+    onError: (e) => toast.error(errorText(e)),
   })
+  const busyId = review.isPending ? review.variables?.id : undefined
+  const reject = async (p: VendorProduct) => {
+    const ok = await prompt({
+      title: `Reject ${p.title}?`,
+      description: `${p.vendor.name} sees it as rejected and it doesn't sell. You can publish it later.`,
+      variant: "danger",
+      confirmText: "Reject",
+      cancelText: "Back",
+    })
+    if (ok) review.mutate({ id: p.id, action: "reject", title: p.title })
+  }
 
   return (
     <Container className="flex flex-col gap-y-4">
@@ -57,7 +73,6 @@ const VendorProductsPage = () => {
         </Select>
       </div>
       {error && <Text className="text-ui-fg-error">{errorText(error)}</Text>}
-      {review.error && <Text className="text-ui-fg-error">{errorText(review.error)}</Text>}
       {isLoading ? (
         <Text>Loading…</Text>
       ) : !data?.products.length ? (
@@ -90,8 +105,9 @@ const VendorProductsPage = () => {
                   {p.status !== "published" && (
                     <Button
                       size="small"
-                      isLoading={review.isPending}
-                      onClick={() => review.mutate({ id: p.id, action: "publish" })}
+                      disabled={!!busyId}
+                      isLoading={busyId === p.id && review.variables?.action === "publish"}
+                      onClick={() => review.mutate({ id: p.id, action: "publish", title: p.title })}
                     >
                       Publish
                     </Button>
@@ -101,8 +117,9 @@ const VendorProductsPage = () => {
                       size="small"
                       variant="danger"
                       className="ml-2"
-                      isLoading={review.isPending}
-                      onClick={() => review.mutate({ id: p.id, action: "reject" })}
+                      disabled={!!busyId}
+                      isLoading={busyId === p.id && review.variables?.action === "reject"}
+                      onClick={() => reject(p)}
                     >
                       Reject
                     </Button>
