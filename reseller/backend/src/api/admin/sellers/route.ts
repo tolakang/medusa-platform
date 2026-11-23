@@ -2,7 +2,8 @@ import type {
   AuthenticatedMedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { z } from "@medusajs/framework/zod"
 import { inviteCode } from "@medusa-platform/medusa-core/lib/invite-code"
 import { createSellerWorkflow } from "../../../workflows/seller/create-seller"
 import type { PostAdminSellerType } from "./validators"
@@ -20,18 +21,35 @@ export const SELLER_FIELDS = [
   "sales_channel.name",
 ]
 
-// GET /admin/sellers (TASKS P5-03): every seller with their sales channel.
+const GetAdminSellers = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+// GET /admin/sellers (TASKS P5-03): sellers with their sales channel, newest
+// first, a page at a time (design critique, 2026-11-23).
 export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
-  const { data: sellers } = await req.scope
+  const parsed = GetAdminSellers.safeParse(req.query)
+  if (!parsed.success) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, parsed.error.issues[0].message)
+  }
+  const { limit, offset } = parsed.data
+  const { data: sellers, metadata } = await req.scope
     .resolve(ContainerRegistrationKeys.QUERY)
-    .graph({ entity: "seller", fields: SELLER_FIELDS })
+    .graph({
+      entity: "seller",
+      fields: SELLER_FIELDS,
+      pagination: { skip: offset, take: limit, order: { created_at: "DESC" } },
+    })
   // The invite code is the shop's to hand to each seller (REVIEW_FIXES B11).
   res.json({
     sellers: sellers.map((seller) => ({
       ...seller,
       invite_code: inviteCode("seller", seller.id),
     })),
-    count: sellers.length,
+    count: metadata?.count ?? sellers.length,
+    limit,
+    offset,
   })
 }
 

@@ -5,7 +5,13 @@ import type {
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
 
-const GetAdminVendorOrders = z.object({ vendor_id: z.string().min(1).optional() }).strict()
+const GetAdminVendorOrders = z
+  .object({
+    vendor_id: z.string().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    offset: z.coerce.number().int().min(0).default(0),
+  })
+  .strict()
 
 // GET /admin/vendor-orders (TASKS P6-07): the vendors' child orders (the ones
 // vendors fulfil and reports count), newest first, with their vendor and
@@ -31,7 +37,8 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   if (!vendorOf.size) {
     return res.json({ orders: [], count: 0 })
   }
-  const { data: orders } = await query.graph({
+  const { limit, offset } = parsed.data
+  const { data: orders, metadata } = await query.graph({
     entity: "order",
     fields: [
       "id",
@@ -43,7 +50,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "metadata",
     ],
     filters: { id: [...vendorOf.keys()] },
-    pagination: { order: { created_at: "DESC" } },
+    pagination: { skip: offset, take: limit, order: { created_at: "DESC" } },
   })
   res.json({
     orders: orders.map(({ metadata, ...o }) => ({
@@ -51,6 +58,8 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       parent_order_id: (metadata?.parent_order_id as string | undefined) ?? null,
       vendor: vendorOf.get(o.id),
     })),
-    count: orders.length,
+    count: metadata?.count ?? orders.length,
+    limit,
+    offset,
   })
 }
