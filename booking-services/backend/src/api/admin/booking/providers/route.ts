@@ -35,7 +35,9 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     fields: ADMIN_PROVIDER_FIELDS,
     pagination: { order: { created_at: "DESC" } },
   })
-  res.json({ providers: (data as ProviderRow[]).map(withInviteCode) })
+  // The portal's address, for the invite message the admin copies.
+  const portal = (process.env.PROVIDER_PORTAL_URL || process.env.PROVIDER_CORS?.split(",")[0] || "").trim().replace(/\/+$/, "")
+  res.json({ providers: (data as ProviderRow[]).map(withInviteCode), portal_url: portal || null })
 }
 
 // Invites a staff member: the answer carries the invite code to give them

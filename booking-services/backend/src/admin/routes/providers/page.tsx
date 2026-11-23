@@ -22,6 +22,59 @@ type Provider = {
 type Resource = { id: string; name: string; type: string; provider_id?: string | null }
 
 const QUERY_KEY = ["booking-providers"]
+
+// The message staff need to join, ready to paste into chat or SMS (staging
+// review, 2026-11-23: the code was only in a toast that disappeared).
+const inviteMessage = (p: Pick<Provider, "name" | "email" | "invite_code">, portal: string | null) =>
+  [
+    `Hi ${p.name}, you're invited to the provider portal.`,
+    `1. Open ${portal ?? "the provider portal"} and choose "I have an invite code".`,
+    `2. Enter this email: ${p.email}`,
+    `3. Enter the invite code: ${p.invite_code}`,
+    `4. Choose a password of at least 8 characters, then confirm your email from the message we send you.`,
+  ].join("\n")
+
+const copy = async (text: string, what: string) => {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.success(`${what} copied`)
+  } catch {
+    toast.error(`Couldn't copy. Select the ${what.toLowerCase()} and copy it by hand.`)
+  }
+}
+
+// Shown after inviting, until closed: the code and the message to send.
+const InviteReady = ({ provider, portal, onClose }: { provider: Provider; portal: string | null; onClose: () => void }) => (
+  <div className="flex flex-col gap-y-3 px-6 py-4" data-testid="invite-ready">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <Text weight="plus">{provider.name} is invited</Text>
+        <Text size="small" className="text-ui-fg-subtle">
+          Send them this message. The code works only with {provider.email}.
+        </Text>
+      </div>
+      <Button size="small" variant="transparent" onClick={onClose}>
+        Close
+      </Button>
+    </div>
+    <pre className="whitespace-pre-wrap rounded-md border border-ui-border-base bg-ui-bg-subtle p-3 text-sm">
+      {inviteMessage(provider, portal)}
+    </pre>
+    <div className="flex flex-wrap gap-2">
+      <Button size="small" onClick={() => copy(inviteMessage(provider, portal), "Message")}>
+        Copy message
+      </Button>
+      <Button size="small" variant="secondary" onClick={() => copy(provider.invite_code ?? "", "Code")}>
+        Copy code {provider.invite_code}
+      </Button>
+    </div>
+    {!portal && (
+      <Text size="xsmall" className="text-ui-fg-error">
+        The portal address isn't set on the backend (PROVIDER_PORTAL_URL): add it so the message has the link.
+      </Text>
+    )}
+  </div>
+)
 const NEW_RESOURCE = "new"
 
 const STATUS: Record<Provider["status"], { label: string; color: "green" | "orange" | "grey" | "red" }> = {
@@ -35,12 +88,15 @@ const ProvidersPage = () => {
   const queryClient = useQueryClient()
   const [form, setForm] = useState({ name: "", email: "", resource_id: NEW_RESOURCE })
   const [rate, setRate] = useState<{ id: string; value: string } | null>(null)
+  const [invited, setInvited] = useState<Provider | null>(null)
+  const [resetLink, setResetLink] = useState<{ id: string; link: string } | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: QUERY_KEY,
-    queryFn: () => sdk.client.fetch<{ providers: Provider[] }>("/admin/booking/providers"),
+    queryFn: () => sdk.client.fetch<{ providers: Provider[]; portal_url: string | null }>("/admin/booking/providers"),
   })
   const providers = data?.providers ?? []
+  const portal = data?.portal_url ?? null
   const { data: resourceData } = useQuery({
     queryKey: ["booking-resources-for-providers"],
     queryFn: () => sdk.client.fetch<{ resources: Resource[] }>("/admin/booking/resources"),
@@ -67,10 +123,7 @@ const ProvidersPage = () => {
     onSuccess: ({ provider }) => {
       setForm({ name: "", email: "", resource_id: NEW_RESOURCE })
       refresh()
-      toast.success(`${provider.name} invited`, {
-        description: `Invite code: ${provider.invite_code}`,
-        duration: 30000,
-      })
+      setInvited(provider)
     },
     onError: (e: Error) => toast.error(e.message),
   })
@@ -86,6 +139,17 @@ const ProvidersPage = () => {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  // A one-time link to set a new password, for someone who can't sign in
+  // and doesn't get the reset email.
+  const reset = useMutation({
+    mutationFn: (id: string) => sdk.client.fetch<{ link: string }>(`/admin/booking/providers/${id}/reset-link`, { method: "POST" }),
+    onSuccess: ({ link }, id) => {
+      setResetLink({ id, link })
+      copy(link, "Reset link")
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
   const canInvite = !!form.name.trim() && /\S+@\S+\.\S+/.test(form.email.trim())
   const rateValue = rate ? (rate.value.trim() === "" ? null : Number(rate.value)) : undefined
   const rateValid = rateValue === null || (typeof rateValue === "number" && rateValue >= 0 && rateValue <= 100)
@@ -96,9 +160,9 @@ const ProvidersPage = () => {
         <div className="px-6 py-4">
           <Heading level="h1">Providers</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            Staff are invited here for their calendar: give them the invite code; they register in the provider portal
-            with this email, the code and a new password, then confirm their email. Partners sign up on their own and
-            show nothing in the shop until you approve them.
+            Invite staff for their calendar, then send them the message with their code. Partners sign up in the portal
+            on their own and stay hidden from the shop until you approve them. Someone who can't sign in: use Reset
+            link and send it to them.
           </Text>
         </div>
         <form
@@ -145,6 +209,7 @@ const ProvidersPage = () => {
             Invite staff
           </Button>
         </form>
+        {invited && <InviteReady provider={invited} portal={portal} onClose={() => setInvited(null)} />}
       </Container>
 
       <Container className="divide-y p-0">
@@ -173,6 +238,16 @@ const ProvidersPage = () => {
                       {STATUS[p.status].label}
                     </Badge>
                     {p.invite_code && <span className="font-mono text-ui-fg-subtle">{p.invite_code}</span>}
+                    {resetLink?.id === p.id && (
+                      <button
+                        type="button"
+                        className="max-w-[16rem] truncate text-left text-xs text-ui-fg-interactive"
+                        title={resetLink.link}
+                        onClick={() => copy(resetLink.link, "Reset link")}
+                      >
+                        Reset link copied (15 min). Copy again
+                      </button>
+                    )}
                   </div>
                 </Table.Cell>
                 <Table.Cell>
@@ -213,6 +288,26 @@ const ProvidersPage = () => {
                       </>
                     ) : (
                       <>
+                        {p.invite_code && (
+                          <>
+                            <Button size="small" variant="secondary" onClick={() => copy(p.invite_code!, "Code")}>
+                              Copy code
+                            </Button>
+                            <Button size="small" variant="secondary" onClick={() => copy(inviteMessage(p, portal), "Message")}>
+                              Copy message
+                            </Button>
+                          </>
+                        )}
+                        {p.status !== "invited" && (
+                          <Button
+                            size="small"
+                            variant="secondary"
+                            isLoading={reset.isPending && reset.variables === p.id}
+                            onClick={() => reset.mutate(p.id)}
+                          >
+                            Reset link
+                          </Button>
+                        )}
                         {p.role === "partner" && (
                           <Button
                             size="small"

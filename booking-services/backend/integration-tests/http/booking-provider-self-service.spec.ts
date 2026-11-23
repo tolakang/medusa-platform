@@ -365,6 +365,28 @@ medusaIntegrationTestRunner({
         const signedIn = await api.post("/auth/provider/emailpass", { email, password: "new-provider-pass-2" }, { headers: freshIp() })
         expect(typeof signedIn.data.token).toBe("string")
       })
+
+      it("staff get a reset link from the admin, without email", async () => {
+        const [sophea] = await booking().listBookingResources({ name: "Sophea" })
+        const email = "kk@spa.test"
+        // Still invited: nothing to reset, the invite code is the way in.
+        const invited = await call(api.post("/admin/booking/providers", { name: "KK", email, resource_id: sophea.id }, admin))
+        const id = invited.data.provider.id
+        expect((await call(api.post(`/admin/booking/providers/${id}/reset-link`, {}, admin))).status).toBe(400)
+        const list = await api.get("/admin/booking/providers", admin)
+        expect(list.data.portal_url).toBe(PORTAL)
+        await call(api.post("/providers/accept", { invite_code: invited.data.provider.invite_code }, bearer(await register(email))))
+        await confirmEmail(email)
+        const res = await call(api.post(`/admin/booking/providers/${id}/reset-link`, {}, admin))
+        expect([res.status, res.data?.message]).toEqual([200, undefined])
+        const url = new URL(res.data.link)
+        expect(url.origin + url.pathname).toEqual(`${PORTAL}/reset-password`)
+        const token = url.searchParams.get("token")!
+        const ok = await call(api.post("/auth/provider/emailpass/update", { email, password: "new-staff-pass-1" }, bearer(token)))
+        expect(ok.status).toBe(200)
+        const signedIn = await api.post("/auth/provider/emailpass", { email, password: "new-staff-pass-1" }, { headers: freshIp() })
+        expect(typeof signedIn.data.token).toBe("string")
+      })
     })
   },
 })
