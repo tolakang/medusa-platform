@@ -1,8 +1,11 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Badge, Container, Heading, Table, Text } from "@medusajs/ui"
 import { useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { adminLink, errorText, money, STATUS_COLOR } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
+
+const PAGE_SIZE = 50
 
 // Vendor orders (TASKS P6-07, BUILD_PLAN §9.6): the child orders vendors
 // fulfil, which reports count. Medusa's own Orders list shows the
@@ -21,9 +24,15 @@ type VendorOrder = {
 }
 
 const VendorOrdersPage = () => {
+  // A page at a time (design critique, 2026-11-23); back to the first page
+  // when the filter changes.
+  const [page, setPage] = useState(0)
   const { data, isLoading, error } = useQuery({
-    queryKey: ["marketplace-vendor-orders"],
-    queryFn: () => sdk.client.fetch<{ orders: VendorOrder[] }>("/admin/vendor-orders"),
+    queryKey: ["marketplace-vendor-orders", page],
+    queryFn: () =>
+      sdk.client.fetch<{ orders: VendorOrder[]; count: number }>("/admin/vendor-orders", {
+        query: { limit: PAGE_SIZE, offset: page * PAGE_SIZE },
+      }),
   })
 
   return (
@@ -77,6 +86,18 @@ const VendorOrdersPage = () => {
           </Table.Body>
         </Table>
       )}
+        {(data?.count ?? 0) > PAGE_SIZE && (
+          <Table.Pagination
+            count={data?.count ?? 0}
+            pageSize={PAGE_SIZE}
+            pageIndex={page}
+            pageCount={Math.ceil((data?.count ?? 0) / PAGE_SIZE)}
+            canPreviousPage={page > 0}
+            canNextPage={(page + 1) * PAGE_SIZE < (data?.count ?? 0)}
+            previousPage={() => setPage((p) => p - 1)}
+            nextPage={() => setPage((p) => p + 1)}
+          />
+        )}
     </Container>
   )
 }

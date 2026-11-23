@@ -1,9 +1,11 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Badge, Button, Container, Heading, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { adminLink, errorText, STATUS_COLOR } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
+
+const PAGE_SIZE = 50
 
 // Product moderation (TASKS P6-07, BUILD_PLAN §9.6): vendors' products, the
 // ones waiting for review first; publish or reject. Reads
@@ -22,12 +24,16 @@ type VendorProduct = {
 const VendorProductsPage = () => {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState("proposed")
+  // A page at a time (design critique, 2026-11-23); back to the first page
+  // when the filter changes.
+  const [page, setPage] = useState(0)
+  useEffect(() => setPage(0), [status])
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["marketplace-vendor-products", status],
+    queryKey: ["marketplace-vendor-products", status, page],
     queryFn: () =>
-      sdk.client.fetch<{ products: VendorProduct[] }>("/admin/vendor-products", {
-        query: status === "all" ? {} : { status },
+      sdk.client.fetch<{ products: VendorProduct[]; count: number }>("/admin/vendor-products", {
+        query: { ...(status === "all" ? {} : { status }), limit: PAGE_SIZE, offset: page * PAGE_SIZE },
       }),
   })
   const prompt = usePrompt()
@@ -130,6 +136,18 @@ const VendorProductsPage = () => {
           </Table.Body>
         </Table>
       )}
+        {(data?.count ?? 0) > PAGE_SIZE && (
+          <Table.Pagination
+            count={data?.count ?? 0}
+            pageSize={PAGE_SIZE}
+            pageIndex={page}
+            pageCount={Math.ceil((data?.count ?? 0) / PAGE_SIZE)}
+            canPreviousPage={page > 0}
+            canNextPage={(page + 1) * PAGE_SIZE < (data?.count ?? 0)}
+            previousPage={() => setPage((p) => p - 1)}
+            nextPage={() => setPage((p) => p + 1)}
+          />
+        )}
     </Container>
   )
 }

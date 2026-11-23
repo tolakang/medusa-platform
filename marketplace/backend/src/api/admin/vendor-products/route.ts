@@ -13,7 +13,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   if (!parsed.success) {
     throw new MedusaError(MedusaError.Types.INVALID_DATA, parsed.error.issues[0].message)
   }
-  const { status, vendor_id } = parsed.data
+  const { status, vendor_id, limit, offset } = parsed.data
   const { data: vendors } = await req.scope.resolve(ContainerRegistrationKeys.QUERY).graph({
     entity: "vendor",
     fields: [
@@ -39,5 +39,5 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
     )
     .filter((p) => !status || p.status === status)
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
-  res.json({ products, count: products.length })
+  res.json({ products: products.slice(offset, offset + limit), count: products.length, limit, offset })
 }

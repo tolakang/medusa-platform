@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
 
+const PAGE_SIZE = 50
+
 // Sellers (TASKS F-081, BUILD_PLAN §9.5): invite a seller, give them their
 // invite code, activate or suspend them, and set their domain and commission
 // rate. Reads GET /admin/sellers; writes POST /admin/sellers (P5-03) and
@@ -70,10 +72,15 @@ const SellersPage = () => {
   const [invite, setInvite] = useState(EMPTY_INVITE)
   const [invited, setInvited] = useState<{ name: string; code: string } | null>(null)
 
+  // A page at a time (design critique, 2026-11-23); back to the first page
+  // when the filter changes.
+  const [page, setPage] = useState(0)
   const { data, isLoading, error } = useQuery({
-    queryKey: ["reseller-sellers"],
+    queryKey: ["reseller-sellers", page],
     queryFn: () =>
-      sdk.client.fetch<{ sellers: Seller[]; count: number }>("/admin/sellers"),
+      sdk.client.fetch<{ sellers: Seller[]; count: number }>("/admin/sellers", {
+        query: { limit: PAGE_SIZE, offset: page * PAGE_SIZE },
+      }),
   })
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["reseller-sellers"] })
 
@@ -377,6 +384,18 @@ const SellersPage = () => {
             </Table.Body>
           </Table>
         )}
+          {(data?.count ?? 0) > PAGE_SIZE && (
+            <Table.Pagination
+              count={data?.count ?? 0}
+              pageSize={PAGE_SIZE}
+              pageIndex={page}
+              pageCount={Math.ceil((data?.count ?? 0) / PAGE_SIZE)}
+              canPreviousPage={page > 0}
+              canNextPage={(page + 1) * PAGE_SIZE < (data?.count ?? 0)}
+              previousPage={() => setPage((p) => p - 1)}
+              nextPage={() => setPage((p) => p + 1)}
+            />
+          )}
       </Container>
     </div>
   )
