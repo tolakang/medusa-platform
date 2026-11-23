@@ -159,6 +159,63 @@ const WholeDays = ({ resource }: { resource: Resource }) => {
   )
 }
 
+// Change a paid rental's dates or a trip's hours (owner, 2026-11-23: the
+// difference is refunded; an extra is due at the venue).
+const ChangeLength = ({ booking, rental, onDone }: { booking: CalendarBooking; rental: boolean; onDone: () => void }) => {
+  const [open, setOpen] = useState(false)
+  const [start, setStart] = useState("")
+  const [end, setEnd] = useState("")
+  const [hours, setHours] = useState("")
+  const change = useMutation({
+    mutationFn: () =>
+      sdk.client.fetch<{ refunded_amount: number; not_refunded: number; balance_due: number; balance_lowered: number; price: number }>(
+        `/admin/booking/bookings/${booking.id}/change`,
+        { method: "POST", body: rental ? { start_date: start, end_date: end } : { hours: Number(hours) } }
+      ),
+    onSuccess: onDone,
+  })
+  if (!open) {
+    return (
+      <Button size="small" variant="transparent" className="mt-1 ml-3 px-0" onClick={() => setOpen(true)}>
+        {rental ? "Change dates" : "Change hours"}
+      </Button>
+    )
+  }
+  const ready = rental ? !!start && !!end : Number(hours) > 0
+  return (
+    <div className="mt-2 flex flex-col gap-2" data-testid="change-length-form">
+      {rental ? (
+        <div className="flex gap-2">
+          <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} aria-label="First day" />
+          <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} aria-label="Last day (or the day out)" />
+        </div>
+      ) : (
+        <Input type="number" min={1} max={24} value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Hours" className="w-28" />
+      )}
+      <Text size="xsmall" className="text-ui-fg-subtle">
+        Priced again: cheaper refunds the difference, dearer is due at the venue.
+      </Text>
+      <div className="flex gap-2">
+        <Button size="small" disabled={!ready} isLoading={change.isPending} onClick={() => change.mutate()}>
+          Change
+        </Button>
+        <Button size="small" variant="secondary" onClick={() => setOpen(false)}>
+          Close
+        </Button>
+      </div>
+      {change.data && (
+        <Text size="xsmall">
+          New price {change.data.price}.{change.data.balance_lowered ? ` ${change.data.balance_lowered} off the balance due.` : ""}
+          {change.data.refunded_amount ? ` Refunded ${change.data.refunded_amount}.` : ""}
+          {change.data.not_refunded ? ` ${change.data.not_refunded} still to refund in the order (payment not captured).` : ""}
+          {change.data.balance_due ? ` ${change.data.balance_due} due at the venue.` : ""}
+        </Text>
+      )}
+      {change.error && <Text size="xsmall" className="text-ui-fg-error">{errorText(change.error)}</Text>}
+    </div>
+  )
+}
+
 const BookingsPage = () => {
   const queryClient = useQueryClient()
   const [resourceId, setResourceId] = useState("")
@@ -347,6 +404,9 @@ const BookingsPage = () => {
                     <Button size="small" variant="transparent" className="mt-1 ml-3 px-0" onClick={() => setMoving(b.id)}>
                       Move
                     </Button>
+                  )}
+                  {b.status === "confirmed" && b.order && (resource?.whole_days || b.dropoff_address) && (
+                    <ChangeLength booking={b} rental={!!resource?.whole_days} onDone={refresh} />
                   )}
                   {moving === b.id && (
                     <MoveForm

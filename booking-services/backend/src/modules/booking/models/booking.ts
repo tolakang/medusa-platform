@@ -43,6 +43,9 @@ export const Booking = model
     // The event package this booking is a piece of (TASKS P3-30): its
     // pieces are booked, paid and cancelled together.
     package_id: model.text().nullable(),
+    // The booking's price after staff changed a rental's dates or a trip's
+    // hours (owner, 2026-11-23: refund the difference); null = its order line.
+    price: model.bigNumber().nullable(),
     resource: model.belongsTo(() => BookingResource, {
       mappedBy: "bookings",
     }),

@@ -229,6 +229,96 @@ medusaIntegrationTestRunner({
         expect(cancelled.data.refunded_amount).toBe(40)
       })
 
+      it("changes a paid rental's dates and a trip's hours: lowers what's due, refunds, or asks the extra (owner, 2026-11-23)", async () => {
+        // The 20-guest tent, two days ($70), 50% deposit: $35 paid, $35 due.
+        const {
+          data: [tent],
+        } = await query().graph({ entity: "product", fields: ["variants.id", "variants.title", "variants.booking_resources.id"], filters: { handle: "wedding-tent" } })
+        const small = tent.variants!.find((v) => v!.title === "20 guests") as unknown as { id: string; booking_resources: { id: string }[] }
+        const day2 = new Date(Date.parse(`${monday}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10)
+        let rentalId = ""
+        const rental = await checkout(async (cart) => {
+          const r = await api.post(
+            "/store/booking/cart",
+            { cart_id: cart, variant_id: small.id, resource_id: small.booking_resources[0].id, start_date: monday, end_date: day2 },
+            store
+          )
+          rentalId = r.data.booking.id
+        })
+        expect(rental.done.data.order.total).toBe(70)
+        const wait = async (id: string) => {
+          for (let i = 0; i < 40; i++) {
+            const { data } = await query().graph({ entity: "booking", fields: ["status"], filters: { id } })
+            if (data[0]?.status === "confirmed") return
+            await new Promise((r) => setTimeout(r, 250))
+          }
+        }
+        await wait(rentalId)
+        await balanceOf(rental.done.data.order.id)
+        // One day instead: the $35 less comes off what's still due, nothing refunded.
+        const shorter = await api.post(`/admin/booking/bookings/${rentalId}/change`, { start_date: monday, end_date: monday }, admin)
+        expect([shorter.data.price, shorter.data.balance_lowered, shorter.data.refunded_amount, shorter.data.balance_due]).toEqual([35, 35, 0, 0])
+        expect(Number((await balanceOf(rental.done.data.order.id)).amount)).toBe(0)
+        // Cancelling it later refunds the booking's new price, not the old one.
+        const {
+          data: [b],
+        } = await query().graph({ entity: "booking", fields: ["price", "starts_at", "ends_at"], filters: { id: rentalId } })
+        expect(Number(b.price)).toBe(35)
+
+        // The truck without its deposit: 2 hours paid ($30).
+        const {
+          data: [mv],
+        } = await query().graph({ entity: "product", fields: ["id", "metadata"], filters: { handle: "moving-truck" } })
+        await updateProductsWorkflow(getContainer()).run({
+          input: { selector: { id: mv.id }, update: { metadata: { ...(mv.metadata ?? {}), deposit_percent: null } } },
+        })
+        let tripId = ""
+        const trip = await checkout(async (cart) => {
+          const r = await bookTruck(cart)
+          tripId = (r as any).data.booking.id
+        })
+        await wait(tripId)
+        const {
+          data: [order],
+        } = await query().graph({ entity: "order", fields: ["payment_collections.payments.id"], filters: { id: trip.done.data.order.id } })
+        await capturePaymentWorkflow(getContainer()).run({ input: { payment_id: order.payment_collections![0]!.payments![0]!.id } })
+        // 4 hours: $30 more, due at the venue.
+        const longer = await api.post(`/admin/booking/bookings/${tripId}/change`, { hours: 4 }, admin)
+        expect([longer.data.price, longer.data.balance_due, longer.data.refunded_amount]).toEqual([60, 30, 0])
+        expect(Number((await balanceOf(trip.done.data.order.id)).amount)).toBe(30)
+        // Back to 2 hours: the $30 due is lowered first, nothing refunded.
+        const back = await api.post(`/admin/booking/bookings/${tripId}/change`, { hours: 2 }, admin)
+        expect([back.data.price, back.data.balance_lowered, back.data.refunded_amount]).toEqual([30, 30, 0])
+        // 2 → 3 is refused below the minimum? 3 is fine; 2 → the same is refused.
+        expect((await call(api.post(`/admin/booking/bookings/${tripId}/change`, { hours: 2 }, admin))).status).toBe(400)
+
+        // Paid in full, nothing due: a shorter rental refunds the difference.
+        const {
+          data: [tentProduct],
+        } = await query().graph({ entity: "product", fields: ["id", "metadata"], filters: { handle: "wedding-tent" } })
+        await updateProductsWorkflow(getContainer()).run({
+          input: { selector: { id: tentProduct.id }, update: { metadata: { ...(tentProduct.metadata ?? {}), deposit_percent: null } } },
+        })
+        const day3 = new Date(Date.parse(`${monday}T00:00:00Z`) + 3 * 86_400_000).toISOString().slice(0, 10)
+        const day4 = new Date(Date.parse(`${monday}T00:00:00Z`) + 4 * 86_400_000).toISOString().slice(0, 10)
+        let fullId = ""
+        const full = await checkout(async (cart) => {
+          const r = await api.post(
+            "/store/booking/cart",
+            { cart_id: cart, variant_id: small.id, resource_id: small.booking_resources[0].id, start_date: day3, end_date: day4 },
+            store
+          )
+          fullId = r.data.booking.id
+        })
+        await wait(fullId)
+        const {
+          data: [fullOrder],
+        } = await query().graph({ entity: "order", fields: ["payment_collections.payments.id"], filters: { id: full.done.data.order.id } })
+        await capturePaymentWorkflow(getContainer()).run({ input: { payment_id: fullOrder.payment_collections![0]!.payments![0]!.id } })
+        const refunded = await api.post(`/admin/booking/bookings/${fullId}/change`, { start_date: day3, end_date: day3 }, admin)
+        expect([refunded.data.price, refunded.data.refunded_amount, refunded.data.balance_lowered]).toEqual([35, 35, 0])
+      })
+
       it("reminds once before the booking, and not after the balance is paid", async () => {
         const { done } = await checkout(bookTruck)
         const balance = await balanceOf(done.data.order.id)

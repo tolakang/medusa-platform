@@ -67,6 +67,7 @@ const planCancellationStep = createStep(
         "customer_id",
         "hold_expires_at",
         "package_id",
+        "price",
         "order.id",
       ],
       filters: { id: input.booking_id },
@@ -136,7 +137,9 @@ const planCancellationStep = createStep(
     const extras = (order.items ?? []).filter(
       (i) => (i?.metadata as Record<string, unknown> | null)?.[EXTRA_FOR_KEY] === booking.id
     )
-    const amount = num(item?.total as Money) + extras.reduce((s, i) => s + num(i?.total as Money), 0)
+    // A rental or trip whose length staff changed has its own price now.
+    const lineAmount = booking.price != null ? num(booking.price as Money) : num(item?.total as Money)
+    const amount = lineAmount + extras.reduce((s, i) => s + num(i?.total as Money), 0)
     // Captured minus already refunded, per payment; refund from the one with
     // the most left (an order normally has one).
     const payments = (order.payment_collections ?? [])
