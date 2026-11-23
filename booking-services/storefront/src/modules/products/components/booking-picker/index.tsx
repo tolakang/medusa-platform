@@ -1,6 +1,14 @@
 "use client"
 
-import { addBookingToCart, addRecurringToCart, listSlots, listTripZones, type MyPass, type Slot, type TripZones } from "@lib/data/booking"
+import {
+  addBookingToCart,
+  addRecurringToCart,
+  listSlots,
+  listTripZones,
+  type MyPass,
+  type Slot,
+  type TripZones,
+} from "@lib/data/booking"
 import {
   durationMinutes,
   formatSlotTime,
@@ -20,7 +28,9 @@ import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button, Text, clx } from "@modules/common/components/ui"
 import JoinWaitlist from "@modules/products/components/join-waitlist"
-import ExtrasChooser, { chosenExtras } from "@modules/products/components/extras-chooser"
+import ExtrasChooser, {
+  chosenExtras,
+} from "@modules/products/components/extras-chooser"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState, useTransition } from "react"
 
@@ -45,7 +55,10 @@ export default function BookingPicker({
   const router = useRouter()
   const countryCode = useParams().countryCode as string
   const services = useMemo(
-    () => orderedServices((product.variants ?? []).filter((v) => durationMinutes(v) !== null)),
+    () =>
+      orderedServices(
+        (product.variants ?? []).filter((v) => durationMinutes(v) !== null)
+      ),
     [product.variants]
   )
   const [variantId, setVariantId] = useState(services[0]?.id ?? "")
@@ -54,7 +67,11 @@ export default function BookingPicker({
   // The chosen time and any error belong to one service, day and length:
   // they are kept with that key and read only while it's current, so a new
   // day or service starts clean without resetting state in an effect.
-  const [picked, setPicked] = useState<{ key: string; slot: Slot | null; error: string | null }>({ key: "", slot: null, error: null })
+  const [picked, setPicked] = useState<{
+    key: string
+    slot: Slot | null
+    error: string | null
+  }>({ key: "", slot: null, error: null })
   const [loading, startLoading] = useTransition()
   const [booking, startBooking] = useTransition()
   // A visit at the customer's place (kind B, P3-20): where and what.
@@ -72,17 +89,28 @@ export default function BookingPicker({
   const [zones, setZones] = useState<TripZones>({ zones: [], prices: [] })
   const [fromZone, setFromZone] = useState("")
   const [toZone, setToZone] = useState("")
-  const zoneRow = trip === "zones" ? zonePrice(zones.prices, fromZone, toZone) : null
-  const tripMinutes = trip === "hours" ? hours * 60 : trip === "zones" ? zoneRow?.minutes ?? null : undefined
+  const zoneRow =
+    trip === "zones" ? zonePrice(zones.prices, fromZone, toZone) : null
+  const tripMinutes =
+    trip === "hours"
+      ? hours * 60
+      : trip === "zones"
+      ? zoneRow?.minutes ?? null
+      : undefined
   const tripReady =
-    !trip || (address.trim().length >= 5 && dropoff.trim().length >= 5 && (trip === "hours" || !!zoneRow))
+    !trip ||
+    (address.trim().length >= 5 &&
+      dropoff.trim().length >= 5 &&
+      (trip === "hours" || !!zoneRow))
   // A scheduled departure (kind D, P3-23): how many seats, never more than
   // the departure has left.
   const departure = isDepartureService(product)
   const [seats, setSeats] = useState(1)
   // Extras the service offers (P3-25), each with a quantity.
   const [extraQty, setExtraQty] = useState<Record<string, number>>({})
-  const visitReady = trip ? tripReady : !visit || (address.trim().length >= 5 && problem.trim().length > 0)
+  const visitReady = trip
+    ? tripReady
+    : !visit || (address.trim().length >= 5 && problem.trim().length > 0)
 
   useEffect(() => {
     if (trip === "zones" && variantId) {
@@ -90,11 +118,61 @@ export default function BookingPicker({
     }
   }, [trip, variantId])
 
+  // Book stays pressable: a press with something missing shows the error at
+  // that field and focuses it (design critique, 2026-11-23).
+  const [showMissing, setShowMissing] = useState(false)
+  const missing: { id: string; text: string } | null = !trip
+    ? visit && address.trim().length < 5
+      ? {
+          id: "booking-address",
+          text: "Add the address for the visit (at least 5 characters).",
+        }
+      : visit && !problem.trim()
+      ? { id: "booking-problem", text: "Say what needs doing." }
+      : null
+    : address.trim().length < 5
+    ? {
+        id: "booking-pickup",
+        text: "Add the pickup address (at least 5 characters).",
+      }
+    : dropoff.trim().length < 5
+    ? {
+        id: "booking-dropoff",
+        text: "Add the drop-off address (at least 5 characters).",
+      }
+    : trip === "zones" && !zoneRow
+    ? { id: "booking-from-zone", text: "Choose two areas that have a price." }
+    : null
+  const fieldError = (id: string) =>
+    showMissing && missing?.id === id ? (
+      <Text
+        id={`${id}-error`}
+        role="alert"
+        className="txt-small text-ui-fg-error"
+      >
+        {missing.text}
+      </Text>
+    ) : null
+  const errProps = (id: string) =>
+    showMissing && missing?.id === id
+      ? { "aria-invalid": true, "aria-describedby": `${id}-error` }
+      : {}
+
   const slotKey = `${variantId}|${date}|${tripMinutes}`
   const chosen = picked.key === slotKey ? picked.slot : null
   const error = picked.key === slotKey ? picked.error : null
-  const setChosen = (slot: Slot | null) => setPicked((p) => ({ key: slotKey, slot, error: p.key === slotKey ? p.error : null }))
-  const setError = (e: string | null) => setPicked((p) => ({ key: slotKey, slot: p.key === slotKey ? p.slot : null, error: e }))
+  const setChosen = (slot: Slot | null) =>
+    setPicked((p) => ({
+      key: slotKey,
+      slot,
+      error: p.key === slotKey ? p.error : null,
+    }))
+  const setError = (e: string | null) =>
+    setPicked((p) => ({
+      key: slotKey,
+      slot: p.key === slotKey ? p.slot : null,
+      error: e,
+    }))
 
   useEffect(() => {
     if (!variantId || !date || tripMinutes === null) {
@@ -109,7 +187,14 @@ export default function BookingPicker({
   }, [variantId, date, tripMinutes])
 
   const book = () => {
-    if (!chosen || !visitReady) {
+    if (!chosen) {
+      setShowMissing(true)
+      document.getElementById("booking-times")?.focus()
+      return
+    }
+    if (!visitReady || missing) {
+      setShowMissing(true)
+      document.getElementById(missing?.id ?? "")?.focus()
       return
     }
     startBooking(async () => {
@@ -121,24 +206,30 @@ export default function BookingPicker({
               slot: chosen,
               weeks,
               every,
-              ...(visit ? { address: address.trim(), notes: problem.trim() } : {}),
+              ...(visit
+                ? { address: address.trim(), notes: problem.trim() }
+                : {}),
             })
           : await addBookingToCart({
-        countryCode,
-        variantId,
-        slot: chosen,
-        ...(visit ? { address: address.trim(), notes: problem.trim() } : {}),
-        ...(trip
-          ? {
-              address: address.trim(),
-              dropoffAddress: dropoff.trim(),
-              ...(trip === "hours" ? { hours } : { fromZoneId: fromZone, toZoneId: toZone }),
-            }
-          : {}),
-        ...(departure ? { seats } : {}),
-        ...(passId ? { passId } : {}),
-        extras: chosenExtras(extraQty),
-      })
+              countryCode,
+              variantId,
+              slot: chosen,
+              ...(visit
+                ? { address: address.trim(), notes: problem.trim() }
+                : {}),
+              ...(trip
+                ? {
+                    address: address.trim(),
+                    dropoffAddress: dropoff.trim(),
+                    ...(trip === "hours"
+                      ? { hours }
+                      : { fromZoneId: fromZone, toZoneId: toZone }),
+                  }
+                : {}),
+              ...(departure ? { seats } : {}),
+              ...(passId ? { passId } : {}),
+              extras: chosenExtras(extraQty),
+            })
       if (result.error) {
         setError(result.error)
         // Someone else may have taken it: refresh the times.
@@ -153,27 +244,40 @@ export default function BookingPicker({
 
   const price = (v: HttpTypes.StoreProductVariant) =>
     v.calculated_price?.calculated_amount != null
-      ? convertToLocale({ amount: v.calculated_price.calculated_amount, currency_code: v.calculated_price.currency_code ?? "usd" })
+      ? convertToLocale({
+          amount: v.calculated_price.calculated_amount,
+          currency_code: v.calculated_price.currency_code ?? "usd",
+        })
       : ""
 
   return (
     <div className="flex flex-col gap-y-4" data-testid="booking-picker">
       {services.length > 1 && (
         <div className="flex flex-col gap-y-2">
-          <Text className="txt-compact-small-plus">{serviceChoiceLabel(product)}</Text>
+          <Text className="txt-compact-small-plus">
+            {serviceChoiceLabel(product)}
+          </Text>
           <div className="flex flex-wrap gap-2">
             {services.map((v) => (
               <button
                 key={v.id}
                 type="button"
                 onClick={() => setVariantId(v.id)}
-                className={clx("border rounded-md px-3 py-2 txt-small", {
-                  "border-ui-border-interactive bg-ui-bg-subtle": v.id === variantId,
-                  "border-ui-border-base": v.id !== variantId,
-                })}
+                aria-pressed={v.id === variantId}
+                className={clx(
+                  "border rounded-md px-3 py-2 min-h-11 txt-small",
+                  {
+                    "border-ui-border-interactive bg-ui-bg-subtle":
+                      v.id === variantId,
+                    "border-ui-border-base": v.id !== variantId,
+                  }
+                )}
                 data-testid="booking-length"
               >
-                {v.title} {price(v) && <span className="text-ui-fg-subtle">· {price(v)}</span>}
+                {v.title}{" "}
+                {price(v) && (
+                  <span className="text-ui-fg-subtle">· {price(v)}</span>
+                )}
               </button>
             ))}
           </div>
@@ -187,9 +291,12 @@ export default function BookingPicker({
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               maxLength={300}
-              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
               data-testid="booking-pickup"
+              id="booking-pickup"
+              {...errProps("booking-pickup")}
             />
+            {fieldError("booking-pickup")}
           </label>
           <label className="flex flex-col gap-y-2">
             <Text className="txt-compact-small-plus">Drop-off address</Text>
@@ -197,9 +304,12 @@ export default function BookingPicker({
               value={dropoff}
               onChange={(e) => setDropoff(e.target.value)}
               maxLength={300}
-              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
               data-testid="booking-dropoff"
+              id="booking-dropoff"
+              {...errProps("booking-dropoff")}
             />
+            {fieldError("booking-dropoff")}
           </label>
           {trip === "hours" && variant && (
             <label className="flex flex-col gap-y-2">
@@ -207,14 +317,22 @@ export default function BookingPicker({
               <select
                 value={hours}
                 onChange={(e) => setHours(Number(e.target.value))}
-                className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+                className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
                 data-testid="booking-hours"
               >
-                {Array.from({ length: MAX_TRIP_HOURS - minHours(variant) + 1 }, (_, i) => minHours(variant) + i).map((h) => (
+                {Array.from(
+                  { length: MAX_TRIP_HOURS - minHours(variant) + 1 },
+                  (_, i) => minHours(variant) + i
+                ).map((h) => (
                   <option key={h} value={h}>
                     {h} hours
                     {variant.calculated_price?.calculated_amount != null
-                      ? ` · ${convertToLocale({ amount: variant.calculated_price.calculated_amount * h, currency_code: variant.calculated_price.currency_code ?? "usd" })}`
+                      ? ` · ${convertToLocale({
+                          amount:
+                            variant.calculated_price.calculated_amount * h,
+                          currency_code:
+                            variant.calculated_price.currency_code ?? "usd",
+                        })}`
                       : ""}
                   </option>
                 ))}
@@ -224,16 +342,28 @@ export default function BookingPicker({
           {trip === "zones" && (
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: "From", value: fromZone, set: setFromZone, id: "booking-from-zone" },
-                { label: "To", value: toZone, set: setToZone, id: "booking-to-zone" },
+                {
+                  label: "From",
+                  value: fromZone,
+                  set: setFromZone,
+                  id: "booking-from-zone",
+                },
+                {
+                  label: "To",
+                  value: toZone,
+                  set: setToZone,
+                  id: "booking-to-zone",
+                },
               ].map((f) => (
                 <label key={f.id} className="flex flex-col gap-y-2">
                   <Text className="txt-compact-small-plus">{f.label}</Text>
                   <select
                     value={f.value}
                     onChange={(e) => f.set(e.target.value)}
-                    className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+                    className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
                     data-testid={f.id}
+                    id={f.id}
+                    {...(f.id === "booking-from-zone" ? errProps(f.id) : {})}
                   >
                     <option value="">Choose an area</option>
                     {zones.zones.map((z) => (
@@ -244,13 +374,22 @@ export default function BookingPicker({
                   </select>
                 </label>
               ))}
-              <Text className="col-span-2 txt-small text-ui-fg-subtle" data-testid="booking-zone-price">
+              <Text
+                className="col-span-2 txt-small text-ui-fg-subtle"
+                data-testid="booking-zone-price"
+              >
                 {zoneRow
-                  ? `${convertToLocale({ amount: Number(zoneRow.amount), currency_code: zoneRow.currency_code })} · about ${zoneRow.minutes} minutes`
+                  ? `${convertToLocale({
+                      amount: Number(zoneRow.amount),
+                      currency_code: zoneRow.currency_code,
+                    })} · about ${zoneRow.minutes} minutes`
                   : fromZone && toZone
-                    ? "No price between these two areas. Try others or contact us."
-                    : "Choose both areas to see the price."}
+                  ? "No price between these two areas. Try others or contact us."
+                  : "Choose both areas to see the price."}
               </Text>
+              <div className="col-span-2">
+                {fieldError("booking-from-zone")}
+              </div>
             </div>
           )}
         </div>
@@ -264,17 +403,23 @@ export default function BookingPicker({
               setSeats(Number(e.target.value))
               setChosen(null)
             }}
-            className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+            className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
             data-testid="booking-seats"
           >
-            {Array.from({ length: maxSeats(product) }, (_, i) => i + 1).map((n) => (
-              <option key={n} value={n}>
-                {n} {n === 1 ? "seat" : "seats"}
-                {variant?.calculated_price?.calculated_amount != null
-                  ? ` · ${convertToLocale({ amount: variant.calculated_price.calculated_amount * n, currency_code: variant.calculated_price.currency_code ?? "usd" })}`
-                  : ""}
-              </option>
-            ))}
+            {Array.from({ length: maxSeats(product) }, (_, i) => i + 1).map(
+              (n) => (
+                <option key={n} value={n}>
+                  {n} {n === 1 ? "seat" : "seats"}
+                  {variant?.calculated_price?.calculated_amount != null
+                    ? ` · ${convertToLocale({
+                        amount: variant.calculated_price.calculated_amount * n,
+                        currency_code:
+                          variant.calculated_price.currency_code ?? "usd",
+                      })}`
+                    : ""}
+                </option>
+              )
+            )}
           </select>
         </label>
       )}
@@ -285,54 +430,122 @@ export default function BookingPicker({
           value={date}
           min={localDate(null)}
           onChange={(e) => setDate(e.target.value)}
-          className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+          className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
           data-testid="booking-date"
         />
       </div>
       <div className="flex flex-col gap-y-2">
-        <Text className="txt-compact-small-plus">Time</Text>
-        {loading && <Text className="txt-small text-ui-fg-subtle">Loading times…</Text>}
+        <Text className="txt-compact-small-plus" id="booking-times-label">
+          Time
+        </Text>
+        <div aria-live="polite" className="contents">
+          {loading && (
+            <Text className="txt-small text-ui-fg-subtle">Loading times…</Text>
+          )}
+          {!loading && slots.length > 0 && (
+            <span className="sr-only">{slots.length} free times.</span>
+          )}
+        </div>
+        {showMissing && !chosen && !loading && slots.length > 0 && (
+          <Text role="alert" className="txt-small text-ui-fg-error">
+            Choose a time.
+          </Text>
+        )}
         {!loading && slots.length === 0 && (
           <>
-            <Text className="txt-small text-ui-fg-subtle">No free times on this day. Try another day.</Text>
-            {!trip && variantId && <JoinWaitlist key={`${variantId}${date}`} variantId={variantId} date={date} signedIn={signedIn} />}
+            <div className="flex flex-wrap items-center gap-2">
+              <Text className="txt-small text-ui-fg-subtle">
+                No free times on this day.
+              </Text>
+              <button
+                type="button"
+                className="min-h-11 px-2 txt-small text-ui-fg-interactive underline"
+                onClick={() => {
+                  const d = new Date(`${date}T12:00:00Z`)
+                  d.setUTCDate(d.getUTCDate() + 1)
+                  setDate(d.toISOString().slice(0, 10))
+                }}
+                data-testid="booking-next-day"
+              >
+                Try the next day →
+              </button>
+            </div>
+            {!trip && variantId && (
+              <JoinWaitlist
+                key={`${variantId}${date}`}
+                variantId={variantId}
+                date={date}
+                signedIn={signedIn}
+              />
+            )}
           </>
         )}
-        <div className="grid grid-cols-3 gap-2">
-          {slots.filter((s) => !departure || s.remaining >= seats).map((s) => (
-            <button
-              key={`${s.resource_id}-${s.starts_at}`}
-              type="button"
-              onClick={() => setChosen(s)}
-              className={clx("border rounded-md px-2 py-2 txt-small text-left", {
-                "border-ui-border-interactive bg-ui-bg-subtle": chosen === s,
-                "border-ui-border-base": chosen !== s,
-              })}
-              data-testid="booking-slot"
-            >
-              <span className="block txt-small-plus">{formatSlotTime(s.starts_at, s.timezone)}</span>
-              {departure ? (
-                <span className="block text-ui-fg-subtle txt-xsmall">{s.remaining} seats left</span>
-              ) : (
-                s.resource_name && <span className="block text-ui-fg-subtle txt-xsmall">{s.resource_name}</span>
-              )}
-            </button>
-          ))}
+        <div
+          id="booking-times"
+          tabIndex={-1}
+          role="group"
+          aria-labelledby="booking-times-label"
+          aria-busy={loading}
+          className={clx(
+            "grid grid-cols-2 xsmall:grid-cols-3 gap-2 outline-none",
+            { "opacity-50": loading }
+          )}
+        >
+          {slots
+            .filter((s) => !departure || s.remaining >= seats)
+            .map((s) => (
+              <button
+                key={`${s.resource_id}-${s.starts_at}`}
+                type="button"
+                onClick={() => setChosen(s)}
+                disabled={loading}
+                aria-pressed={chosen === s}
+                className={clx(
+                  "border rounded-md px-2 py-2 min-h-11 txt-small text-left disabled:cursor-wait",
+                  {
+                    "border-ui-border-interactive bg-ui-bg-subtle":
+                      chosen === s,
+                    "border-ui-border-base": chosen !== s,
+                  }
+                )}
+                data-testid="booking-slot"
+              >
+                <span className="block txt-small-plus">
+                  {formatSlotTime(s.starts_at, s.timezone)}
+                </span>
+                {departure ? (
+                  <span className="block text-ui-fg-subtle txt-xsmall">
+                    {s.remaining} seats left
+                  </span>
+                ) : (
+                  s.resource_name && (
+                    <span className="block text-ui-fg-subtle txt-xsmall">
+                      {s.resource_name}
+                    </span>
+                  )
+                )}
+              </button>
+            ))}
         </div>
       </div>
       {visit && (
         <>
           <label className="flex flex-col gap-y-2">
-            <Text className="txt-compact-small-plus">Address for the visit</Text>
+            <Text className="txt-compact-small-plus">
+              Address for the visit
+            </Text>
             <textarea
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               rows={2}
               maxLength={300}
               placeholder="House or building, street, commune, district, province"
-              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
               data-testid="booking-address"
+              id="booking-address"
+              {...errProps("booking-address")}
             />
+            {fieldError("booking-address")}
           </label>
           <label className="flex flex-col gap-y-2">
             <Text className="txt-compact-small-plus">What needs doing?</Text>
@@ -342,79 +555,125 @@ export default function BookingPicker({
               rows={3}
               maxLength={500}
               placeholder="Describe the problem or the job"
-              className="border border-ui-border-base rounded-md px-3 py-2 txt-small"
+              className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
               data-testid="booking-problem"
+              id="booking-problem"
+              {...errProps("booking-problem")}
             />
+            {fieldError("booking-problem")}
           </label>
         </>
       )}
       {/* A series is booked without extras (review finding: they were
           dropped silently), so the list hides while Repeat is on. */}
-      {weeks === 1 && <ExtrasChooser product={product} countryCode={countryCode} value={extraQty} onChange={setExtraQty} />}
+      {weeks === 1 && (
+        <ExtrasChooser
+          product={product}
+          countryCode={countryCode}
+          value={extraQty}
+          onChange={setExtraQty}
+        />
+      )}
       {error && (
-        <Text className="txt-small text-ui-fg-error" data-testid="booking-error">
+        <Text
+          role="alert"
+          className="txt-small text-ui-fg-error"
+          data-testid="booking-error"
+        >
           {error}
         </Text>
       )}
       {!trip && !departure && (
-        <label className="flex items-center gap-x-2 txt-small" data-testid="booking-repeat">
-          <input
-            type="checkbox"
-            checked={weeks > 1}
-            onChange={(e) => {
-              setWeeks(e.target.checked ? 4 : 1)
-              if (e.target.checked) setPassId("")
-            }}
-          />
-          Repeat
-          <select
-            className="rounded-md border border-ui-border-base px-1"
-            value={every}
-            disabled={weeks === 1}
-            onChange={(e) => setEvery(e.target.value as "week" | "2weeks" | "month")}
-            aria-label="How often"
-          >
-            <option value="week">every week</option>
-            <option value="2weeks">every 2 weeks</option>
-            <option value="month">every month</option>
-          </select>
-          ×
-          <select
-            className="rounded-md border border-ui-border-base px-1"
-            value={weeks > 1 ? weeks : 4}
-            disabled={weeks === 1}
-            onChange={(e) => setWeeks(Number(e.target.value))}
-            aria-label="Weeks"
-          >
-            {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
-              <option key={n} value={n}>
-                {n} times
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="flex flex-col gap-y-2" data-testid="booking-repeat">
+          <label className="flex min-h-11 items-center gap-x-3 txt-small">
+            <input
+              type="checkbox"
+              className="h-5 w-5"
+              checked={weeks > 1}
+              onChange={(e) => {
+                setWeeks(e.target.checked ? 4 : 1)
+                if (e.target.checked) setPassId("")
+              }}
+            />
+            Repeat this booking
+          </label>
+          {weeks > 1 && (
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col gap-y-1 txt-small">
+                How often
+                <select
+                  className="rounded-md border border-ui-border-base px-3 min-h-11"
+                  value={every}
+                  onChange={(e) =>
+                    setEvery(e.target.value as "week" | "2weeks" | "month")
+                  }
+                >
+                  <option value="week">every week</option>
+                  <option value="2weeks">every 2 weeks</option>
+                  <option value="month">every month</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-y-1 txt-small">
+                How many times
+                <select
+                  className="rounded-md border border-ui-border-base px-3 min-h-11"
+                  value={weeks}
+                  onChange={(e) => setWeeks(Number(e.target.value))}
+                >
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                    <option key={n} value={n}>
+                      {n} times
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+        </div>
       )}
       {passes.length > 0 && weeks === 1 && (
-        <label className="flex items-center gap-x-2 txt-small" data-testid="booking-use-pass">
-          <input type="checkbox" checked={!!passId} onChange={(e) => setPassId(e.target.checked ? passes[0].id : "")} />
-          Use my pass ({passes[0].title}: {passes[0].credits_left} of {passes[0].credits_total} left{departure && seats > 1 ? `; ${seats} seats take ${seats}` : ""})
+        <label
+          className="flex min-h-11 items-center gap-x-3 txt-small"
+          data-testid="booking-use-pass"
+        >
+          <input
+            type="checkbox"
+            checked={!!passId}
+            onChange={(e) => setPassId(e.target.checked ? passes[0].id : "")}
+          />
+          Use my pass ({passes[0].title}: {passes[0].credits_left} of{" "}
+          {passes[0].credits_total} left
+          {departure && seats > 1 ? `; ${seats} seats take ${seats}` : ""})
         </label>
       )}
-      <Button onClick={book} disabled={!chosen || !visitReady || booking} isLoading={booking} className="w-full h-10" data-testid="booking-submit">
+      <Button
+        onClick={book}
+        disabled={booking}
+        isLoading={booking}
+        className="w-full h-11"
+        data-testid="booking-submit"
+      >
         {!chosen
           ? "Choose a time"
           : !visitReady
-            ? trip
-              ? "Add both addresses" + (trip === "zones" ? " and the areas" : "")
-              : "Add the address and the job"
-            : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}${weeks > 1 ? ` × ${weeks}` : ""}`}
+          ? trip
+            ? "Add both addresses" + (trip === "zones" ? " and the areas" : "")
+            : "Add the address and the job"
+          : `Book ${formatSlotTime(chosen.starts_at, chosen.timezone)}${
+              weeks > 1 ? ` × ${weeks}` : ""
+            }`}
       </Button>
       {depositPercent(product) !== null && (
-        <Text className="txt-small text-ui-fg-subtle" data-testid="booking-deposit">
+        <Text
+          className="txt-small text-ui-fg-subtle"
+          data-testid="booking-deposit"
+        >
           Pay a {depositPercent(product)}% deposit now; the rest at the venue.
         </Text>
       )}
-      <Text className="txt-xsmall text-ui-fg-subtle">The time is held for you while you check out.</Text>
+      <Text className="txt-xsmall text-ui-fg-subtle">
+        The time is held for you while you check out.
+      </Text>
     </div>
   )
 }

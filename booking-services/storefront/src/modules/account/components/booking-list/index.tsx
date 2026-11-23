@@ -13,6 +13,15 @@ const REFUND_TEXT: Record<string, string> = {
   no_order: "Cancelled.",
 }
 
+// Statuses in the customer's words (design critique, 2026-11-23).
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Held",
+  confirmed: "Booked",
+  completed: "Done",
+  cancelled: "Cancelled",
+  no_show: "Missed",
+}
+
 // Change the time (TASKS P3-28): pick a day, then a free time of the same
 // length (any calendar offering the service). The shop's cancellation
 // cutoff applies; the backend says when it's too late.
@@ -27,9 +36,12 @@ function ChangeTime({ booking, onDone }: { booking: MyBooking; onDone: (notice: 
   )
   const [slots, setSlots] = useState<Slot[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // A paid booking moves only after "Move to this time" (design critique, 2026-11-23).
+  const [picked, setPicked] = useState<Slot | null>(null)
   const [pending, start] = useTransition()
   const load = (d: string) =>
     start(async () => {
+      setPicked(null)
       const r = await listSlots(booking.variant_id!, d, minutes)
       setError(r.error ?? null)
       setSlots(r.slots.filter((s) => Date.parse(s.ends_at) - Date.parse(s.starts_at) === minutes * 60_000))
@@ -45,7 +57,8 @@ function ChangeTime({ booking, onDone }: { booking: MyBooking; onDone: (notice: 
       <div className="flex items-center gap-2">
         <input
           type="date"
-          className="rounded-md border border-ui-border-base px-3 py-1 txt-small"
+          aria-label="New day"
+          className="rounded-md border border-ui-border-base px-3 min-h-11 txt-small"
           value={date}
           onChange={(e) => {
             setDate(e.target.value)
@@ -60,14 +73,36 @@ function ChangeTime({ booking, onDone }: { booking: MyBooking; onDone: (notice: 
       {slots && slots.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {slots.map((s) => (
-            <Button key={`${s.resource_id}${s.starts_at}`} variant="secondary" disabled={pending} onClick={() => move(s)} data-testid="booking-new-time">
+            <Button
+              key={`${s.resource_id}${s.starts_at}`}
+              variant={picked === s ? "primary" : "secondary"}
+              aria-pressed={picked === s}
+              disabled={pending}
+              onClick={() => setPicked(s)}
+              className="min-h-11"
+              data-testid="booking-new-time"
+            >
               {formatBookingRange(s.starts_at, s.ends_at, s.timezone ?? booking.resource?.timezone)}
               {s.resource_name && s.resource_name !== booking.resource?.name ? ` · ${s.resource_name}` : ""}
             </Button>
           ))}
         </div>
       )}
-      {error && <Text className="txt-small text-ui-fg-error">{error}</Text>}
+      {picked && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Text className="txt-small">
+            Move to {formatBookingRange(picked.starts_at, picked.ends_at, picked.timezone ?? booking.resource?.timezone)}?
+          </Text>
+          <Button isLoading={pending} onClick={() => move(picked)} className="min-h-11" data-testid="booking-move-confirm">
+            Move to this time
+          </Button>
+        </div>
+      )}
+      {error && (
+        <Text role="alert" className="txt-small text-ui-fg-error">
+          {error}
+        </Text>
+      )}
     </div>
   )
 }
@@ -189,7 +224,7 @@ export default function BookingList({
             )}
           </div>
           <div className="flex items-center gap-3">
-            <Badge>{b.status === "pending" ? "held" : b.status.replace("_", " ")}</Badge>
+            <Badge>{STATUS_LABEL[b.status] ?? b.status.replace(/_/g, " ")}</Badge>
             {canCancel && b.status === "confirmed" && b.variant_id && confirming !== b.id && changing !== b.id &&
               Date.parse(b.ends_at) - Date.parse(b.starts_at) < 24 * 3600_000 && (
                 <Button variant="secondary" onClick={() => setChanging(b.id)} data-testid="booking-change">
