@@ -20,6 +20,7 @@ type Payouts = {
 export default async function PayoutsPage() {
   const { token, vendor } = await requireVendor()
   if (vendor.status !== "active") {
+    // Shell shows the review / paused screen (no data to load).
     return <Shell vendor={vendor} active="/payouts">{null}</Shell>
   }
   const data = await vendorGet<Payouts>(token, "/vendors/me/payouts")

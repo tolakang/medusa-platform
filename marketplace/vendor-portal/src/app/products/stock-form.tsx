@@ -17,8 +17,13 @@ export function StockForm({ productId, quantity }: { productId: string; quantity
         aria-label="Quantity in stock"
       />
       <button className="btn-secondary" type="submit" disabled={saving}>
-        {saving ? "…" : "Save"}
+        {saving ? "Saving…" : "Save"}
       </button>
+      {state.saved !== undefined && !saving && !state.error && (
+        <span role="status" className="text-xs text-ui-tag-green-text">
+          Saved: {state.saved}
+        </span>
+      )}
       {state.error && (
         <span role="alert" className="text-xs text-ui-tag-red-text">
           {state.error}
