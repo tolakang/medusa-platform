@@ -177,6 +177,39 @@ medusaIntegrationTestRunner({
         const otherHeaders = (other as unknown as { headers: Record<string, string> }).headers
         expect(otherHeaders["access-control-allow-origin"]).toBeUndefined()
       })
+
+      it("an admin copies a reset link for a cashier who forgot the password", async () => {
+        const auth = await adminAuth()
+        const cashier = await invite("reset.me@example.com", "Dara")
+        // Not signed up yet: the invite code is the way in.
+        const early = await fail(api.post(`/admin/pos/cashiers/${cashier.id}/reset-link`, {}, auth))
+        expect(early.status).toEqual(400)
+        expect(early.data?.message).toContain("invite code")
+
+        await api.post("/pos/cashiers/accept", code(cashier), bearer(await register("reset.me@example.com")))
+        const { data } = await api.post(`/admin/pos/cashiers/${cashier.id}/reset-link`, {}, auth)
+        expect(data.expires_in_minutes).toEqual(15)
+        const link = new URL(data.link)
+        expect(link.origin + link.pathname).toEqual(`${POS_ORIGIN}/reset-password`)
+        expect(link.searchParams.get("email")).toEqual("reset.me@example.com")
+
+        // The link's token sets a new password (at least 8 characters).
+        const token = link.searchParams.get("token")!
+        const short = await fail(
+          api.post("/auth/cashier/emailpass/update", { email: "reset.me@example.com", password: "short" }, bearer(token))
+        )
+        expect(short.status).toEqual(400)
+        await api.post(
+          "/auth/cashier/emailpass/update",
+          { email: "reset.me@example.com", password: "new-cashier-pass-1" },
+          bearer(token)
+        )
+        const { data: signedIn } = await api.post("/auth/cashier/emailpass", {
+          email: "reset.me@example.com",
+          password: "new-cashier-pass-1",
+        })
+        expect(typeof signedIn.token).toEqual("string")
+      })
     })
   },
 })

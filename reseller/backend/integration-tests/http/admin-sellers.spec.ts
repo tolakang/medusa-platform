@@ -166,6 +166,33 @@ medusaIntegrationTestRunner({
         // The payouts route under the same path keeps its own body.
         expect((await call(api.post(`/admin/sellers/${id}/payouts`, {}, admin))).status).toEqual(200)
       })
+
+      it("copies a reset link for a seller who forgot the password", async () => {
+        const invited = await invite()
+        const id = invited.data.seller.id
+        // Not signed up yet: the invite code is the way in.
+        const early = await call(api.post(`/admin/sellers/${id}/reset-link`, {}, admin))
+        expect(early.status).toEqual(400)
+        expect(early.data.message).toContain("invite code")
+
+        await onboard(invited)
+        const res = await call(api.post(`/admin/sellers/${id}/reset-link`, {}, admin))
+        expect(res.status).toEqual(200)
+        const link = new URL(res.data.link)
+        expect(link.origin + link.pathname).toEqual("https://portal.seller.test/reset-password")
+        const token = link.searchParams.get("token")!
+        const updated = await call(
+          api.post("/auth/seller/emailpass/update", { email: "sok@seller.test", password: "new-seller-pass-1" }, bearer(token))
+        )
+        expect(updated.status).toEqual(200)
+        const signedIn = await api.post("/auth/seller/emailpass", {
+          email: "sok@seller.test",
+          password: "new-seller-pass-1",
+        })
+        expect(typeof signedIn.data.token).toEqual("string")
+        // Someone else's seller id is not found.
+        expect((await call(api.post(`/admin/sellers/sel_missing/reset-link`, {}, admin))).status).toEqual(404)
+      })
     })
   },
 })

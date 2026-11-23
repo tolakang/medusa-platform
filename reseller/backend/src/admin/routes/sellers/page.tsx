@@ -92,6 +92,23 @@ const SellersPage = () => {
     onError: (e) => toast.error(errorText(e)),
   })
   const busyId = update.isPending ? update.variables?.id : undefined
+  // A one-time "set a new password" link to send by chat when the reset email
+  // doesn't reach them (design critique, 2026-11-23).
+  const resetLink = useMutation({
+    mutationFn: ({ path }: { path: string; who: string }) =>
+      sdk.client.fetch<{ link: string; expires_in_minutes: number }>(path, { method: "POST" }),
+    onSuccess: async ({ link, expires_in_minutes }, { who }) => {
+      const copied = await navigator.clipboard.writeText(link).then(
+        () => true,
+        () => false
+      )
+      toast.success(copied ? `Reset link for ${who} copied` : `Reset link for ${who}`, {
+        description: copied ? `Send it to them. It works for ${expires_in_minutes} minutes.` : link,
+        duration: copied ? 8000 : 60000,
+      })
+    },
+    onError: (e) => toast.error(errorText(e)),
+  })
   // Suspending signs the seller out at once, so it asks first.
   const suspend = async (s: Seller) => {
     const ok = await prompt({
@@ -343,6 +360,16 @@ const SellersPage = () => {
                           Suspend
                         </Button>
                       )}
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        className="ml-2"
+                        disabled={resetLink.isPending}
+                        isLoading={resetLink.isPending && resetLink.variables?.path.includes(s.id)}
+                        onClick={() => resetLink.mutate({ path: `/admin/sellers/${s.id}/reset-link`, who: s.name })}
+                      >
+                        Reset link
+                      </Button>
                     </Table.Cell>
                   </Table.Row>
                 )

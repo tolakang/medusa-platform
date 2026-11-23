@@ -50,6 +50,24 @@ const CashiersPage = () => {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  // A one-time "set a new password" link to send by chat when the reset email
+  // doesn't reach them (design critique, 2026-11-23).
+  const resetLink = useMutation({
+    mutationFn: ({ path }: { path: string; who: string }) =>
+      sdk.client.fetch<{ link: string; expires_in_minutes: number }>(path, { method: "POST" }),
+    onSuccess: async ({ link, expires_in_minutes }, { who }) => {
+      const copied = await navigator.clipboard.writeText(link).then(
+        () => true,
+        () => false
+      )
+      toast.success(copied ? `Reset link for ${who} copied` : `Reset link for ${who}`, {
+        description: copied ? `Send it to them. It works for ${expires_in_minutes} minutes.` : link,
+        duration: copied ? 8000 : 60000,
+      })
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
   const body = inviteBody(form)
 
   return (
@@ -155,6 +173,15 @@ const CashiersPage = () => {
                           onClick={() => update.mutate({ id: c.id, is_active: !c.is_active })}
                         >
                           {c.is_active ? "Deactivate" : "Activate"}
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="secondary"
+                          disabled={resetLink.isPending}
+                          isLoading={resetLink.isPending && resetLink.variables?.path.includes(c.id)}
+                          onClick={() => resetLink.mutate({ path: `/admin/pos/cashiers/${c.id}/reset-link`, who: c.name })}
+                        >
+                          Reset link
                         </Button>
                       </>
                     )}

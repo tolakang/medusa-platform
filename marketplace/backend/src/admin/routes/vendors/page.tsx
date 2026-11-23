@@ -44,6 +44,23 @@ const VendorsPage = () => {
     onError: (e) => toast.error(errorText(e)),
   })
   const busyId = update.isPending ? update.variables?.id : undefined
+  // A one-time "set a new password" link to send by chat when the reset email
+  // doesn't reach them (design critique, 2026-11-23).
+  const resetLink = useMutation({
+    mutationFn: ({ path }: { path: string; who: string }) =>
+      sdk.client.fetch<{ link: string; expires_in_minutes: number }>(path, { method: "POST" }),
+    onSuccess: async ({ link, expires_in_minutes }, { who }) => {
+      const copied = await navigator.clipboard.writeText(link).then(
+        () => true,
+        () => false
+      )
+      toast.success(copied ? `Reset link for ${who} copied` : `Reset link for ${who}`, {
+        description: copied ? `Send it to them. It works for ${expires_in_minutes} minutes.` : link,
+        duration: copied ? 8000 : 60000,
+      })
+    },
+    onError: (e) => toast.error(errorText(e)),
+  })
   // Suspending closes the vendor's shop and signs them out, so it asks first.
   const suspend = async (v: Vendor) => {
     const ok = await prompt({
@@ -109,7 +126,24 @@ const VendorsPage = () => {
                   </div>
                 </Table.Cell>
                 <Table.Cell>
-                  <Text size="small">{v.admins.map((a) => a.email).join(", ")}</Text>
+                  <div className="flex flex-col gap-1">
+                    {v.admins.map((a) => (
+                      <div key={a.id} className="flex items-center gap-2">
+                        <Text size="small">{a.email}</Text>
+                        <Button
+                          size="small"
+                          variant="transparent"
+                          disabled={resetLink.isPending}
+                          isLoading={resetLink.isPending && resetLink.variables?.path.includes(a.id)}
+                          onClick={() =>
+                            resetLink.mutate({ path: `/admin/vendors/${v.id}/admins/${a.id}/reset-link`, who: a.email })
+                          }
+                        >
+                          Reset link
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </Table.Cell>
                 <Table.Cell>
                   <Badge size="2xsmall" color={STATUS_COLOR[v.status]}>{v.status}</Badge>
