@@ -8,7 +8,7 @@ body {
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-2 min-h-11 rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
 }
 .btn-primary {
   @apply btn bg-ui-button-inverted text-ui-fg-on-inverted hover:bg-ui-button-inverted-hover;
@@ -17,7 +17,7 @@ body {
   @apply btn border border-ui-border-base bg-ui-bg-base hover:bg-ui-bg-base-hover;
 }
 .field {
-  @apply w-full rounded-lg border border-ui-border-base bg-ui-bg-field px-3 py-2 text-sm outline-none focus:border-ui-border-interactive;
+  @apply w-full rounded-lg border border-ui-border-base min-h-11 bg-ui-bg-field px-3 py-2 text-base outline-none sm:text-sm focus:border-ui-border-interactive;
 }
 .card {
   @apply rounded-xl border border-ui-border-base bg-ui-bg-base;

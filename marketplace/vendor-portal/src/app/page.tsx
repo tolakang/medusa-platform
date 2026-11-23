@@ -11,6 +11,7 @@ type Payouts = { not_yet_paid_out: { currency_code: string; amount: number }[] }
 export default async function OverviewPage() {
   const { token, vendor } = await requireVendor()
   if (vendor.status !== "active") {
+    // Shell shows the review / paused screen (no data to load).
     return <Shell vendor={vendor} active="/">{null}</Shell>
   }
   const [{ orders }, payouts] = await Promise.all([

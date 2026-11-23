@@ -44,14 +44,31 @@ export function Shell({
           </Link>
         ))}
       </nav>
-      {vendor.status === "pending" && (
-        <p className="card px-4 py-3 text-sm">
-          Your shop is waiting for the marketplace's approval. You can add products and see
-          orders once it is approved.
-        </p>
-      )}
-      <main className="flex flex-col gap-6">{children}</main>
+      <main className="flex flex-col gap-6">{vendor.status === "active" ? children : <NotActive vendor={vendor} />}</main>
     </div>
+  )
+}
+
+// A pending or suspended shop sees what's happening and what comes next on
+// every tab (design critique, 2026-11-23), not an empty page.
+function NotActive({ vendor }: { vendor: Vendor }) {
+  const pending = vendor.status === "pending"
+  return (
+    <section role="status" className="card flex flex-col gap-3 p-6">
+      <h2 className="text-lg font-semibold">{pending ? "Your shop is being reviewed" : "Your shop is paused"}</h2>
+      <p className="text-ui-fg-subtle">
+        {pending
+          ? "The marketplace checks every new shop, usually within 1–2 working days. We email you when it's approved."
+          : "The marketplace has paused your shop, so your products aren't for sale right now. Contact the marketplace to find out why."}
+      </p>
+      {pending && (
+        <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm">
+          <li className="text-ui-fg-subtle">Shop created ✓</li>
+          <li className="font-medium">Marketplace review (now)</li>
+          <li className="text-ui-fg-subtle">Add products, take orders, get paid</li>
+        </ol>
+      )}
+    </section>
   )
 }
 
