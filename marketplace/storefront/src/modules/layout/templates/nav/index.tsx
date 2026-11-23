@@ -1,3 +1,4 @@
+import { SHOP_NAME } from "@lib/shop"
 import { Suspense } from "react"
 
 import { listLocales } from "@lib/data/locales"
@@ -32,7 +33,7 @@ export default async function Nav() {
               className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
               data-testid="nav-store-link"
             >
-              Medusa Store
+              {SHOP_NAME}
             </LocalizedClientLink>
           </div>
 

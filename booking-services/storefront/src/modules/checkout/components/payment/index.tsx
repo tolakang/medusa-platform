@@ -143,7 +143,7 @@ const Payment = ({
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && availablePaymentMethods?.length && (
+          {!paidByGiftcard && (availablePaymentMethods?.length ?? 0) > 0 && (
             <>
               <RadioGroup
                 value={selectedPaymentMethod}
@@ -172,8 +172,14 @@ const Payment = ({
             </>
           )}
 
+          {!paidByGiftcard && !availablePaymentMethods?.length && (
+            <Text className="txt-medium text-ui-fg-subtle" data-testid="no-payment-methods">
+              No payment method is set up for your country yet. Contact the shop to order.
+            </Text>
+          )}
+
           {paidByGiftcard && (
-            <div className="flex flex-col w-1/3">
+            <div className="flex flex-col w-full xsmall:w-1/3">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Payment method
               </Text>
@@ -210,8 +216,8 @@ const Payment = ({
 
         <div className={isOpen ? "hidden" : "block"}>
           {cart && paymentReady && activeSession ? (
-            <div className="flex items-start gap-x-1 w-full">
-              <div className="flex flex-col w-1/3">
+            <div className="flex flex-col xsmall:flex-row items-start gap-4 xsmall:gap-x-1 w-full">
+              <div className="flex flex-col w-full xsmall:w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Payment method
                 </Text>
@@ -223,7 +229,7 @@ const Payment = ({
                     activeSession?.provider_id}
                 </Text>
               </div>
-              <div className="flex flex-col w-1/3">
+              <div className="flex flex-col w-full xsmall:w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Payment details
                 </Text>
@@ -241,7 +247,7 @@ const Payment = ({
               </div>
             </div>
           ) : paidByGiftcard ? (
-            <div className="flex flex-col w-1/3">
+            <div className="flex flex-col w-full xsmall:w-1/3">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Payment method
               </Text>

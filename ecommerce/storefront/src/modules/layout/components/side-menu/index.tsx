@@ -1,4 +1,5 @@
 "use client"
+import { SHOP_NAME } from "@lib/shop"
 
 import { Popover, PopoverPanel, Transition } from "@headlessui/react"
 import useToggleState from "@lib/hooks/use-toggle-state"
@@ -127,7 +128,7 @@ const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
                         />
                       </div>
                       <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
+                        © {new Date().getFullYear()} {SHOP_NAME}. All rights
                         reserved.
                       </Text>
                     </div>

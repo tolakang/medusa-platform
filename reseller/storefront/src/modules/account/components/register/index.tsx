@@ -1,4 +1,5 @@
 "use client"
+import { SHOP_NAME } from "@lib/shop"
 
 import { startTransition, useActionState } from "react"
 import { useCaptcha } from "@modules/common/components/captcha"
@@ -50,11 +51,10 @@ const Register = ({ setCurrentView }: Props) => {
       data-testid="register-page"
     >
       <h1 className="text-large-semi uppercase mb-6">
-        Become a Medusa Store Member
+        Create your account
       </h1>
       <p className="text-center text-base-regular text-ui-fg-base mb-4">
-        Create your Medusa Store Member profile, and get access to an enhanced
-        shopping experience.
+        Track your orders and check out faster with your saved addresses.
       </p>
       <form className="w-full flex flex-col" action={submit}>
         <div className="flex flex-col w-full gap-y-2">
@@ -126,7 +126,7 @@ const Register = ({ setCurrentView }: Props) => {
           data-testid="register-error"
         />
         <span className="text-center text-ui-fg-base text-small-regular mt-6">
-          By creating an account, you agree to Medusa Store&apos;s{" "}
+          By creating an account, you agree to {SHOP_NAME}&apos;s{" "}
           <LocalizedClientLink
             href="/content/privacy-policy"
             className="underline"

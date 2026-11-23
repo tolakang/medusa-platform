@@ -1,3 +1,4 @@
+import { SHOP_NAME } from "@/lib/shop"
 import { getCategoryByHandle, listCategories } from "@/lib/data/categories"
 import { listRegions } from "@/lib/data/regions"
 import CategoryTemplate from "@/modules/categories/templates"
@@ -26,7 +27,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     const description = product_category.description ?? `${title} category.`
 
     return {
-      title: `${title} | Medusa Store`,
+      title: `${title} | ${SHOP_NAME}`,
       description,
       alternates: {
         canonical: `${params.category.join("/")}`,

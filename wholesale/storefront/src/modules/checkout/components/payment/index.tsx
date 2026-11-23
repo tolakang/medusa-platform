@@ -151,7 +151,7 @@ const Payment = ({
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && availablePaymentMethods?.length && (
+          {!paidByGiftcard && (availablePaymentMethods?.length ?? 0) > 0 && (
             <>
               <RadioGroup
                 value={selectedPaymentMethod}
@@ -193,8 +193,14 @@ const Payment = ({
             </>
           )}
 
+          {!paidByGiftcard && !availablePaymentMethods?.length && (
+            <Text className="txt-medium text-ui-fg-subtle" data-testid="no-payment-methods">
+              No payment method is set up for your country yet. Contact the shop to order.
+            </Text>
+          )}
+
           {paidByGiftcard && (
-            <div className="flex flex-col w-1/3">
+            <div className="flex flex-col w-full xsmall:w-1/3">
               <Text
                 className="txt-medium text-ui-fg-subtle"
                 data-testid="payment-method-summary"
@@ -231,7 +237,7 @@ const Payment = ({
         <div className={isOpen ? "hidden" : "block"}>
           {cart && paymentReady && activeSession ? (
             <div className="flex items-center gap-x-1 w-full pt-2">
-              <div className="flex flex-col w-1/3">
+              <div className="flex flex-col w-full xsmall:w-1/3">
                 <Text
                   className="txt-medium text-ui-fg-subtle"
                   data-testid="payment-method-summary"
@@ -240,7 +246,7 @@ const Payment = ({
                     selectedPaymentMethod}
                 </Text>
               </div>
-              <div className="flex flex-col w-1/3">
+              <div className="flex flex-col w-full xsmall:w-1/3">
                 <div
                   className="flex gap-2 txt-medium text-ui-fg-subtle items-center"
                   data-testid="payment-details-summary"
@@ -259,7 +265,7 @@ const Payment = ({
               </div>
             </div>
           ) : paidByGiftcard ? (
-            <div className="flex flex-col w-1/3">
+            <div className="flex flex-col w-full xsmall:w-1/3">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Payment method
               </Text>

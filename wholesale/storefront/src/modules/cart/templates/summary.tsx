@@ -57,7 +57,7 @@ const Summary = ({ customer, spendLimitExceeded }: SummaryProps) => {
         data-testid="checkout-button"
       >
         <Button
-          className="w-full h-10 rounded-full shadow-none"
+          className="w-full h-11 rounded-full shadow-none"
           disabled={spendLimitExceeded}
         >
           {customer
@@ -70,7 +70,7 @@ const Summary = ({ customer, spendLimitExceeded }: SummaryProps) => {
       {!!customer && (
         <RequestQuoteConfirmation>
           <Button
-            className="w-full h-10 rounded-full shadow-borders-base"
+            className="w-full h-11 rounded-full shadow-borders-base"
             variant="secondary"
             disabled={isPendingApproval}
           >
@@ -81,7 +81,7 @@ const Summary = ({ customer, spendLimitExceeded }: SummaryProps) => {
       {!customer && (
         <RequestQuotePrompt>
           <Button
-            className="w-full h-10 rounded-full shadow-borders-base"
+            className="w-full h-11 rounded-full shadow-borders-base"
             variant="secondary"
             disabled={isPendingApproval}
           >
@@ -92,7 +92,7 @@ const Summary = ({ customer, spendLimitExceeded }: SummaryProps) => {
       <CartToCsvButton cart={cart} />
       <Button
         onClick={handleEmptyCart}
-        className="w-full h-10 rounded-full shadow-borders-base"
+        className="w-full h-11 rounded-full shadow-borders-base"
         variant="secondary"
         disabled={isPendingApproval}
       >
