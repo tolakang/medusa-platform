@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Input, Select, Table, Text } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { adminLink, errorText, money, STATUS_COLOR } from "../../lib/marketplace"
@@ -65,8 +65,10 @@ type HeldCommission = Commission & {
 
 // Refunds to review (owner, F-078): a commission whose customer order has a
 // refund is held out of payouts until it's settled here. Keep: the vendor
-// gets it as it is; Reduce: the vendor gets the amount you enter; Cancel:
-// nothing for this order. Kept or reduced, the next payout includes it.
+// gets it as it is; Reduce: the vendor gets the amount you enter; Pay nothing:
+// nothing for this order. Kept or reduced, the next payout includes it. Each
+// one is final, so it asks first and names the vendor and amount (design
+// critique, 2026-11-23).
 const RefundsToReview = () => {
   const queryClient = useQueryClient()
   const [amounts, setAmounts] = useState<Record<string, string>>({})
@@ -77,11 +79,43 @@ const RefundsToReview = () => {
         query: { refund_review: "to_review" },
       }),
   })
+  const prompt = usePrompt()
   const settle = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown>; done: string }) =>
       sdk.client.fetch(`/admin/vendor-commissions/${id}/settle`, { method: "POST", body }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["marketplace-refunds-to-review"] }),
+    onSuccess: (_, { done }) => {
+      toast.success(done)
+      queryClient.invalidateQueries({ queryKey: ["marketplace-refunds-to-review"] })
+    },
+    onError: (e) => toast.error(errorText(e)),
   })
+  const busyId = settle.isPending ? settle.variables?.id : undefined
+  const decide = async (c: HeldCommission, action: "keep" | "reduce" | "cancel") => {
+    const order = c.order ? ` #${c.order.display_id}` : ""
+    const amount = action === "reduce" ? Number(amounts[c.id]) : action === "keep" ? c.payout_amount : 0
+    const gets = money(amount, c.currency_code)
+    const ok = await prompt({
+      title: action === "cancel" ? `Pay ${c.vendor.name} nothing for order${order}?` : `Pay ${c.vendor.name} ${gets} for order${order}?`,
+      description:
+        action === "cancel"
+          ? "The vendor gets nothing for this order. This can't be undone."
+          : `The next payout includes ${gets} for this order. This can't be undone.`,
+      variant: action === "cancel" ? "danger" : "confirmation",
+      confirmText: action === "cancel" ? "Pay nothing" : `Pay ${gets}`,
+      cancelText: "Back",
+    })
+    if (!ok) return
+    settle.mutate({
+      id: c.id,
+      body: action === "reduce" ? { action, payout_amount: amount } : { action },
+      done: action === "cancel" ? `${c.vendor.name} gets nothing for order${order}` : `${c.vendor.name} gets ${gets} for order${order}`,
+    })
+  }
+  const validAmount = (c: HeldCommission) => {
+    const raw = amounts[c.id]?.trim()
+    const n = Number(raw)
+    return !!raw && Number.isFinite(n) && n >= 0 && n < c.payout_amount
+  }
   const held = data?.vendor_commissions ?? []
   if (!held.length) {
     return null
@@ -95,7 +129,6 @@ const RefundsToReview = () => {
           what the vendor gets.
         </Text>
       </div>
-      {settle.error && <Text className="text-ui-fg-error">{errorText(settle.error)}</Text>}
       <Table>
         <Table.Header>
           <Table.Row>
@@ -136,36 +169,40 @@ const RefundsToReview = () => {
                   <Button
                     size="small"
                     variant="secondary"
-                    isLoading={settle.isPending}
-                    onClick={() => settle.mutate({ id: c.id, body: { action: "keep" } })}
+                    disabled={!!busyId}
+                    isLoading={busyId === c.id && settle.variables?.body.action === "keep"}
+                    onClick={() => decide(c, "keep")}
                   >
                     Keep
                   </Button>
                   <Input
                     size="small"
-                    className="w-24"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    className="w-28"
                     placeholder="New amount"
+                    aria-label={`New amount for ${c.vendor.name}`}
                     value={amounts[c.id] ?? ""}
                     onChange={(e) => setAmounts((a) => ({ ...a, [c.id]: e.target.value }))}
                   />
                   <Button
                     size="small"
                     variant="secondary"
-                    disabled={!amounts[c.id]?.trim()}
-                    isLoading={settle.isPending}
-                    onClick={() =>
-                      settle.mutate({ id: c.id, body: { action: "reduce", payout_amount: Number(amounts[c.id]) } })
-                    }
+                    disabled={!!busyId || !validAmount(c)}
+                    isLoading={busyId === c.id && settle.variables?.body.action === "reduce"}
+                    onClick={() => decide(c, "reduce")}
                   >
                     Reduce
                   </Button>
                   <Button
                     size="small"
                     variant="danger"
-                    isLoading={settle.isPending}
-                    onClick={() => settle.mutate({ id: c.id, body: { action: "cancel" } })}
+                    disabled={!!busyId}
+                    isLoading={busyId === c.id && settle.variables?.body.action === "cancel"}
+                    onClick={() => decide(c, "cancel")}
                   >
-                    Cancel
+                    Pay nothing
                   </Button>
                 </div>
               </Table.Cell>
@@ -190,11 +227,28 @@ const VendorPayoutsPage = () => {
         query: status === "all" ? {} : { status },
       }),
   })
+  const prompt = usePrompt()
   const pay = useMutation({
-    mutationFn: ({ id, reference }: { id: string; reference: string }) =>
+    mutationFn: ({ id, reference }: { id: string; reference: string; done: string }) =>
       sdk.client.fetch(`/admin/vendor-payouts/${id}/pay`, { method: "POST", body: { reference } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["marketplace-vendor-payouts"] }),
+    onSuccess: (_, { done }) => {
+      toast.success(done)
+      queryClient.invalidateQueries({ queryKey: ["marketplace-vendor-payouts"] })
+    },
+    onError: (e) => toast.error(errorText(e)),
   })
+  const markPaid = async (p: Payout) => {
+    const reference = references[p.id].trim()
+    const amount = money(p.amount, p.currency_code)
+    const ok = await prompt({
+      title: `Record ${amount} paid to ${p.vendor.name}?`,
+      description: `For ${p.period}, transfer reference "${reference}". Check the reference: this can't be undone.`,
+      variant: "confirmation",
+      confirmText: "Record payment",
+      cancelText: "Back",
+    })
+    if (ok) pay.mutate({ id: p.id, reference, done: `${amount} to ${p.vendor.name} recorded as paid` })
+  }
 
   return (
     <div className="flex flex-col gap-y-3">
@@ -204,8 +258,8 @@ const VendorPayoutsPage = () => {
         <div>
           <Heading>Vendor payouts</Heading>
           <Text className="text-ui-fg-subtle">
-            Made on MARKETPLACE_PAYOUT_DAY for the month before: each vendor's order totals minus
-            commission. Pay outside Medusa, then record the reference.
+            Made once a month for the month before: each vendor's order totals minus commission.
+            Pay by bank transfer, then record the transfer's reference here.
           </Text>
         </div>
         <Select value={status} onValueChange={setStatus}>
@@ -218,7 +272,6 @@ const VendorPayoutsPage = () => {
         </Select>
       </div>
       {error && <Text className="text-ui-fg-error">{errorText(error)}</Text>}
-      {pay.error && <Text className="text-ui-fg-error">{errorText(pay.error)}</Text>}
       {isLoading ? (
         <Text>Loading…</Text>
       ) : !data?.vendor_payouts.length ? (
@@ -238,8 +291,12 @@ const VendorPayoutsPage = () => {
             {data.vendor_payouts.map((p) => (
               <Table.Row key={p.id}>
                 <Table.Cell>
-                  <button className="text-ui-fg-interactive hover:underline" onClick={() => setOpen(open === p.id ? null : p.id)}>
-                    {p.vendor.name}
+                  <button
+                    className="text-ui-fg-interactive hover:underline"
+                    aria-expanded={open === p.id}
+                    onClick={() => setOpen(open === p.id ? null : p.id)}
+                  >
+                    {open === p.id ? "▾" : "▸"} {p.vendor.name}
                   </button>
                   {open === p.id && <PayoutDetail id={p.id} />}
                 </Table.Cell>
@@ -256,14 +313,15 @@ const VendorPayoutsPage = () => {
                         size="small"
                         className="w-40"
                         placeholder="Transfer reference"
+                        aria-label={`Transfer reference for ${p.vendor.name}`}
                         value={references[p.id] ?? ""}
                         onChange={(e) => setReferences((r) => ({ ...r, [p.id]: e.target.value }))}
                       />
                       <Button
                         size="small"
-                        disabled={!references[p.id]?.trim()}
-                        isLoading={pay.isPending}
-                        onClick={() => pay.mutate({ id: p.id, reference: references[p.id].trim() })}
+                        disabled={!references[p.id]?.trim() || pay.isPending}
+                        isLoading={pay.isPending && pay.variables?.id === p.id}
+                        onClick={() => markPaid(p)}
                       >
                         Mark paid
                       </Button>
