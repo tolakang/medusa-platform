@@ -40,11 +40,28 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
   const [looking, setLooking] = useState(false)
   const [paying, setPaying] = useState(false)
   const [done, setDone] = useState<Done | null>(null)
+  // The line a scan just added, flashed so the cashier sees it registered.
+  const [flash, setFlash] = useState<string | null>(null)
+  // A cleared sale, kept for 10 seconds so Clear can be undone.
+  const [cleared, setCleared] = useState<{ cart: CartLine[]; customer: Customer | null; promo: string } | null>(null)
+
+  useEffect(() => {
+    if (!flash) return
+    const t = window.setTimeout(() => setFlash(null), 1200)
+    return () => window.clearTimeout(t)
+  }, [flash])
+  useEffect(() => {
+    if (!cleared) return
+    const t = window.setTimeout(() => setCleared(null), 10_000)
+    return () => window.clearTimeout(t)
+  }, [cleared])
 
   const add = (v: LookupVariant) => {
     setCart((c) => addLine(c, lineFromVariant(v)))
     setChoices(null)
-    setMessage({ tone: "info", text: `Added ${v.product.title ?? v.title ?? v.sku}` })
+    setCleared(null)
+    setFlash(v.id)
+    setMessage({ tone: "info", text: `✓ Added ${v.product.title ?? v.title ?? v.sku}` })
   }
 
   const lookup = async (code: string) => {
@@ -82,6 +99,39 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
     setPaying(false)
   }
 
+  const clearSale = () => {
+    setCleared({ cart, customer, promo })
+    setCart([])
+    setCustomer(null)
+    setPromo("")
+    setMessage(null)
+  }
+
+  const undoClear = () => {
+    if (!cleared) return
+    setCart(cleared.cart)
+    setCustomer(cleared.customer)
+    setPromo(cleared.promo)
+    setCleared(null)
+  }
+
+  const total = cartTotal(cart)
+  const unpriced = cart.some((l) => l.unit_price === null)
+  const canPay = cart.length > 0 && !unpriced
+
+  // F9 opens payment from anywhere on the sale screen (design critique, 2026-11-23).
+  useEffect(() => {
+    if (done || paying) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "F9" && canPay) {
+        e.preventDefault()
+        setPaying(true)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [done, paying, canPay])
+
   const newSale = () => {
     setCart([])
     setCustomer(null)
@@ -102,9 +152,6 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
       />
     )
   }
-
-  const total = cartTotal(cart)
-  const unpriced = cart.some((l) => l.unit_price === null)
 
   return (
     <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-[1fr_380px]">
@@ -135,9 +182,20 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
         )}
 
         <div className="card divide-y divide-ui-border-base">
-          {!cart.length && <p className="p-6 text-center text-ui-fg-subtle">Scan an item to start the sale.</p>}
+          {!cart.length && !cleared && <p className="p-6 text-center text-ui-fg-subtle">Scan an item to start the sale.</p>}
+          {!cart.length && cleared && (
+            <div role="status" className="flex items-center justify-between gap-3 p-4">
+              <span>Sale cleared.</span>
+              <button className="btn-secondary" onClick={undoClear}>
+                Undo
+              </button>
+            </div>
+          )}
           {cart.map((l) => (
-            <div key={l.variant_id} className="flex items-center gap-3 p-3">
+            <div
+              key={l.variant_id}
+              className={`flex items-center gap-3 p-3 transition-colors ${flash === l.variant_id ? "bg-ui-tag-green-bg" : ""}`}
+            >
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{l.title}</div>
                 <div className="truncate text-sm text-ui-fg-subtle">
@@ -163,7 +221,7 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
               </div>
               <div className="w-24 text-right tabular-nums">{formatMoney(lineTotal(l), currency)}</div>
               <button
-                className="text-sm text-ui-fg-error"
+                className="min-h-11 px-2 text-sm text-ui-fg-error"
                 aria-label={`Remove ${l.title}`}
                 onClick={() => setCart((c) => setQuantity(c, l.variant_id, 0))}
               >
@@ -200,14 +258,14 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
           {paying ? (
             <Payment total={total} currency={currency} onPay={pay} onCancel={() => setPaying(false)} />
           ) : (
-            <div className="flex gap-2">
-              <button className="btn-secondary" onClick={newSale} disabled={!cart.length}>
-                Clear
+            <>
+              <button className="btn-primary w-full" onClick={() => setPaying(true)} disabled={!canPay} aria-keyshortcuts="F9">
+                Pay <kbd className="ml-2 hidden text-xs opacity-70 lg:inline">F9</kbd>
               </button>
-              <button className="btn-primary flex-1" onClick={() => setPaying(true)} disabled={!cart.length || unpriced}>
-                Pay
+              <button className="self-start py-2 text-sm text-ui-fg-error" onClick={clearSale} disabled={!cart.length}>
+                Clear sale
               </button>
-            </div>
+            </>
           )}
         </div>
       </aside>

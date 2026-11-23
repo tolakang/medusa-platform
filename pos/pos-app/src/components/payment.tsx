@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { PaymentMethod } from "@/lib/api"
 import { changeDue, formatMoney, quickTender } from "@/lib/cart"
 
@@ -35,7 +35,27 @@ export function Payment({
   const change = method === "cash" && tendered !== "" ? changeDue(total, cash) : null
   const ready = method !== "cash" || change !== null
 
+  // Keyboard paying (design critique, 2026-11-23): Esc goes back; F1–F3 pick
+  // the method. Enter in the form completes the sale.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (busy) return
+      if (e.key === "Escape") {
+        e.preventDefault()
+        onCancel()
+      }
+      const i = ["F1", "F2", "F3"].indexOf(e.key)
+      if (i >= 0) {
+        e.preventDefault()
+        setMethod(METHODS[i].id)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [busy, onCancel])
+
   const confirm = async () => {
+    if (!ready || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -47,11 +67,20 @@ export function Payment({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <form
+      data-keep-focus
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        confirm()
+      }}
+    >
       <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Payment method">
-        {METHODS.map((m) => (
+        {METHODS.map((m, i) => (
           <button
             key={m.id}
+            type="button"
+            aria-keyshortcuts={`F${i + 1}`}
             role="radio"
             aria-checked={method === m.id}
             className={method === m.id ? "btn-primary" : "btn-secondary"}
@@ -59,6 +88,7 @@ export function Payment({
             disabled={busy}
           >
             {m.label}
+            <kbd className="ml-1 hidden text-xs opacity-60 lg:inline">F{i + 1}</kbd>
           </button>
         ))}
       </div>
@@ -75,12 +105,13 @@ export function Payment({
               step="0.01"
               value={tendered}
               onChange={(e) => setTendered(e.target.value)}
+              aria-label="Cash received"
               autoFocus
             />
           </label>
           <div className="grid grid-cols-4 gap-2">
             {quickTender(total).map((a) => (
-              <button key={a} className="btn-secondary px-2" onClick={() => setTendered(String(a))} disabled={busy}>
+              <button key={a} type="button" className="btn-secondary px-2" onClick={() => setTendered(String(a))} disabled={busy}>
                 {formatMoney(a, currency)}
               </button>
             ))}
@@ -93,7 +124,7 @@ export function Payment({
       ) : (
         <p className="rounded-lg bg-ui-bg-subtle p-3 text-sm">
           Take {formatMoney(total, currency)} on the {method === "card" ? "card terminal" : "KHQR stand"} first, then
-          confirm here.
+          press Enter or Complete sale.
         </p>
       )}
 
@@ -103,13 +134,14 @@ export function Payment({
         </p>
       )}
       <div className="flex gap-2">
-        <button className="btn-secondary" onClick={onCancel} disabled={busy}>
-          Back
+        <button type="button" className="btn-secondary" onClick={onCancel} disabled={busy} aria-keyshortcuts="Escape">
+          Back <kbd className="ml-1 hidden text-xs opacity-60 lg:inline">Esc</kbd>
         </button>
-        <button className="btn-primary flex-1" onClick={confirm} disabled={!ready || busy}>
+        <button type="submit" className="btn-primary flex-1" disabled={!ready || busy} aria-keyshortcuts="Enter">
           {busy ? "Recording sale…" : "Complete sale"}
+          {!busy && <kbd className="ml-2 hidden text-xs opacity-70 lg:inline">Enter</kbd>}
         </button>
       </div>
-    </div>
+    </form>
   )
 }

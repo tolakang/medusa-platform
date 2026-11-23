@@ -27,16 +27,25 @@ export function Scanner({ onCode, busy }: { onCode: (code: string) => void; busy
     setHasCamera(!!detectorCtor() && !!navigator.mediaDevices?.getUserMedia)
   }, [])
 
-  // Keep the scanner field focused while nothing else is being typed in.
+  // Keep the scanner field focused while nothing else is being typed in
+  // (design critique, 2026-11-23): checked right after focus moves, so a scan
+  // straight after a tap isn't lost; the timer stays as a fallback.
   useEffect(() => {
     const refocus = () => {
       const active = document.activeElement
-      if (!active || active === document.body) {
-        input.current?.focus()
+      if (!active || active === document.body || (active instanceof HTMLButtonElement && !active.closest("[data-keep-focus]"))) {
+        input.current?.focus({ preventScroll: true })
       }
     }
+    const soon = () => window.setTimeout(refocus, 0)
+    document.addEventListener("focusout", soon)
+    document.addEventListener("click", soon)
     const t = window.setInterval(refocus, 1000)
-    return () => window.clearInterval(t)
+    return () => {
+      document.removeEventListener("focusout", soon)
+      document.removeEventListener("click", soon)
+      window.clearInterval(t)
+    }
   }, [])
 
   const submit = (value: string) => {
