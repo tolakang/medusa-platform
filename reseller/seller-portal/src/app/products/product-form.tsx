@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import { saveProducts, type SaveState } from "./actions"
 
 type Product = { id: string; title: string; handle: string; thumbnail: string | null; selected: boolean }
@@ -8,6 +8,9 @@ type Product = { id: string; title: string; handle: string; thumbnail: string | 
 // TASKS P5-08: tick the products to show in your shop, then save.
 export function ProductForm({ products }: { products: Product[] }) {
   const [state, action, saving] = useActionState<SaveState, FormData>(saveProducts, {})
+  // The Save button stays in view under a long list, with the ticked count,
+  // so ticks aren't lost by leaving without saving.
+  const [ticked, setTicked] = useState(() => products.filter((p) => p.selected).length)
   return (
     <form action={action} className="card flex flex-col gap-3 p-4">
       {products.length === 0 && (
@@ -23,6 +26,7 @@ export function ProductForm({ products }: { products: Product[] }) {
               name="selected"
               value={product.id}
               defaultChecked={product.selected}
+              onChange={(e) => setTicked((n) => n + (e.target.checked ? 1 : -1))}
               className="h-4 w-4"
             />
             {product.thumbnail ? (
@@ -38,17 +42,24 @@ export function ProductForm({ products }: { products: Product[] }) {
           </li>
         ))}
       </ul>
-      {state.error && (
-        <p role="alert" className="rounded-lg bg-ui-tag-red-bg px-3 py-2 text-sm text-ui-tag-red-text">
-          {state.error}
-        </p>
-      )}
-      {state.saved && !state.error && (
-        <p className="rounded-lg bg-ui-tag-green-bg px-3 py-2 text-sm text-ui-tag-green-text">Saved.</p>
-      )}
-      <button className="btn-primary self-start" type="submit" disabled={saving}>
-        {saving ? "Saving…" : "Save"}
-      </button>
+      <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col gap-2 border-t border-ui-border-base bg-ui-bg-base p-4">
+        {state.error && (
+          <p role="alert" className="rounded-lg bg-ui-tag-red-bg px-3 py-2 text-sm text-ui-tag-red-text">
+            {state.error}
+          </p>
+        )}
+        {state.saved && !state.error && (
+          <p role="status" className="rounded-lg bg-ui-tag-green-bg px-3 py-2 text-sm text-ui-tag-green-text">Saved.</p>
+        )}
+        <div className="flex items-center gap-3">
+          <button className="btn-primary" type="submit" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+          <span className="text-sm text-ui-fg-subtle">
+            {ticked} of {products.length} ticked
+          </span>
+        </div>
+      </div>
     </form>
   )
 }
