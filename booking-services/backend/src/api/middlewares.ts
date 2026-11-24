@@ -24,6 +24,9 @@ import {
   PostAdminWalkIn,
   PostAdminZone,
   PostAdminZonePrice,
+  PostAdminZoneUpdate,
+  PostAdminZonePriceUpdate,
+  PostAdminPass,
   PostAdminQuote,
   PostAdminBookingMove,
   PostAdminReview,
@@ -128,6 +131,26 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/admin/booking/providers/:id',
       middlewares: [validateAndTransformBody(PostAdminBookingProvider)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/zones/:id',
+      middlewares: [validateAndTransformBody(PostAdminZoneUpdate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/zone-prices/:id',
+      middlewares: [validateAndTransformBody(PostAdminZonePriceUpdate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/passes/:id',
+      middlewares: [validateAndTransformBody(PostAdminPass)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/bookings/:id/move',
+      middlewares: [validateAndTransformBody(PostAdminBookingMove)],
     },
     {
       // Trip zones and their prices (TASKS P3-21).

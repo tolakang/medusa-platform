@@ -3,7 +3,7 @@ import { Shell } from "@/components/shell"
 import { customerLabel, STATUS_LABEL } from "@/lib/format"
 import { providerGet, requireProvider } from "@/lib/server/provider"
 import { addDays, dayLabel, dayWindow, isDate, timeRange, todayIn } from "@/lib/time"
-import { CancelButton, WalkInForm } from "./calendar-forms"
+import { CancelButton, MoveButton, WalkInForm } from "./calendar-forms"
 
 type Booking = {
   id: string
@@ -105,7 +105,12 @@ export default async function CalendarPage({
                       </p>
                     )}
                   </div>
-                  {(b.status === "confirmed" || b.status === "pending") && <CancelButton bookingId={b.id} />}
+                  {(b.status === "confirmed" || b.status === "pending") && (
+                    <div className="flex flex-wrap items-start gap-2">
+                      {b.status === "confirmed" && <MoveButton bookingId={b.id} date={date} timezone={calendar.timezone} />}
+                      <CancelButton bookingId={b.id} />
+                    </div>
+                  )}
                 </li>
               )
             })}

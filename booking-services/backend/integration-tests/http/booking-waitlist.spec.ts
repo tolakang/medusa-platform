@@ -97,6 +97,8 @@ medusaIntegrationTestRunner({
           ]
         )
 
+        // Staff can take someone off the list (gap review 2026-11-24); put back by joining again isn't needed here.
+        expect((await call(api.delete(`/admin/booking/waitlist/bwait_missing`, admin))).status).toBe(404)
         // Still full: nothing sent.
         expect((await notifyWaitlistWorkflow(getContainer()).run({ input: {} })).result).toEqual([])
 

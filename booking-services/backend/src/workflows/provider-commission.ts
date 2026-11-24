@@ -427,3 +427,47 @@ export const settleProviderCommissionWorkflow = createWorkflow(
     return new WorkflowResponse(id)
   }
 )
+
+export const PAYOUT_CANCEL_NOT_PENDING_MESSAGE = "Only a pending payout can be cancelled."
+
+// A wrong payout is cancelled (gap review 2026-11-24): its commissions go back
+// to pending and join a later payout.
+const cancelPayoutStep = createStep(
+  "cancel-provider-payout",
+  async (input: { id: string }, { container }) => {
+    const service = booking(container)
+    const payout = await service.retrieveBookingPayout(input.id)
+    if (payout.status !== "pending") {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PAYOUT_CANCEL_NOT_PENDING_MESSAGE)
+    }
+    const commissions = await service.listBookingCommissions({ payout_id: payout.id })
+    await service.updateBookingPayouts({ id: payout.id, status: "cancelled" })
+    if (commissions.length) {
+      await service.updateBookingCommissions(commissions.map((c) => ({ id: c.id, status: "pending" as const, payout_id: null })))
+    }
+    return new StepResponse(payout.id, { id: payout.id, commission_ids: commissions.map((c) => c.id) })
+  },
+  async (previous, { container }) => {
+    if (!previous) {
+      return
+    }
+    const service = booking(container)
+    await service.updateBookingPayouts({ id: previous.id, status: "pending" })
+    if (previous.commission_ids.length) {
+      await service.updateBookingCommissions(
+        previous.commission_ids.map((id) => ({ id, status: "approved" as const, payout_id: previous.id }))
+      )
+    }
+  }
+)
+
+export const cancelProviderPayoutWorkflow = createWorkflow(
+  "cancel-provider-payout",
+  function (input: { id: string }) {
+    const ownerId = transform(input, () => `provider-payout-cancel:${randomUUID()}`)
+    acquireLockStep({ key: PAYOUTS_LOCK, ownerId, timeout: 30, ttl: 120 })
+    const id = cancelPayoutStep(input)
+    releaseLockStep({ key: PAYOUTS_LOCK, ownerId })
+    return new WorkflowResponse(id)
+  }
+)

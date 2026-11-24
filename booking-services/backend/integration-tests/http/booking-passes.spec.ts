@@ -161,6 +161,12 @@ medusaIntegrationTestRunner({
         const days = (Date.parse(pass.expires_at) - Date.now()) / 86_400_000
         expect(days > 179 && days <= 180).toBe(true)
 
+        // Staff can't go above the total; they can set credits and end it (gap review 2026-11-24).
+        const passId = listed[0].id
+        expect((await call(api.post(`/admin/booking/passes/${passId}`, { credits_left: 6 }, admin))).status).toBe(400)
+        expect((await call(api.post(`/admin/booking/passes/${passId}`, { credits_left: 4 }, admin))).data.pass.credits_left).toBe(4)
+        await api.post(`/admin/booking/passes/${passId}`, { credits_left: 5 }, admin)
+
         const free = await slots()
         const { cart, added } = await bookWithPass(sok, pass.id, free[0])
         expect(added.status).toBe(200)

@@ -274,6 +274,12 @@ medusaIntegrationTestRunner({
         const { data: [haircut] } = await query.graph({ entity: "product", fields: ["id"], filters: { handle: "haircut" } })
         expect((await call(api.post(`/providers/me/services/${haircut.id}`, { status: "draft" }, dara.auth))).status).toBe(404)
 
+        // Dara moves it to 11:00 local on her own calendar; not onto Vuthy's, and Vuthy can't move it (gap review 2026-11-24).
+        expect((await call(api.post(`/providers/me/bookings/${made.data.booking.id}/move`, { starts_at: at("05:00") }, vuthy.auth))).status).toBe(404)
+        expect((await call(api.post(`/providers/me/bookings/${made.data.booking.id}/move`, { resource_id: vuthy.calendar.id }, dara.auth))).status).toBe(404)
+        const moved = await call(api.post(`/providers/me/bookings/${made.data.booking.id}/move`, { starts_at: at("04:00") }, dara.auth))
+        expect([moved.status, moved.data?.message]).toEqual([200, undefined])
+        expect(Date.parse(moved.data.booking.starts_at)).toBe(Date.parse(at("04:00")))
         // Dara cancels her own booking; a partner sees the refund amount field.
         const cancelled = await call(api.post(`/providers/me/bookings/${made.data.booking.id}/cancel`, {}, dara.auth))
         expect(cancelled.status).toBe(200)

@@ -58,3 +58,26 @@ export async function cancelBooking(_: FormState, form: FormData): Promise<FormS
   revalidatePath("/")
   return { info: result.data.refund === "refunded" ? "Cancelled. The customer is refunded." : "Cancelled." }
 }
+
+// A provider moves a booking on their own calendar to another day and time;
+// same length (gap review 2026-11-24). The day and time are the calendar's.
+export async function moveBooking(_: FormState, form: FormData): Promise<FormState> {
+  const { token } = await requireProvider()
+  const id = String(form.get("booking_id") ?? "")
+  const date = String(form.get("date") ?? "")
+  const time = String(form.get("time") ?? "")
+  const timezone = String(form.get("timezone") ?? "")
+  if (!ID.test(id)) {
+    return { error: "Unknown booking." }
+  }
+  if (!isDate(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time) || !timezone) {
+    return { error: "Choose a day and a time." }
+  }
+  const { starts_at } = walkInTimes(date, time, 0, timezone)
+  const result = await backendFetch(`/providers/me/bookings/${id}/move`, { token, method: "POST", body: { starts_at } })
+  if (!result.ok) {
+    return { error: result.message }
+  }
+  revalidatePath("/")
+  return { info: "Moved. Tell the customer the new time." }
+}

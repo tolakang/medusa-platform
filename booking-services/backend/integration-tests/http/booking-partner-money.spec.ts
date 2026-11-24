@@ -281,6 +281,9 @@ medusaIntegrationTestRunner({
         expect(done.status).toBe(200)
         const again = await call(api.post(`/admin/booking/payouts/${payout.id}/pay`, { reference: "ABA 123" }, admin))
         expect(again.data.message).toBe(PAYOUT_NOT_PENDING_MESSAGE)
+        // A paid payout can't be cancelled; an unknown one is 404 (gap review 2026-11-24).
+        expect((await call(api.post(`/admin/booking/payouts/${payout.id}/cancel`, {}, admin))).status).toBe(400)
+        expect((await call(api.post(`/admin/booking/payouts/bpay_missing/cancel`, {}, admin))).status).toBe(404)
 
         const earnings = await api.get("/providers/me/earnings", dara.auth)
         expect(earnings.data.commissions.map((c: any) => c.status)).toEqual(["paid", "paid"])
