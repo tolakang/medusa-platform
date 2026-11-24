@@ -66,6 +66,7 @@ medusaIntegrationTestRunner({
           credit_limit: 5000,
           tax_id: "KH-123456789",
           status: "suspended",
+          spending_limit_reset_frequency: "weekly",
         },
         adminHeaders
       );
@@ -76,6 +77,7 @@ medusaIntegrationTestRunner({
           credit_limit: 5000,
           tax_id: "KH-123456789",
           status: "suspended",
+          spending_limit_reset_frequency: "weekly",
         })
       );
 

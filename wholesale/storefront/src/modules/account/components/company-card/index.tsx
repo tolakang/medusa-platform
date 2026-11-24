@@ -220,7 +220,7 @@ const CompanyCard = ({
             "grid grid-cols-2 gap-4 border-b border-neutral-200 transition-all duration-300 ease-in-out",
             {
               "opacity-0 max-h-0": isEditing,
-              "opacity-100 max-h-[280px] p-4": !isEditing,
+              "opacity-100 max-h-[400px] p-4": !isEditing,
             }
           )}
         >
@@ -257,6 +257,21 @@ const CompanyCard = ({
             <Text className=" text-neutral-500">
               {company.spending_limit_reset_frequency?.charAt(0).toUpperCase() +
                 company.spending_limit_reset_frequency?.slice(1)}
+            </Text>
+          </div>
+          {/* Set by the shop; shown so buyers know their terms (gap review 2026-11-24). */}
+          <div className="flex flex-col gap-y-2">
+            <Text className="font-medium text-neutral-950">Payment terms</Text>
+            <Text className=" text-neutral-500">
+              {({ prepaid: "Pay when you order", net_15: "Pay within 15 days", net_30: "Pay within 30 days", net_60: "Pay within 60 days" } as Record<string, string>)[company.payment_terms ?? "prepaid"] ?? "Pay when you order"}
+            </Text>
+          </div>
+          <div className="flex flex-col gap-y-2">
+            <Text className="font-medium text-neutral-950">Credit limit</Text>
+            <Text className=" text-neutral-500">
+              {company.credit_limit != null
+                ? `${currencySymbolMap[company.currency_code!] ?? ""}${Number(company.credit_limit).toLocaleString()}`
+                : "None set"}
             </Text>
           </div>
         </div>

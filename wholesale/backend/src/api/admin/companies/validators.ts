@@ -26,6 +26,8 @@ export const AdminCreateCompany = z
     credit_limit: z.number().nonnegative().optional().nullable(),
     tax_id: z.string().optional().nullable(),
     status: z.enum(["pending", "approved", "suspended"]).optional(),
+    // How often employees' spending limits start again (gap review 2026-11-24).
+    spending_limit_reset_frequency: z.enum(["never", "daily", "weekly", "monthly", "yearly"]).optional(),
   })
   .strict();
 
@@ -46,6 +48,8 @@ export const AdminUpdateCompany = z
     credit_limit: z.number().nonnegative().optional().nullable(),
     tax_id: z.string().optional().nullable(),
     status: z.enum(["pending", "approved", "suspended"]).optional(),
+    // How often employees' spending limits start again (gap review 2026-11-24).
+    spending_limit_reset_frequency: z.enum(["never", "daily", "weekly", "monthly", "yearly"]).optional(),
   })
   .strict();
 

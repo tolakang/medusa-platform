@@ -14,6 +14,7 @@ export const adminCompanyFields = [
   "payment_terms",
   "credit_limit",
   "tax_id",
+  "spending_limit_reset_frequency",
   "status",
   "*employees",
 ];
