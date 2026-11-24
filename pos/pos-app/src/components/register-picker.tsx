@@ -78,7 +78,17 @@ export function RegisterPicker({
               </button>
             </>
           ) : opening?.id === r.id ? (
-            <>
+            // A form, so Enter opens the shift and Esc cancels (keyboard at the till).
+            <form
+              className="flex flex-col gap-3"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (validCash && !busy) open()
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" && !busy) setOpening(null)
+              }}
+            >
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Cash in the drawer now</span>
                 <input
@@ -94,14 +104,14 @@ export function RegisterPicker({
               </label>
               {error && <p className="text-sm text-ui-fg-error">{error}</p>}
               <div className="flex gap-2">
-                <button className="btn-secondary flex-1" onClick={() => setOpening(null)} disabled={busy}>
+                <button type="button" className="btn-secondary flex-1" onClick={() => setOpening(null)} disabled={busy}>
                   Cancel
                 </button>
-                <button className="btn-primary flex-1" onClick={open} disabled={!validCash || busy}>
+                <button type="submit" className="btn-primary flex-1" disabled={!validCash || busy}>
                   {busy ? "Opening…" : "Open shift"}
                 </button>
               </div>
-            </>
+            </form>
           ) : (
             <button
               className="btn-secondary"
