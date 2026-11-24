@@ -165,3 +165,50 @@ export const markVendorPayoutPaidWorkflow = createWorkflow(
     return new WorkflowResponse(id)
   }
 )
+
+export const PAYOUT_CANCEL_NOT_PENDING_MESSAGE = "Only a pending payout can be cancelled."
+
+// A wrong payout is cancelled (gap review 2026-11-24): its commissions go back
+// to pending and join the next period's payout.
+const cancelPayoutStep = createStep(
+  "cancel-vendor-payout",
+  async (input: { id: string }, { container }) => {
+    const marketplace = container.resolve<MarketplaceModuleService>(MARKETPLACE_MODULE)
+    const payout = await marketplace.retrieveVendorPayout(input.id)
+    if (payout.status !== "pending") {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PAYOUT_CANCEL_NOT_PENDING_MESSAGE)
+    }
+    const commissions = await marketplace.listVendorCommissions({ payout_id: payout.id })
+    await marketplace.updateVendorPayouts({ id: payout.id, status: "cancelled" })
+    if (commissions.length) {
+      await marketplace.updateVendorCommissions(
+        commissions.map((c) => ({ id: c.id, status: "pending" as const, payout_id: null }))
+      )
+    }
+    return new StepResponse(payout.id, { id: payout.id, commission_ids: commissions.map((c) => c.id) })
+  },
+  async (previous, { container }) => {
+    if (!previous) {
+      return
+    }
+    const marketplace = container.resolve<MarketplaceModuleService>(MARKETPLACE_MODULE)
+    await marketplace.updateVendorPayouts({ id: previous.id, status: "pending" })
+    if (previous.commission_ids.length) {
+      await marketplace.updateVendorCommissions(
+        previous.commission_ids.map((id) => ({ id, status: "approved" as const, payout_id: previous.id }))
+      )
+    }
+  }
+)
+
+export const cancelVendorPayoutWorkflow = createWorkflow(
+  "cancel-vendor-payout",
+  function (input: { id: string }) {
+    const key = transform(input, (i) => `vendor-payout:${i.id}`)
+    const ownerId = transform(input, () => `vendor-payout-cancel:${randomUUID()}`)
+    acquireLockStep({ key, ownerId, timeout: 30, ttl: 120 })
+    const id = cancelPayoutStep(input)
+    releaseLockStep({ key, ownerId })
+    return new WorkflowResponse(id)
+  }
+)

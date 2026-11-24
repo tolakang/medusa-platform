@@ -14,7 +14,20 @@ export async function fulfil(_: FulfilState, form: FormData): Promise<FulfilStat
   if (!/^order_[A-Za-z0-9]+$/.test(id)) {
     return { error: "Unknown order." }
   }
-  const result = await backendFetch(`/vendors/me/orders/${id}/fulfillments`, { token, method: "POST" })
+  // A tracking number and link, if the courier gave one (gap review 2026-11-24).
+  const tracking_number = String(form.get("tracking_number") ?? "").trim()
+  const tracking_url = String(form.get("tracking_url") ?? "").trim()
+  if (tracking_url && !/^https?:\/\/\S+$/.test(tracking_url)) {
+    return { error: "The tracking link must start with http:// or https://." }
+  }
+  const result = await backendFetch(`/vendors/me/orders/${id}/fulfillments`, {
+    token,
+    method: "POST",
+    body: {
+      ...(tracking_number ? { tracking_number } : {}),
+      ...(tracking_number && tracking_url ? { tracking_url } : {}),
+    },
+  })
   if (!result.ok) {
     return { error: result.message }
   }
