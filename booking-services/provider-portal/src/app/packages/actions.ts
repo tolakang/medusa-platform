@@ -48,3 +48,35 @@ export async function addPackage(_: FormState, form: FormData): Promise<FormStat
   revalidatePath("/packages")
   return { info: `"${title}" is in the shop.` }
 }
+
+// Edit a package (gap review 2026-11-24): name, price, and hide or show it.
+export async function updatePackage(_: FormState, form: FormData): Promise<FormState> {
+  const { token } = await requirePartner()
+  const id = String(form.get("package_id") ?? "")
+  if (!/^prod_[A-Za-z0-9]+$/.test(id)) {
+    return { error: "Unknown package." }
+  }
+  const intent = String(form.get("intent") ?? "save")
+  let body: Record<string, unknown>
+  if (intent === "hide" || intent === "show") {
+    body = { status: intent === "show" ? "published" : "draft" }
+  } else {
+    const title = String(form.get("title") ?? "").trim()
+    if (!title) {
+      return { error: "Give the package a name." }
+    }
+    const price = priceValue(String(form.get("price") ?? ""))
+    if (typeof price === "string") {
+      return { error: price }
+    }
+    body = { title, price }
+  }
+  const result = await backendFetch(`/providers/me/packages/${id}`, { token, method: "POST", body })
+  if (!result.ok) {
+    return { error: result.message }
+  }
+  revalidatePath("/packages")
+  return {
+    info: intent === "hide" ? "Hidden from the shop." : intent === "show" ? "Back in the shop." : "Saved.",
+  }
+}

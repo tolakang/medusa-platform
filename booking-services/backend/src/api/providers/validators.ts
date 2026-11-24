@@ -107,3 +107,15 @@ export const PostProviderPackage = z.object({
     .max(10),
 })
 export type PostProviderPackageType = z.infer<typeof PostProviderPackage>
+
+// Edit a package: rename, describe, hide or show, or change the price (gap
+// review 2026-11-24).
+export const PostProviderPackageUpdate = z
+  .object({
+    title: text(120),
+    description: z.string().trim().max(2000),
+    status: z.enum(["draft", "published"]),
+    price: z.number().min(0).max(1_000_000),
+  })
+  .partial()
+export type PostProviderPackageUpdateType = z.infer<typeof PostProviderPackageUpdate>

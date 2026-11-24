@@ -39,6 +39,7 @@ import {
   PostProviderMe,
   PostProviderService,
   PostProviderPackage,
+  PostProviderPackageUpdate,
   PostProviderServiceUpdate,
   PostProviderWalkIn,
 } from './providers/validators'
@@ -192,6 +193,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/providers/me/services',
       middlewares: [validateAndTransformBody(PostProviderService)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/packages/:id',
+      middlewares: [validateAndTransformBody(PostProviderPackageUpdate)],
     },
     {
       // A partner's event package (TASKS P3-30).

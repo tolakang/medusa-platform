@@ -2,7 +2,7 @@
 
 import { useActionState } from "react"
 import { Notice } from "@/components/notice"
-import { addPackage, type FormState } from "./actions"
+import { addPackage, updatePackage, type FormState } from "./actions"
 
 export type Choice = { variant_id: string; label: string }
 
@@ -41,6 +41,52 @@ export function AddPackageForm({ choices, currency }: { choices: Choice[]; curre
       <button className="btn-primary self-start" type="submit" disabled={saving || !choices.length}>
         {saving ? "Adding…" : "Add package"}
       </button>
+    </form>
+  )
+}
+
+// Edit one package, or hide / show it (gap review 2026-11-24).
+export function EditPackageForm({
+  pkg,
+}: {
+  pkg: { id: string; title: string; status: string; price: { amount: number; currency_code: string } | null }
+}) {
+  const [state, action, saving] = useActionState<FormState, FormData>(updatePackage, {})
+  const published = pkg.status === "published"
+  return (
+    <form action={action} className="mt-3 flex flex-col gap-2 border-t border-ui-border-base pt-3">
+      <input type="hidden" name="package_id" value={pkg.id} />
+      <details>
+        <summary className="cursor-pointer py-2 text-sm text-ui-fg-interactive">Edit name or price</summary>
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          <label className="flex flex-1 flex-col gap-1">
+            <span className="text-sm font-medium">Name</span>
+            <input className="field" name="title" defaultValue={pkg.title} maxLength={120} />
+          </label>
+          <label className="flex w-32 flex-col gap-1">
+            <span className="text-sm font-medium">Price ({(pkg.price?.currency_code ?? "usd").toUpperCase()})</span>
+            <input className="field" name="price" inputMode="decimal" defaultValue={pkg.price ? String(pkg.price.amount) : ""} />
+          </label>
+          <button className="btn-primary" type="submit" name="intent" value="save" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </details>
+      <div className="flex flex-wrap items-center gap-2">
+        <button className="btn-secondary" type="submit" name="intent" value={published ? "hide" : "show"} disabled={saving}>
+          {published ? "Hide from the shop" : "Show in the shop"}
+        </button>
+        {state.error && (
+          <span role="alert" className="text-sm text-ui-tag-red-text">
+            {state.error}
+          </span>
+        )}
+        {state.info && (
+          <span role="status" className="text-sm text-ui-tag-green-text">
+            {state.info}
+          </span>
+        )}
+      </div>
     </form>
   )
 }
