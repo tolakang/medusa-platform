@@ -50,21 +50,34 @@ export default async function initial_data_seed({
   }
   const defaultSalesChannel = { id: store.default_sales_channel_id };
 
+  // Add the demo regions' currencies (EUR, USD) without touching the ones
+  // already there or the default. This demo seed runs after `seed` on real
+  // shops (Ecommerce staging ran both), and replacing the list made EUR the
+  // default and dropped KHR, so the POS till opened shifts in euros.
+  const {
+    data: [current],
+  } = await query.graph({
+    entity: "store",
+    fields: ["supported_currencies.currency_code", "supported_currencies.is_default"],
+    filters: { id: store.id },
+  });
+  const existing = (current?.supported_currencies ?? []).filter(
+    (c): c is NonNullable<typeof c> => !!c
+  );
+  const hasDefault = existing.some((c) => c.is_default);
+  const supported = existing.map((c) => ({
+    currency_code: c.currency_code,
+    is_default: !!c.is_default,
+  }));
+  for (const code of ["eur", "usd"]) {
+    if (!supported.some((c) => c.currency_code === code)) {
+      supported.push({ currency_code: code, is_default: !hasDefault && code === "eur" });
+    }
+  }
   await updateStoresWorkflow(container).run({
     input: {
       selector: { id: store.id },
-      update: {
-        supported_currencies: [
-          {
-            currency_code: "eur",
-            is_default: true,
-          },
-          {
-            currency_code: "usd",
-            is_default: false,
-          },
-        ],
-      },
+      update: { supported_currencies: supported },
     },
   });
 
