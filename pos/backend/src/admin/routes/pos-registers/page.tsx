@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { CreditCard } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -171,8 +172,13 @@ const RegistersPage = () => {
             ))}
           </Table.Body>
         </Table>
-        {!isLoading && !registers.length && (
+        {isLoading && (
           <Text size="small" className="text-ui-fg-subtle px-6 py-4">
+            Loading…
+          </Text>
+        )}
+        {!isLoading && !registers.length && (
+          <Text size="small" className={`px-6 py-4 ${error ? "text-ui-fg-error" : "text-ui-fg-subtle"}`}>
             {error ? `Couldn't load the registers: ${(error as Error).message}` : "No registers yet. Add one above."}
           </Text>
         )}
@@ -182,7 +188,7 @@ const RegistersPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Registers",
+  label: "Registers", icon: CreditCard,
 })
 
 export default RegistersPage
