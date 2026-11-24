@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { ReceiptPercent } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
@@ -113,6 +114,6 @@ const PassesPage = () => {
   )
 }
 
-export const config = defineRouteConfig({ label: "Passes" })
+export const config = defineRouteConfig({ label: "Passes", icon: ReceiptPercent })
 
 export default PassesPage

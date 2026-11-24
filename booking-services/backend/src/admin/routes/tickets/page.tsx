@@ -1,8 +1,10 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Input, Label, Text } from "@medusajs/ui"
+import { Tag } from "@medusajs/icons"
+import { Badge, Button, Container, Heading, Input, Label, Text, toast } from "@medusajs/ui"
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { errorText, statusLabel } from "../../lib/format"
 
 // Tickets (TASKS P3-24): at the door, type the code a guest shows, see the
 // event, date and section, and let them in once. Reads GET
@@ -17,7 +19,6 @@ type Ticket = {
   used_at: string | null
 }
 
-const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
 
 const TicketsPage = () => {
   const [code, setCode] = useState("")
@@ -26,7 +27,10 @@ const TicketsPage = () => {
   const find = useMutation({
     mutationFn: () => sdk.client.fetch<{ ticket: Ticket }>(`/admin/booking/tickets/${encodeURIComponent(code.trim())}`),
     onSuccess: (r) => setTicket(r.ticket),
-    onError: () => setTicket(null),
+    onError: (e) => {
+      setTicket(null)
+      toast.error(errorText(e))
+    },
   })
   const use = useMutation({
     mutationFn: () => sdk.client.fetch<{ ticket: Ticket }>(`/admin/booking/tickets/${encodeURIComponent(ticket!.code)}/use`, { method: "POST" }),
@@ -96,7 +100,7 @@ const TicketsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Tickets",
+  label: "Tickets", icon: Tag,
 })
 
 export default TicketsPage

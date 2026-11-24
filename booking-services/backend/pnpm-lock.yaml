@@ -191,6 +191,9 @@ catalogs:
     '@medusajs/framework':
       specifier: 2.22.6
       version: 2.22.6
+    '@medusajs/icons':
+      specifier: 2.22.6
+      version: 2.22.6
     '@medusajs/js-sdk':
       specifier: 2.22.6
       version: 2.22.6
@@ -238,6 +241,9 @@ importers:
       '@medusajs/framework':
         specifier: 'catalog:'
         version: 2.22.6(@medusajs/cli@2.22.6(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(supports-color@8.1.1))(@types/node@20.19.43)(debug@4.4.3(supports-color@8.1.1))(ioredis@5.11.1(supports-color@8.1.1))(supports-color@8.1.1)(vite@7.3.7(@types/node@20.19.43)(jiti@2.7.0)(yaml@2.9.1))(zod@4.2.0)
+      '@medusajs/icons':
+        specifier: 'catalog:'
+        version: 2.22.6(react@18.3.1)
       '@medusajs/js-sdk':
         specifier: 'catalog:'
         version: 2.22.6

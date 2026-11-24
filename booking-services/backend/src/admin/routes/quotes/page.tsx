@@ -1,9 +1,11 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Input, Label, Select, Text, Textarea } from "@medusajs/ui"
+import { ChatBubbleLeftRight } from "@medusajs/icons"
+import { Badge, Button, Container, Heading, Input, Label, Select, Text, Textarea, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { walkInTimes } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
+import { errorText, formatDate, formatDateTime, formatMoney, statusLabel } from "../../lib/format"
 
 // Quotes (TASKS P3-27): requests for quote-only services. Staff pick a
 // calendar, a time, a length and a price, add a note, and send it; the
@@ -31,7 +33,6 @@ type Quote = {
 type Resource = { id: string; name: string; timezone: string; product_variants?: { id: string }[] }
 
 const COLORS = { requested: "orange", quoted: "blue", accepted: "green", declined: "grey", expired: "grey" } as const
-const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
 // A datetime-local value in the calendar's zone (review finding: the
 // browser's zone moved quotes by hours for staff elsewhere).
 const local = (iso: string, timeZone: string) => {
@@ -129,6 +130,7 @@ const QuotesPage = () => {
     queryKey: ["booking-resources-for-quotes"],
     queryFn: () => sdk.client.fetch<{ resources: Resource[] }>("/admin/booking/resources"),
   })
+  const prompt = usePrompt()
   const decline = useMutation({
     mutationFn: (id: string) => sdk.client.fetch(`/admin/booking/quotes/${id}/decline`, { method: "POST" }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["booking-quotes"] }),
@@ -168,7 +170,7 @@ const QuotesPage = () => {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <Text weight="plus">{q.service ?? "Service"}</Text>
             <Badge size="2xsmall" color={COLORS[q.status]}>
-              {q.status}
+              {statusLabel(q.status)}
             </Badge>
             <Text size="small" className="text-ui-fg-subtle">
               {q.customer?.name ?? q.customer?.email ?? "Customer"} · wished {new Date(q.wished_starts_at).toLocaleString()}
@@ -184,8 +186,8 @@ const QuotesPage = () => {
           )}
           {q.amount !== null && q.starts_at && (
             <Text size="small" className="mt-1">
-              Quoted {q.amount} {(q.currency_code ?? "").toUpperCase()} for {new Date(q.starts_at).toLocaleString()}
-              {q.valid_until ? `, valid until ${new Date(q.valid_until).toLocaleDateString()}` : ""}
+              Quoted {formatMoney(q.amount, q.currency_code)} for {formatDateTime(q.starts_at)}
+              {q.valid_until ? `, valid until ${formatDate(q.valid_until)}` : ""}
             </Text>
           )}
           {(q.status === "requested" || q.status === "quoted") && (
@@ -193,7 +195,16 @@ const QuotesPage = () => {
               <Button size="small" variant="secondary" onClick={() => setOpen(open === q.id ? null : q.id)}>
                 {q.status === "requested" ? "Price it" : "Change price"}
               </Button>
-              <Button size="small" variant="transparent" isLoading={decline.isPending && decline.variables === q.id} onClick={() => decline.mutate(q.id)}>
+              <Button size="small" variant="transparent" isLoading={decline.isPending && decline.variables === q.id} onClick={async () => {
+                  const ok = await prompt({
+                    title: "Decline this request?",
+                    description: `${q.customer?.name ?? q.customer?.email ?? "The customer"} is told you can't do it.`,
+                    variant: "danger",
+                    confirmText: "Decline",
+                    cancelText: "Back",
+                  })
+                  if (ok) decline.mutate(q.id)
+                }}>
                 Decline
               </Button>
             </div>
@@ -206,7 +217,7 @@ const QuotesPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Quotes",
+  label: "Quotes", icon: ChatBubbleLeftRight,
 })
 
 export default QuotesPage

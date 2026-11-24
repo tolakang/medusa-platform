@@ -1,9 +1,11 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Gift } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Text } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { STATUS_COLOR } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
+import { errorText, statusLabel } from "../../lib/format"
 
 // Events (TASKS P3-30): event packages with all their pieces on one card,
 // soonest first (the next 90 days). Cancel cancels every piece; the
@@ -22,7 +24,6 @@ type Event = {
   pieces: Piece[]
 }
 
-const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
 const when = (p: Piece) => {
   const opts = { timeZone: p.timezone ?? undefined, hour: "2-digit", minute: "2-digit", hourCycle: "h23" } as const
   const day = new Intl.DateTimeFormat("en-GB", { timeZone: p.timezone ?? undefined, weekday: "short", day: "numeric", month: "short" })
@@ -99,7 +100,7 @@ const EventsPage = () => {
               </Text>
             )}
             <Badge size="2xsmall" color={STATUS_COLOR[e.status as keyof typeof STATUS_COLOR] ?? "grey"}>
-              {e.status}
+              {statusLabel(e.status)}
             </Badge>
           </div>
           <Text size="small" className="text-ui-fg-subtle">
@@ -112,7 +113,7 @@ const EventsPage = () => {
               <li key={p.id}>
                 <Text size="small">
                   {when(p)} · {p.title ?? "Piece"} · {p.resource ?? ""}
-                  {p.status !== e.status ? ` (${p.status})` : ""}
+                  {p.status !== e.status ? ` (${statusLabel(p.status)})` : ""}
                 </Text>
               </li>
             ))}
@@ -151,7 +152,7 @@ const EventsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Events",
+  label: "Events", icon: Gift,
 })
 
 export default EventsPage

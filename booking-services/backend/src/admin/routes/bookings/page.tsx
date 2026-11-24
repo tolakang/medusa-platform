@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Calendar } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Text } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
@@ -16,6 +17,7 @@ import {
   type CalendarView,
 } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
+import { errorText, statusLabel } from "../../lib/format"
 
 // Bookings (TASKS P3-11, BUILD_PLAN §9.3): a day or week calendar per
 // resource, in the resource's own time zone, with walk-in booking and
@@ -35,7 +37,6 @@ type Resource = {
   whole_days?: boolean
 }
 
-const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
 
 // Assign a booking to another calendar or move it to another time (TASKS
 // P3-28). The time is in the chosen calendar's zone; the length stays.
@@ -85,7 +86,7 @@ const MoveForm = ({
   return (
     <div className="mt-2 flex flex-col gap-2" data-testid="move-form">
       <Select value={to} onValueChange={setTo}>
-        <Select.Trigger><Select.Value /></Select.Trigger>
+        <Select.Trigger aria-label="Move to calendar"><Select.Value /></Select.Trigger>
         <Select.Content>
           {resources.map((r) => (
             <Select.Item key={r.id} value={r.id}>{r.name}</Select.Item>
@@ -93,8 +94,8 @@ const MoveForm = ({
         </Select.Content>
       </Select>
       <div className="flex gap-2">
-        <Input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
-        <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        <Input type="date" aria-label="New day" value={day} onChange={(e) => setDay(e.target.value)} />
+        <Input type="time" aria-label="New start time" value={time} onChange={(e) => setTime(e.target.value)} />
         <Text size="xsmall" className="self-center text-ui-fg-subtle">{target.timezone}</Text>
       </div>
       <div className="flex gap-2">
@@ -124,7 +125,7 @@ const TelegramChat = ({ resource }: { resource: Resource }) => {
     <div className="flex flex-wrap items-end gap-2">
       <div className="flex flex-col gap-y-1">
         <Label size="small">Telegram chat for jobs</Label>
-        <Input value={chat} placeholder="Staff group" onChange={(e) => setChat(e.target.value)} className="w-48" />
+        <Input value={chat} aria-label="Telegram chat for staff alerts" placeholder="Staff group" onChange={(e) => setChat(e.target.value)} className="w-48" />
       </div>
       <Button size="small" variant="secondary" isLoading={save.isPending} onClick={() => save.mutate()}>
         Save
@@ -190,7 +191,7 @@ const ChangeLength = ({ booking, rental, onDone }: { booking: CalendarBooking; r
           <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} aria-label="Last day (or the day out)" />
         </div>
       ) : (
-        <Input type="number" min={1} max={24} value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Hours" className="w-28" />
+        <Input type="number" min={1} max={24} value={hours} onChange={(e) => setHours(e.target.value)} aria-label="Hours" placeholder="Hours" className="w-28" />
       )}
       <Text size="xsmall" className="text-ui-fg-subtle">
         Priced again: cheaper refunds the difference, dearer is due at the venue.
@@ -298,7 +299,7 @@ const BookingsPage = () => {
   if (!resources.length) {
     return (
       <Container>
-        <Heading>Bookings</Heading>
+        <Heading level="h1">Bookings</Heading>
         <Text className="text-ui-fg-subtle mt-2">
           No bookable resources yet. Create one with POST /admin/booking/resources (name, type, weekly hours and the
           services it offers).
@@ -311,7 +312,7 @@ const BookingsPage = () => {
     <div className="flex flex-col gap-y-3">
       <Container className="flex flex-col gap-y-4">
         <div>
-          <Heading>Bookings</Heading>
+          <Heading level="h1">Bookings</Heading>
           <Text className="text-ui-fg-subtle">
             Times are in {resource?.timezone ?? "the resource's time zone"}.
           </Text>
@@ -375,7 +376,7 @@ const BookingsPage = () => {
                 <div key={b.id} className="rounded-md border border-ui-border-base p-2">
                   <div className="flex flex-wrap items-center justify-between gap-1">
                     <Text size="small" weight="plus">{timeRange(b, resource!.timezone)}</Text>
-                    <Badge size="2xsmall" color={STATUS_COLOR[b.status] ?? "grey"}>{b.status}</Badge>
+                    <Badge size="2xsmall" color={STATUS_COLOR[b.status] ?? "grey"}>{statusLabel(b.status)}</Badge>
                   </div>
                   <Text size="small">{customerLabel(b)}</Text>
                   {b.order?.display_id != null && (
@@ -492,7 +493,7 @@ const BookingsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Bookings",
+  label: "Bookings", icon: Calendar,
 })
 
 export default BookingsPage

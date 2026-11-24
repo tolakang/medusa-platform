@@ -1,8 +1,10 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { MapPin } from "@medusajs/icons"
 import { Button, Container, Heading, Input, Label, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { formatMoney } from "../../lib/format"
 
 // Trip zones (TASKS P3-21, plan D12 "zones"): the areas trips run between and,
 // for each vehicle of a zone-priced trip service (product metadata
@@ -307,7 +309,7 @@ const TripZonesPage = () => {
                 ) : (
                   <>
                     <Table.Cell>
-                      {Number(p.amount).toFixed(2)} {p.currency_code.toUpperCase()}
+                      {formatMoney(p.amount, p.currency_code)}
                     </Table.Cell>
                     <Table.Cell>{p.minutes}</Table.Cell>
                     <Table.Cell>
@@ -341,7 +343,7 @@ const TripZonesPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Trip zones",
+  label: "Trip zones", icon: MapPin,
 })
 
 export default TripZonesPage

@@ -1,5 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
+import { Users } from "@medusajs/icons"
+import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -128,6 +129,7 @@ const ProvidersPage = () => {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  const prompt = usePrompt()
   const update = useMutation({
     mutationFn: ({ id, ...body }: { id: string; status?: "active" | "suspended"; commission_rate?: number | null }) =>
       sdk.client.fetch<{ provider: Provider }>(`/admin/booking/providers/${id}`, { method: "POST", body }),
@@ -152,7 +154,7 @@ const ProvidersPage = () => {
 
   const canInvite = !!form.name.trim() && /\S+@\S+\.\S+/.test(form.email.trim())
   const rateValue = rate ? (rate.value.trim() === "" ? null : Number(rate.value)) : undefined
-  const rateValid = rateValue === null || (typeof rateValue === "number" && rateValue >= 0 && rateValue <= 100)
+  const rateValid = rateValue === null || (typeof rateValue === "number" && Number.isFinite(rateValue) && rateValue >= 0 && rateValue <= 100)
 
   return (
     <div className="flex flex-col gap-y-3">
@@ -331,7 +333,16 @@ const ProvidersPage = () => {
                             size="small"
                             variant="secondary"
                             disabled={update.isPending}
-                            onClick={() => update.mutate({ id: p.id, status: "suspended" })}
+                            onClick={async () => {
+                              const ok = await prompt({
+                                title: `Suspend ${p.name}?`,
+                                description: "Their services leave the shop and they can't sign in to the portal. Bookings already made stay.",
+                                variant: "danger",
+                                confirmText: "Suspend",
+                                cancelText: "Back",
+                              })
+                              if (ok) update.mutate({ id: p.id, status: "suspended" })
+                            }}
                           >
                             Suspend
                           </Button>
@@ -365,7 +376,7 @@ const ProvidersPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Providers",
+  label: "Providers", icon: Users,
 })
 
 export default ProvidersPage
