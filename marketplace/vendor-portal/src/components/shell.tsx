@@ -8,6 +8,7 @@ const LINKS = [
   { href: "/products", label: "Products" },
   { href: "/orders", label: "Orders" },
   { href: "/payouts", label: "Payouts" },
+  { href: "/settings", label: "Shop settings" },
 ]
 
 export function Shell({

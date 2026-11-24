@@ -255,6 +255,25 @@ const VendorPayoutsPage = () => {
     })
     if (ok) pay.mutate({ id: p.id, reference, done: `${amount} to ${p.vendor.name} recorded as paid` })
   }
+  // Cancel a payout made by mistake (gap review 2026-11-24).
+  const cancelPayout = useMutation({
+    mutationFn: (p: Payout) => sdk.client.fetch(`/admin/vendor-payouts/${p.id}/cancel`, { method: "POST" }),
+    onSuccess: (_, p) => {
+      toast.success(`Payout to ${p.vendor.name} cancelled. Its sales go into the next payout.`)
+      queryClient.invalidateQueries({ queryKey: ["marketplace-vendor-payouts"] })
+    },
+    onError: (e) => toast.error(errorText(e)),
+  })
+  const cancel = async (p: Payout) => {
+    const ok = await prompt({
+      title: `Cancel the ${money(p.amount, p.currency_code)} payout to ${p.vendor.name}?`,
+      description: `Only if you haven't paid it. Its sales go back to waiting and are included in the next period's payout.`,
+      variant: "danger",
+      confirmText: "Cancel payout",
+      cancelText: "Keep it",
+    })
+    if (ok) cancelPayout.mutate(p)
+  }
 
   return (
     <div className="flex flex-col gap-y-3">
@@ -273,6 +292,7 @@ const VendorPayoutsPage = () => {
           <Select.Content>
             <Select.Item value="pending">To pay</Select.Item>
             <Select.Item value="paid">Paid</Select.Item>
+            <Select.Item value="cancelled">Cancelled</Select.Item>
             <Select.Item value="all">All</Select.Item>
           </Select.Content>
         </Select>
@@ -309,7 +329,7 @@ const VendorPayoutsPage = () => {
                 <Table.Cell>{p.period}</Table.Cell>
                 <Table.Cell>{money(p.amount, p.currency_code)}</Table.Cell>
                 <Table.Cell>
-                  <Badge size="2xsmall" color={STATUS_COLOR[p.status]}>{p.status}</Badge>
+                  <Badge size="2xsmall" color={STATUS_COLOR[p.status]}>{({ pending: "To pay", paid: "Paid", cancelled: "Cancelled" } as Record<string, string>)[p.status] ?? p.status}</Badge>
                   {p.reference && <Text size="small" className="text-ui-fg-subtle">{p.reference}</Text>}
                 </Table.Cell>
                 <Table.Cell className="text-right">
@@ -330,6 +350,15 @@ const VendorPayoutsPage = () => {
                         onClick={() => markPaid(p)}
                       >
                         Mark paid
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        disabled={pay.isPending || cancelPayout.isPending}
+                        isLoading={cancelPayout.isPending && cancelPayout.variables?.id === p.id}
+                        onClick={() => cancel(p)}
+                      >
+                        Cancel
                       </Button>
                     </div>
                   )}

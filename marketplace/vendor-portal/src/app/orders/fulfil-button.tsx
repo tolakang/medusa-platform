@@ -20,7 +20,9 @@ export function FulfilButton({ orderId }: { orderId: string }) {
       <input type="hidden" name="order_id" value={orderId} />
       {sure ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="text-sm">Every item is packed and sent?</span>
+          <span className="w-full text-right text-sm">Every item is packed and sent?</span>
+          <input className="field w-44" name="tracking_number" placeholder="Tracking number (optional)" aria-label="Tracking number (optional)" maxLength={100} />
+          <input className="field w-56" name="tracking_url" type="url" placeholder="Tracking link (optional)" aria-label="Tracking link (optional)" maxLength={500} />
           <button className="btn-secondary" type="button" onClick={() => setSure(false)} disabled={working}>
             Not yet
           </button>

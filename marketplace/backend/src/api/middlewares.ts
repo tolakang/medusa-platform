@@ -23,6 +23,8 @@ import { requireVendor, vendorCors } from './vendor-auth'
 import { refuseExistingInventoryItems, refuseVendorOrderMetadata } from './marketplace-guards'
 import { PostVendorCreate } from './vendors/validators'
 import { PostVendorProductStock } from './vendors/products/[id]/stock/route'
+import { PostVendorFulfillment } from './vendors/me/orders/[id]/fulfillments/route'
+import { PostVendorMe } from './vendors/me/route'
 import { PostVendorProduct } from './vendors/products/[id]/route'
 import { AdminCreateProduct } from '@medusajs/medusa/api/admin/products/validators'
 import { PostAdminVendor } from './admin/vendors/validators'
@@ -48,6 +50,16 @@ export default defineMiddlewares({
         limitPerIp('vendor_create', AUTH_LIMITS.signup, 60),
         validateAndTransformBody(PostVendorCreate),
       ],
+    },
+    {
+      method: ['POST'],
+      matcher: '/vendors/me/orders/:id/fulfillments',
+      middlewares: [validateAndTransformBody(PostVendorFulfillment)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/vendors/me',
+      middlewares: [validateAndTransformBody(PostVendorMe)],
     },
     {
       method: ['POST'],

@@ -176,6 +176,24 @@ medusaIntegrationTestRunner({
         expect((await call(api.get("/admin/vendor-payouts?status=open", admin))).status).toBe(400)
       })
 
+      it("cancels a pending payout; its commissions go back to pending (gap review 2026-11-24)", async () => {
+        await twoVendorOrder()
+        await runPayouts()
+        const report = await call(api.get("/admin/vendor-payouts?status=pending", admin))
+        const payoutId = report.data.vendor_payouts[0].id
+        const [inPayout] = await marketplace().listVendorCommissions({ payout_id: payoutId })
+        const cancelled = await call(api.post(`/admin/vendor-payouts/${payoutId}/cancel`, {}, admin))
+        expect(cancelled.data.vendor_payout.status).toBe("cancelled")
+        const [back] = await marketplace().listVendorCommissions({ id: inPayout.id })
+        expect(back).toEqual(expect.objectContaining({ status: "pending", payout_id: null }))
+        // Twice, or after paying: refused.
+        expect((await call(api.post(`/admin/vendor-payouts/${payoutId}/cancel`, {}, admin))).status).toBe(400)
+        const other = report.data.vendor_payouts[1].id
+        await api.post(`/admin/vendor-payouts/${other}/pay`, { reference: "ABA-2" }, admin)
+        expect((await call(api.post(`/admin/vendor-payouts/${other}/cancel`, {}, admin))).status).toBe(400)
+        expect((await call(api.post(`/admin/vendor-payouts/vpay_missing/cancel`, {}, admin))).status).toBe(404)
+      })
+
       it("a cancelled child order loses its commission before payout, not after", async () => {
         const { res } = await twoVendorOrder()
         const [first, second] = res.data.vendor_orders as { order_id: string }[]

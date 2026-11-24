@@ -86,12 +86,27 @@ medusaIntegrationTestRunner({
         }
 
         // Dara fulfils its order: stock taken from the reservation.
+        // Too many of an item is refused; one item with a tracking number is fine
+        // (gap review 2026-11-24).
+        const lineId = mine.items[0].id
+        expect(
+          (await call(api.post(`/vendors/me/orders/${childOf(dara.id)}/fulfillments`, { items: [{ id: lineId, quantity: 3 }] }, dara.auth))).status
+        ).toBe(400)
+        const part = await call(
+          api.post(
+            `/vendors/me/orders/${childOf(dara.id)}/fulfillments`,
+            { items: [{ id: lineId, quantity: 1 }], tracking_number: "KH123", tracking_url: "https://track.example/KH123" },
+            dara.auth
+          )
+        )
+        expect(part.status).toBe(200)
+        expect(part.data.order.fully_fulfilled).toBe(false)
         const fulfilled = await call(
           api.post(`/vendors/me/orders/${childOf(dara.id)}/fulfillments`, {}, dara.auth)
         )
         expect(fulfilled.status).toBe(200)
         expect(fulfilled.data.order.fully_fulfilled).toBe(true)
-        expect(fulfilled.data.order.fulfillments).toHaveLength(1)
+        expect(fulfilled.data.order.fulfillments).toHaveLength(2)
         const after = await stockOf("t-shirt")
         expect(after.stocked).toBe(before.stocked - 2)
         expect(after.reserved).toBe(before.reserved)
@@ -110,6 +125,15 @@ medusaIntegrationTestRunner({
           api.post(`/vendors/me/orders/${childOf(sok.id)}/fulfillments`, {}, sok.auth)
         )
         expect(sokDone.data.order.fully_fulfilled).toBe(true)
+      })
+
+      it("a vendor renames its shop and sets a logo; the handle stays", async () => {
+        const dara = await kit.signUpVendor(admin, "rename@vendor.test", "Dara Crafts")
+        const res = await call(api.post("/vendors/me", { name: "Dara Silk", logo: "https://cdn.example/l.png" }, dara.auth))
+        expect(res.status).toBe(200)
+        expect(res.data.vendor).toEqual(expect.objectContaining({ name: "Dara Silk", logo: "https://cdn.example/l.png" }))
+        expect((await call(api.post("/vendors/me", { handle: "x" }, dara.auth))).status).toBe(400)
+        expect((await call(api.post("/vendors/me", { logo: "not a url" }, dara.auth))).status).toBe(400)
       })
 
       it("refuses other callers", async () => {
