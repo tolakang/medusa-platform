@@ -132,3 +132,23 @@ export const PostAdminBookingChange = z
   })
   .refine((v) => (v.start_date && v.end_date) || v.hours, { message: "Give the new dates, or the hours." })
 export type PostAdminBookingChangeType = z.infer<typeof PostAdminBookingChange>
+
+// Gap review 2026-11-24: edit a zone or a zone price, change a pass's credits
+// or end it, and take someone off the waitlist.
+export const PostAdminZoneUpdate = PostAdminZone.partial().refine((b) => Object.keys(b).length > 0, { message: "Send name or rank." })
+export type PostAdminZoneUpdateType = z.infer<typeof PostAdminZoneUpdate>
+
+export const PostAdminZonePriceUpdate = z
+  .object({ amount: z.number().min(0).max(1_000_000), minutes: z.number().int().min(5).max(1440) })
+  .partial()
+  .refine((b) => Object.keys(b).length > 0, { message: "Send amount or minutes." })
+export type PostAdminZonePriceUpdateType = z.infer<typeof PostAdminZonePriceUpdate>
+
+export const PostAdminPass = z
+  .object({
+    credits_left: z.number().int().min(0).optional(),
+    // "now" ends the pass today.
+    expires_at: z.union([z.literal("now"), z.string().datetime({ offset: true })]).optional(),
+  })
+  .refine((b) => b.credits_left !== undefined || b.expires_at !== undefined, { message: "Send credits_left or expires_at." })
+export type PostAdminPassType = z.infer<typeof PostAdminPass>

@@ -1,7 +1,7 @@
 import { Shell } from "@/components/shell"
 import { money } from "@/lib/format"
 import { providerGet, requirePartner } from "@/lib/server/provider"
-import { AddPackageForm, type Choice } from "./forms"
+import { AddPackageForm, EditPackageForm, type Choice } from "./forms"
 
 type Service = { id: string; title: string; variants: { id: string; title: string; prices: { amount: number; currency_code: string }[] }[] }
 type Package = {
@@ -41,6 +41,7 @@ export default async function PackagesPage() {
               </li>
             ))}
           </ul>
+          <EditPackageForm pkg={p} />
         </section>
       ))}
       {!packages.length && <p className="text-sm text-ui-fg-subtle">No packages yet. Put several of your services together below.</p>}

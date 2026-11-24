@@ -25,6 +25,7 @@ import { PostVendorCreate } from './vendors/validators'
 import { PostVendorProductStock } from './vendors/products/[id]/stock/route'
 import { PostVendorFulfillment } from './vendors/me/orders/[id]/fulfillments/route'
 import { PostVendorMe } from './vendors/me/route'
+import { PostVendorProduct } from './vendors/products/[id]/route'
 import { AdminCreateProduct } from '@medusajs/medusa/api/admin/products/validators'
 import { PostAdminVendor } from './admin/vendors/validators'
 import { PostAdminVendorPayoutPay } from './admin/vendor-payouts/validators'
@@ -59,6 +60,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/vendors/me',
       middlewares: [validateAndTransformBody(PostVendorMe)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/vendors/products/:id',
+      middlewares: [validateAndTransformBody(PostVendorProduct)],
     },
     {
       // A vendor sets a product's stock (F-080, P6-15).

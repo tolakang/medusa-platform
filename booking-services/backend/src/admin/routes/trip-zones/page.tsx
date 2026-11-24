@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Button, Container, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
+import { Button, Container, Heading, Input, Label, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -76,6 +76,43 @@ const TripZonesPage = () => {
     },
     onError,
   })
+  // Rename a zone; change a price or its minutes in place (gap review 2026-11-24).
+  const prompt = usePrompt()
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null)
+  const [editing, setEditing] = useState<{ id: string; amount: string; minutes: string } | null>(null)
+  const renameZone = useMutation({
+    mutationFn: (z: { id: string; name: string }) =>
+      sdk.client.fetch(`/admin/booking/zones/${z.id}`, { method: "POST", body: { name: z.name.trim() } }),
+    onSuccess: () => {
+      setRenaming(null)
+      refresh()
+      toast.success("Zone renamed")
+    },
+    onError,
+  })
+  const editPrice = useMutation({
+    mutationFn: (p: { id: string; amount: string; minutes: string }) =>
+      sdk.client.fetch(`/admin/booking/zone-prices/${p.id}`, {
+        method: "POST",
+        body: { amount: Number(p.amount), minutes: Number(p.minutes) },
+      }),
+    onSuccess: () => {
+      setEditing(null)
+      refresh()
+      toast.success("Price saved")
+    },
+    onError,
+  })
+  const deleteZone = async (z: { id: string; name: string }) => {
+    const ok = await prompt({
+      title: `Delete ${z.name}?`,
+      description: "Its prices are deleted too. Trips already booked keep their price.",
+      variant: "danger",
+      confirmText: "Delete zone",
+      cancelText: "Keep it",
+    })
+    if (ok) removeZone.mutate(z.id)
+  }
   const removePrice = useMutation({
     mutationFn: (id: string) => sdk.client.fetch(`/admin/booking/zone-prices/${id}`, { method: "DELETE" }),
     onSuccess: refresh,
@@ -136,14 +173,39 @@ const TripZonesPage = () => {
         <div className="flex flex-wrap gap-2 px-6 py-4">
           {list.map((z) => (
             <span key={z.id} className="flex items-center gap-x-2 rounded-md border border-ui-border-base px-2 py-1">
-              <Text size="small">{z.name}</Text>
-              <Button
-                size="small"
-                variant="transparent"
-                onClick={() => window.confirm(`Delete ${z.name} and its prices?`) && removeZone.mutate(z.id)}
-              >
-                Delete
-              </Button>
+              {renaming?.id === z.id ? (
+                <form
+                  className="flex items-center gap-x-1"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    if (renaming.name.trim()) renameZone.mutate(renaming)
+                  }}
+                >
+                  <Input
+                    size="small"
+                    aria-label={`New name for ${z.name}`}
+                    value={renaming.name}
+                    onChange={(e) => setRenaming({ id: z.id, name: e.target.value })}
+                    autoFocus
+                  />
+                  <Button size="small" type="submit" isLoading={renameZone.isPending}>
+                    Save
+                  </Button>
+                  <Button size="small" variant="transparent" type="button" onClick={() => setRenaming(null)}>
+                    Cancel
+                  </Button>
+                </form>
+              ) : (
+                <>
+                  <Text size="small">{z.name}</Text>
+                  <Button size="small" variant="transparent" onClick={() => setRenaming({ id: z.id, name: z.name })}>
+                    Rename
+                  </Button>
+                  <Button size="small" variant="transparent" onClick={() => deleteZone(z)}>
+                    Delete
+                  </Button>
+                </>
+              )}
             </span>
           ))}
           {!list.length && <Text size="small" className="text-ui-fg-subtle">No zones yet.</Text>}
@@ -202,15 +264,68 @@ const TripZonesPage = () => {
                 <Table.Cell>
                   {zoneName_(p.from_zone_id)} ↔ {zoneName_(p.to_zone_id)}
                 </Table.Cell>
-                <Table.Cell>
-                  {Number(p.amount).toFixed(2)} {p.currency_code.toUpperCase()}
-                </Table.Cell>
-                <Table.Cell>{p.minutes}</Table.Cell>
-                <Table.Cell>
-                  <Button size="small" variant="secondary" onClick={() => removePrice.mutate(p.id)}>
-                    Delete
-                  </Button>
-                </Table.Cell>
+                {editing?.id === p.id ? (
+                  <>
+                    <Table.Cell>
+                      <Input
+                        size="small"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        aria-label="Price"
+                        value={editing.amount}
+                        onChange={(e) => setEditing({ ...editing, amount: e.target.value })}
+                      />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Input
+                        size="small"
+                        type="number"
+                        min={5}
+                        max={1440}
+                        aria-label="Minutes"
+                        value={editing.minutes}
+                        onChange={(e) => setEditing({ ...editing, minutes: e.target.value })}
+                      />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <div className="flex gap-x-1">
+                        <Button
+                          size="small"
+                          isLoading={editPrice.isPending}
+                          disabled={editing.amount.trim() === "" || Number(editing.amount) < 0 || !(Number(editing.minutes) >= 5)}
+                          onClick={() => editPrice.mutate(editing)}
+                        >
+                          Save
+                        </Button>
+                        <Button size="small" variant="secondary" onClick={() => setEditing(null)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </Table.Cell>
+                  </>
+                ) : (
+                  <>
+                    <Table.Cell>
+                      {Number(p.amount).toFixed(2)} {p.currency_code.toUpperCase()}
+                    </Table.Cell>
+                    <Table.Cell>{p.minutes}</Table.Cell>
+                    <Table.Cell>
+                      <div className="flex gap-x-1">
+                        <Button
+                          size="small"
+                          variant="secondary"
+                          onClick={() => setEditing({ id: p.id, amount: String(p.amount), minutes: String(p.minutes) })}
+                        >
+                          Edit
+                        </Button>
+                        <Button size="small" variant="secondary" onClick={() => removePrice.mutate(p.id)}>
+                          Delete
+                        </Button>
+                      </div>
+                    </Table.Cell>
+                  </>
+                )}
               </Table.Row>
             ))}
           </Table.Body>

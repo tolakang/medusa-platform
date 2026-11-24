@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Container, Heading, Table, Text } from "@medusajs/ui"
-import { useQuery } from "@tanstack/react-query"
+import { Badge, Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
 
 // Passes (TASKS P3-29 follow-up): customers' passes, soonest to expire first,
@@ -22,6 +22,28 @@ const PassesPage = () => {
     queryFn: () => sdk.client.fetch<{ passes: Pass[] }>("/admin/booking/passes"),
   })
   const now = data ? new Date().getTime() : 0
+  // Give back a credit or end a pass (gap review 2026-11-24).
+  const queryClient = useQueryClient()
+  const prompt = usePrompt()
+  const change = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Record<string, unknown>; done: string }) =>
+      sdk.client.fetch(`/admin/booking/passes/${id}`, { method: "POST", body }),
+    onSuccess: (_, { done }) => {
+      toast.success(done)
+      queryClient.invalidateQueries({ queryKey: ["booking-passes"] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't change the pass."),
+  })
+  const end = async (p: Pass) => {
+    const ok = await prompt({
+      title: `End ${p.title} now?`,
+      description: `${p.customer?.name ?? p.customer?.email ?? "The customer"} can't use the ${p.credits_left} credits left after today. This doesn't refund anything.`,
+      variant: "danger",
+      confirmText: "End pass",
+      cancelText: "Keep it",
+    })
+    if (ok) change.mutate({ id: p.id, body: { expires_at: "now" }, done: "Pass ended." })
+  }
   return (
     <Container className="divide-y p-0">
       <div className="px-6 py-4">
@@ -42,6 +64,7 @@ const PassesPage = () => {
               <Table.HeaderCell>Credits left</Table.HeaderCell>
               <Table.HeaderCell>Until</Table.HeaderCell>
               <Table.HeaderCell>Order</Table.HeaderCell>
+              <Table.HeaderCell />
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -63,6 +86,23 @@ const PassesPage = () => {
                     )}
                   </Table.Cell>
                   <Table.Cell>{p.order_display_id != null ? `#${p.order_display_id}` : "—"}</Table.Cell>
+                  <Table.Cell className="text-right">
+                    {!expired && (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="small"
+                          variant="secondary"
+                          disabled={change.isPending || p.credits_left >= p.credits_total}
+                          onClick={() => change.mutate({ id: p.id, body: { credits_left: p.credits_left + 1 }, done: "One credit given back." })}
+                        >
+                          Give back 1
+                        </Button>
+                        <Button size="small" variant="secondary" disabled={change.isPending} onClick={() => end(p)}>
+                          End now
+                        </Button>
+                      </div>
+                    )}
+                  </Table.Cell>
                 </Table.Row>
               )
             })}

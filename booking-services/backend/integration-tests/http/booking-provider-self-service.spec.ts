@@ -216,6 +216,15 @@ medusaIntegrationTestRunner({
         expect((await api.get("/providers/me/services", dara.auth)).data.services.map((x: any) => x.title)).toEqual(["Check-up"])
         expect((await api.get("/providers/me/packages", vuthy.auth)).data.packages).toEqual([])
 
+        // Dara renames, reprices and hides it; Vuthy can't touch it (gap review 2026-11-24).
+        const pkgId = made.data.package.id
+        const edited = await call(api.post(`/providers/me/packages/${pkgId}`, { title: "Family morning", price: 15 }, dara.auth))
+        expect(edited.data.package).toMatchObject({ title: "Family morning", price: { amount: 15 } })
+        expect((await call(api.post(`/providers/me/packages/${pkgId}`, { status: "draft" }, dara.auth))).data.package.status).toBe("draft")
+        expect((await call(api.post(`/providers/me/packages/${pkgId}`, { title: "Mine" }, vuthy.auth))).status).toBe(404)
+        expect((await call(api.post(`/providers/me/packages/${pkgId}`, { price: -1 }, dara.auth))).status).toBe(400)
+        await api.post(`/providers/me/packages/${pkgId}`, { title: "Family check-up morning", price: 12, status: "published" }, dara.auth)
+
         // A customer books it on a Monday: both times on Dara's calendar, at $12.
         const query = getContainer().resolve(ContainerRegistrationKeys.QUERY)
         const regionId = (await query.graph({ entity: "region", fields: ["id"] })).data[0].id
@@ -265,6 +274,12 @@ medusaIntegrationTestRunner({
         const { data: [haircut] } = await query.graph({ entity: "product", fields: ["id"], filters: { handle: "haircut" } })
         expect((await call(api.post(`/providers/me/services/${haircut.id}`, { status: "draft" }, dara.auth))).status).toBe(404)
 
+        // Dara moves it to 11:00 local on her own calendar; not onto Vuthy's, and Vuthy can't move it (gap review 2026-11-24).
+        expect((await call(api.post(`/providers/me/bookings/${made.data.booking.id}/move`, { starts_at: at("05:00") }, vuthy.auth))).status).toBe(404)
+        expect((await call(api.post(`/providers/me/bookings/${made.data.booking.id}/move`, { resource_id: vuthy.calendar.id }, dara.auth))).status).toBe(404)
+        const moved = await call(api.post(`/providers/me/bookings/${made.data.booking.id}/move`, { starts_at: at("04:00") }, dara.auth))
+        expect([moved.status, moved.data?.message]).toEqual([200, undefined])
+        expect(Date.parse(moved.data.booking.starts_at)).toBe(Date.parse(at("04:00")))
         // Dara cancels her own booking; a partner sees the refund amount field.
         const cancelled = await call(api.post(`/providers/me/bookings/${made.data.booking.id}/cancel`, {}, dara.auth))
         expect(cancelled.status).toBe(200)

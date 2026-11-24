@@ -60,7 +60,6 @@ export const listApprovals = async ({
   return result
 }
 
-export const retrieveApproval = async (approvalId: string) => {}
 
 export const updateApproval = async (
   approvalId: string,

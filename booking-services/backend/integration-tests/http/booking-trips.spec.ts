@@ -166,6 +166,12 @@ medusaIntegrationTestRunner({
         expect(shop.prices.filter((p: any) => [p.from_zone_id, p.to_zone_id].includes(pp.id))).toEqual([
           expect.objectContaining({ amount: 55, minutes: 330 }),
         ])
+        // Edit a price and rename a zone (gap review 2026-11-24).
+        const edited = await call(api.post(`/admin/booking/zone-prices/${set.data.price.id}`, { amount: 58 }, admin))
+        expect(Number(edited.data.zone_price.amount)).toBe(58)
+        expect((await call(api.post(`/admin/booking/zone-prices/${set.data.price.id}`, { minutes: 1 }, admin))).status).toBe(400)
+        expect((await call(api.post(`/admin/booking/zones/${pp.id}`, { name: "Phnom Penh city" }, admin))).data.zone.name).toBe("Phnom Penh city")
+        expect((await call(api.post(`/admin/booking/zones/bzone_missing`, { name: "x" }, admin))).status).toBe(404)
         // Deleting a zone takes its prices along.
         await api.delete(`/admin/booking/zones/${pp.id}`, admin)
         const after = (await api.get(`/store/booking/zones?variant_id=${car}`, store)).data

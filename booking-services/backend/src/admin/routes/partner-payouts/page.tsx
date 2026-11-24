@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Input, Table, Text, toast } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -65,6 +65,26 @@ const PartnerPayoutsPage = () => {
     },
     onError,
   })
+  // Cancel a payout made by mistake (gap review 2026-11-24).
+  const prompt = usePrompt()
+  const cancelPayout = useMutation({
+    mutationFn: (id: string) => sdk.client.fetch(`/admin/booking/payouts/${id}/cancel`, { method: "POST" }),
+    onSuccess: () => {
+      refresh()
+      toast.success("Payout cancelled. Its bookings go into a later payout.")
+    },
+    onError,
+  })
+  const cancel = async (id: string, who: string) => {
+    const ok = await prompt({
+      title: `Cancel the payout to ${who}?`,
+      description: "Only if you haven't paid it. Its bookings go back to waiting for a later payout.",
+      variant: "danger",
+      confirmText: "Cancel payout",
+      cancelText: "Keep it",
+    })
+    if (ok) cancelPayout.mutate(id)
+  }
   const pay = useMutation({
     mutationFn: ({ id, reference }: { id: string; reference: string }) =>
       sdk.client.fetch(`/admin/booking/payouts/${id}/pay`, { method: "POST", body: { reference } }),
@@ -144,6 +164,14 @@ const PartnerPayoutsPage = () => {
                         onClick={() => pay.mutate({ id: p.id, reference: refs[p.id].trim() })}
                       >
                         Mark paid
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        disabled={pay.isPending || cancelPayout.isPending}
+                        onClick={() => cancel(p.id, p.provider?.name ?? "this partner")}
+                      >
+                        Cancel
                       </Button>
                     </div>
                   )}

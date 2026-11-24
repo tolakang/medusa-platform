@@ -24,6 +24,9 @@ import {
   PostAdminWalkIn,
   PostAdminZone,
   PostAdminZonePrice,
+  PostAdminZoneUpdate,
+  PostAdminZonePriceUpdate,
+  PostAdminPass,
   PostAdminQuote,
   PostAdminBookingMove,
   PostAdminReview,
@@ -39,6 +42,7 @@ import {
   PostProviderMe,
   PostProviderService,
   PostProviderPackage,
+  PostProviderPackageUpdate,
   PostProviderServiceUpdate,
   PostProviderWalkIn,
 } from './providers/validators'
@@ -129,6 +133,26 @@ export default defineMiddlewares({
       middlewares: [validateAndTransformBody(PostAdminBookingProvider)],
     },
     {
+      method: ['POST'],
+      matcher: '/admin/booking/zones/:id',
+      middlewares: [validateAndTransformBody(PostAdminZoneUpdate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/zone-prices/:id',
+      middlewares: [validateAndTransformBody(PostAdminZonePriceUpdate)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/booking/passes/:id',
+      middlewares: [validateAndTransformBody(PostAdminPass)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/bookings/:id/move',
+      middlewares: [validateAndTransformBody(PostAdminBookingMove)],
+    },
+    {
       // Trip zones and their prices (TASKS P3-21).
       method: ['POST'],
       matcher: '/admin/booking/zones',
@@ -192,6 +216,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/providers/me/services',
       middlewares: [validateAndTransformBody(PostProviderService)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/providers/me/packages/:id',
+      middlewares: [validateAndTransformBody(PostProviderPackageUpdate)],
     },
     {
       // A partner's event package (TASKS P3-30).
