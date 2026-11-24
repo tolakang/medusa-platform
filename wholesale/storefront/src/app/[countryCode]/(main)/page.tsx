@@ -6,6 +6,7 @@ import FeaturedProducts from "@/modules/home/components/featured-products"
 import Hero from "@/modules/home/components/hero"
 import SkeletonFeaturedProducts from "@/modules/skeletons/templates/skeleton-featured-products"
 import { Metadata } from "next"
+import { SHOP_NAME } from "@/lib/shop"
 import { Suspense } from "react"
 
 // Rendered per request: the featured products show the buyer's own prices
@@ -19,9 +20,8 @@ export async function generateMetadata(props: {
   const [origin, regions] = await Promise.all([getSiteOrigin(), listRegions()])
 
   return {
-    title: "Medusa Next.js Starter Template",
-    description:
-      "A performant frontend ecommerce starter template with Next.js 14 and Medusa.",
+    title: SHOP_NAME,
+    description: "Wholesale prices for business buyers. Order online, ask for a quote.",
     alternates: {
       canonical: `${origin}/${countryCode}`,
       languages: {
