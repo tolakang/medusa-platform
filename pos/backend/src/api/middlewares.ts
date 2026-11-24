@@ -14,6 +14,7 @@ import {
   PostPosCheckout,
   PostPosCustomer,
   PostPosShiftClose,
+  PostAdminPosShiftClose,
   PostPosShiftOpen,
 } from './pos/validators'
 import { PostAdminUploadLimit } from '@medusa-platform/medusa-core/api/admin/upload-limit/validators'
@@ -236,6 +237,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/pos/shifts/close',
       middlewares: [validateAndTransformBody(PostPosShiftClose)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/admin/pos/shifts/:id/close',
+      middlewares: [validateAndTransformBody(PostAdminPosShiftClose)],
     },
     {
       method: ['POST'],

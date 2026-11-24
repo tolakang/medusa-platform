@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Container, Heading, Input, Label, Select, Table, Text } from "@medusajs/ui"
-import { useQuery } from "@tanstack/react-query"
+import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import { sdk } from "../../lib/sdk"
 import {
@@ -59,6 +59,21 @@ const ShiftReportPage = () => {
     queryFn: () => sdk.client.fetch<{ shifts: ReportShift[]; count: number }>("/admin/pos/shifts", { query: params }),
   })
   const shifts = data?.shifts ?? []
+
+  // Close a shift a cashier left open (gap review 2026-11-24): count the
+  // drawer, enter it, and the register can open again.
+  const queryClient = useQueryClient()
+  const [closing, setClosing] = useState<{ id: string; counted: string } | null>(null)
+  const close = useMutation({
+    mutationFn: (c: { id: string; counted: number }) =>
+      sdk.client.fetch(`/admin/pos/shifts/${c.id}/close`, { method: "POST", body: { counted_cash: c.counted } }),
+    onSuccess: () => {
+      toast.success("Shift closed. The register can open a new shift.")
+      setClosing(null)
+      queryClient.invalidateQueries({ queryKey: ["pos-shifts"] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't close the shift."),
+  })
   const groups = useMemo(() => groupShifts(shifts, groupBy), [shifts, groupBy])
   const pageCount = Math.max(1, Math.ceil(shifts.length / PAGE_SIZE))
   const visible = shifts.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
@@ -223,9 +238,47 @@ const ShiftReportPage = () => {
                 <Table.Cell>
                   {when(s.opened_at)}
                   {s.status === "open" ? (
-                    <Badge size="2xsmall" color="blue" className="ml-2">
-                      Open
-                    </Badge>
+                    <>
+                      <Badge size="2xsmall" color="blue" className="ml-2">
+                        Open
+                      </Badge>
+                      {closing?.id === s.id ? (
+                        <form
+                          className="mt-2 flex items-center gap-2"
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            const counted = Number(closing.counted)
+                            if (closing.counted.trim() === "" || !(counted >= 0)) {
+                              toast.error("Enter the cash counted in the drawer (0 or more).")
+                              return
+                            }
+                            close.mutate({ id: s.id, counted })
+                          }}
+                        >
+                          <Input
+                            size="small"
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            aria-label="Cash counted in the drawer"
+                            placeholder="Cash counted"
+                            value={closing.counted}
+                            onChange={(e) => setClosing({ id: s.id, counted: e.target.value })}
+                            autoFocus
+                          />
+                          <Button size="small" type="submit" isLoading={close.isPending}>
+                            Close shift
+                          </Button>
+                          <Button size="small" variant="secondary" type="button" onClick={() => setClosing(null)}>
+                            Cancel
+                          </Button>
+                        </form>
+                      ) : (
+                        <Button size="small" variant="secondary" className="ml-2" onClick={() => setClosing({ id: s.id, counted: "" })}>
+                          Close…
+                        </Button>
+                      )}
+                    </>
                   ) : (
                     <div className="text-ui-fg-muted txt-small">Closed {when(s.closed_at)}</div>
                   )}
