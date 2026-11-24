@@ -51,7 +51,7 @@ async function askToVerify(email: string, token: string): Promise<AuthState> {
   } catch (e) {
     const status = (e as { status?: number })?.status
     return status === 429
-      ? { info: `We already emailed a link to ${email}. Open it to confirm your email, then sign in.` }
+      ? { info: `We already emailed a link to ${email}. Open it to confirm your email, then sign in. No email? Check spam, or sign in again in 2 minutes to get a new link.` }
       : { error: "Couldn't send the confirmation email. Try again in a few minutes." }
   }
 }
