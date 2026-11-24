@@ -223,6 +223,31 @@ export function CompanyForm({
               </Select>
             </div>
           </div>
+          <Label size="xsmall">Spending limits start again</Label>
+          <Select
+            name="spending_limit_reset_frequency"
+            value={(formData as { spending_limit_reset_frequency?: string }).spending_limit_reset_frequency || "monthly"}
+            onValueChange={(value) =>
+              setFormData({ ...formData, spending_limit_reset_frequency: value } as typeof formData)
+            }
+          >
+            <Select.Trigger>
+              <Select.Value />
+            </Select.Trigger>
+            <Select.Content className="z-50">
+              {[
+                ["never", "Never"],
+                ["daily", "Every day"],
+                ["weekly", "Every week"],
+                ["monthly", "Every month"],
+                ["yearly", "Every year"],
+              ].map(([value, label]) => (
+                <Select.Item key={value} value={value}>
+                  {label}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select>
           <Label size="xsmall">Credit Limit (empty = no limit set)</Label>
           <Input
             type="number"

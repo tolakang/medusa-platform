@@ -96,6 +96,14 @@ const ApprovalSettingsCard = ({
                 </Text>
               </div>
             </div>
+            {(approval_settings as { approval_threshold?: number | null } | undefined)?.approval_threshold != null && (
+              <div className="flex flex-col gap-y-2">
+                <Text className="font-medium text-neutral-950">Approval needed above</Text>
+                <Text className="text-neutral-500">
+                  {Number((approval_settings as { approval_threshold?: number }).approval_threshold).toLocaleString()} (set by the shop)
+                </Text>
+              </div>
+            )}
           </TooltipProvider>
         </div>
 
