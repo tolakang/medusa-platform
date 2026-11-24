@@ -193,6 +193,17 @@ medusaIntegrationTestRunner({
         // Someone else's seller id is not found.
         expect((await call(api.post(`/admin/sellers/sel_missing/reset-link`, {}, admin))).status).toEqual(404)
       })
+
+      it("a seller renames their shop, but can't change the domain", async () => {
+        const invited = await invite()
+        const token = await onboard(invited)
+        await api.post(`/admin/sellers/${invited.data.seller.id}`, { status: "active" }, admin)
+        const res = await call(api.post("/sellers/me", { name: "Sok's Corner" }, bearer(token)))
+        expect(res.status).toEqual(200)
+        expect(res.data.seller.name).toEqual("Sok's Corner")
+        expect((await call(api.post("/sellers/me", { domain: "evil.test" }, bearer(token)))).status).toEqual(400)
+        expect((await call(api.post("/sellers/me", { name: "" }, bearer(token)))).status).toEqual(400)
+      })
     })
   },
 })
