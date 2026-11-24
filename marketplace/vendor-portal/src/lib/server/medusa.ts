@@ -56,7 +56,7 @@ export type BackendResult<T> = { ok: true; status: number; data: T } | { ok: fal
 
 export async function backendFetch<T>(
   path: string,
-  init: { token?: string | null; method?: "GET" | "POST"; body?: unknown; query?: Record<string, string> } = {}
+  init: { token?: string | null; method?: "GET" | "POST" | "DELETE"; body?: unknown; query?: Record<string, string> } = {}
 ): Promise<BackendResult<T>> {
   try {
     const data = await sdk.client.fetch<T>(path, {

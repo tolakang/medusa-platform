@@ -13,7 +13,7 @@ export const GetAdminVendorProducts = z
 
 // POST /admin/vendor-products/:id/review: publish or reject a vendor's product.
 export const PostAdminVendorProductReview = z
-  .object({ action: z.enum(["publish", "reject"]) })
+  .object({ action: z.enum(["publish", "reject"]), note: z.string().trim().max(500).optional() })
   .strict()
 
 export type PostAdminVendorProductReviewType = z.infer<typeof PostAdminVendorProductReview>

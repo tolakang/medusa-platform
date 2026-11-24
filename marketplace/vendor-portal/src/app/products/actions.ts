@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import { productBody, stockQuantity } from "@/lib/format"
 import { backendFetch } from "@/lib/server/medusa"
 import { requireVendor } from "@/lib/server/vendor"
@@ -61,4 +62,40 @@ export async function setProductStock(_: StockState, form: FormData): Promise<St
   }
   revalidatePath("/products")
   return { saved: quantity }
+}
+
+// Edit or delete a product that isn't on sale yet (gap review 2026-11-24):
+// POST / DELETE /vendors/products/:id.
+export type EditState = { error?: string; info?: string }
+
+export async function editProduct(_: EditState, form: FormData): Promise<EditState> {
+  const { token } = await requireVendor()
+  const id = String(form.get("product_id") ?? "")
+  if (!/^prod_[A-Za-z0-9]+$/.test(id)) {
+    return { error: "Unknown product." }
+  }
+  const title = String(form.get("title") ?? "").trim()
+  if (!title) {
+    return { error: "Give the product a name." }
+  }
+  const status = form.get("intent") === "propose" ? "proposed" : "draft"
+  const result = await backendFetch(`/vendors/products/${id}`, {
+    token,
+    method: "POST",
+    body: { title, description: String(form.get("description") ?? "").trim(), status },
+  })
+  if (!result.ok) {
+    return { error: result.message }
+  }
+  revalidatePath("/products")
+  return { info: status === "proposed" ? "Saved and sent for review." : "Saved as a draft." }
+}
+
+export async function deleteProduct(form: FormData): Promise<void> {
+  const { token } = await requireVendor()
+  const id = String(form.get("product_id") ?? "")
+  if (!/^prod_[A-Za-z0-9]+$/.test(id)) return
+  await backendFetch(`/vendors/products/${id}`, { token, method: "DELETE" })
+  revalidatePath("/products")
+  redirect("/products")
 }

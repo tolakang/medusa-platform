@@ -236,6 +236,37 @@ medusaIntegrationTestRunner({
         expect((await call(api.post("/vendors/products", product("Z"), admin))).status).toBe(401)
         expect((await call(api.get("/vendors/products"))).status).toBe(401)
       })
+
+      it("a vendor fixes a rejected product, sends it again, and deletes a draft; a published one is refused", async () => {
+        const sok = await vendor("sok@vendor.test", "Sok Weaves")
+        const created = await call(api.post("/vendors/products", product("Krama", { status: "proposed" }), sok.auth))
+        const id = created.data.product.id
+        await api.post(`/admin/vendor-products/${id}/review`, { action: "reject", note: "Add real photos." }, admin)
+        const listed = await call(api.get("/vendors/products", sok.auth))
+        const rejected = listed.data.products.find((p: { id: string }) => p.id === id)
+        expect(rejected.status).toBe("rejected")
+        expect(rejected.metadata?.rejection_note).toBe("Add real photos.")
+
+        const edited = await call(api.post(`/vendors/products/${id}`, { title: "Krama scarf", status: "proposed" }, sok.auth))
+        expect(edited.status).toBe(200)
+        const again = (await call(api.get("/vendors/products", sok.auth))).data.products.find((p: { id: string }) => p.id === id)
+        expect(again).toEqual(expect.objectContaining({ title: "Krama scarf", status: "proposed" }))
+        expect(again.metadata?.rejection_note).toBeUndefined()
+        expect((await call(api.post(`/vendors/products/${id}`, { status: "published" }, sok.auth))).status).toBe(400)
+
+        // Another vendor can't touch it.
+        const other = await vendor("vy@vendor.test", "Vy Pots")
+        expect((await call(api.post(`/vendors/products/${id}`, { title: "Mine" }, other.auth))).status).toBe(404)
+        expect((await call(api.delete(`/vendors/products/${id}`, other.auth))).status).toBe(404)
+
+        // Published: the marketplace's to change.
+        await api.post(`/admin/vendor-products/${id}/review`, { action: "publish" }, admin)
+        expect((await call(api.post(`/vendors/products/${id}`, { title: "x" }, sok.auth))).status).toBe(400)
+        expect((await call(api.delete(`/vendors/products/${id}`, sok.auth))).status).toBe(400)
+
+        const draft = await call(api.post("/vendors/products", product("Basket"), sok.auth))
+        expect((await call(api.delete(`/vendors/products/${draft.data.product.id}`, sok.auth))).data.deleted).toBe(true)
+      })
     })
   },
 })

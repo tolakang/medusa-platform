@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { adminLink, errorText, STATUS_COLOR } from "../../lib/marketplace"
@@ -38,8 +38,11 @@ const VendorProductsPage = () => {
   })
   const prompt = usePrompt()
   const review = useMutation({
-    mutationFn: ({ id, action }: { id: string; action: "publish" | "reject"; title: string }) =>
-      sdk.client.fetch(`/admin/vendor-products/${id}/review`, { method: "POST", body: { action } }),
+    mutationFn: ({ id, action, note }: { id: string; action: "publish" | "reject"; title: string; note?: string }) =>
+      sdk.client.fetch(`/admin/vendor-products/${id}/review`, {
+        method: "POST",
+        body: { action, ...(note?.trim() ? { note: note.trim() } : {}) },
+      }),
     onSuccess: (_, { action, title }) => {
       toast.success(`${title} ${action === "publish" ? "published" : "rejected"}`)
       queryClient.invalidateQueries({ queryKey: ["marketplace-vendor-products"] })
@@ -47,15 +50,24 @@ const VendorProductsPage = () => {
     onError: (e) => toast.error(errorText(e)),
   })
   const busyId = review.isPending ? review.variables?.id : undefined
+  // Reject with a reason the vendor sees (gap review 2026-11-24).
+  const [rejecting, setRejecting] = useState<{ id: string; note: string } | null>(null)
   const reject = async (p: VendorProduct) => {
+    if (rejecting?.id !== p.id) {
+      setRejecting({ id: p.id, note: "" })
+      return
+    }
     const ok = await prompt({
       title: `Reject ${p.title}?`,
-      description: `${p.vendor.name} sees it as rejected and it doesn't sell. You can publish it later.`,
+      description: `${p.vendor.name} sees it as rejected${rejecting.note.trim() ? ", with your reason," : ""} and it doesn't sell. They can fix it and send it again.`,
       variant: "danger",
       confirmText: "Reject",
       cancelText: "Back",
     })
-    if (ok) review.mutate({ id: p.id, action: "reject", title: p.title })
+    if (ok) {
+      review.mutate({ id: p.id, action: "reject", title: p.title, note: rejecting.note })
+      setRejecting(null)
+    }
   }
 
   return (
@@ -127,8 +139,20 @@ const VendorProductsPage = () => {
                       isLoading={busyId === p.id && review.variables?.action === "reject"}
                       onClick={() => reject(p)}
                     >
-                      Reject
+                      {rejecting?.id === p.id ? "Reject now" : "Reject"}
                     </Button>
+                  )}
+                  {rejecting?.id === p.id && (
+                    <Input
+                      size="small"
+                      className="mt-2"
+                      aria-label="Reason for rejecting (the vendor sees it)"
+                      placeholder="Reason (the vendor sees it)"
+                      maxLength={500}
+                      value={rejecting.note}
+                      onChange={(e) => setRejecting({ id: p.id, note: e.target.value })}
+                      autoFocus
+                    />
                   )}
                 </Table.Cell>
               </Table.Row>
