@@ -27,6 +27,7 @@ export const VENDOR_PRODUCT_FIELDS = [
   "subtitle",
   "description",
   "status",
+  "metadata",
   "thumbnail",
   "created_at",
   "updated_at",

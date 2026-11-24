@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Shell } from "@/components/shell";
 import { day, money } from "@/lib/format";
 import { requireVendor, vendorGet } from "@/lib/server/vendor";
@@ -56,7 +57,7 @@ export default async function ProductsPage() {
                 return (
                   <li key={p.id} className="flex flex-col gap-2 py-3">
                     <div className="flex items-start justify-between gap-3">
-                      <span className="font-medium">{p.title}</span>
+                      <Link href={`/products/${p.id}`} className="font-medium text-ui-fg-interactive">{p.title}</Link>
                       <span>
                         {price ? money(price.amount, price.currency_code) : "—"}
                       </span>
@@ -92,7 +93,7 @@ export default async function ProductsPage() {
                   const price = p.variants[0]?.prices[0];
                   return (
                     <tr key={p.id} className="border-t border-ui-border-base">
-                      <td className="py-1">{p.title}</td>
+                      <td className="py-1"><Link href={`/products/${p.id}`} className="text-ui-fg-interactive">{p.title}</Link></td>
                       <td>
                         {price ? money(price.amount, price.currency_code) : "—"}
                       </td>

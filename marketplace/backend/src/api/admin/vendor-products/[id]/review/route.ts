@@ -20,7 +20,7 @@ export const POST = async (
   const {
     data: [product],
   } = await query.graph(
-    { entity: "product", fields: ["id", "vendor.id"], filters: { id: req.params.id } },
+    { entity: "product", fields: ["id", "metadata", "vendor.id"], filters: { id: req.params.id } },
     { throwIfKeyNotFound: true }
   )
   if (!product.vendor?.id) {
@@ -28,7 +28,17 @@ export const POST = async (
   }
   const status = req.validatedBody.action === "publish" ? "published" : "rejected"
   await updateProductsWorkflow(req.scope).run({
-    input: { selector: { id: product.id }, update: { status } },
+    input: {
+      selector: { id: product.id },
+      update: {
+        status,
+        // Why it was rejected, shown to the vendor (gap review 2026-11-24).
+        metadata: {
+          ...(product.metadata ?? {}),
+          rejection_note: status === "rejected" ? req.validatedBody.note ?? null : null,
+        },
+      },
+    },
   })
   const {
     data: [updated],
