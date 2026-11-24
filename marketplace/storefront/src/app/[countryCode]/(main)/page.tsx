@@ -1,14 +1,14 @@
 import { Metadata } from "next"
 
+import { SHOP_NAME } from "@lib/shop"
 import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero from "@modules/home/components/hero"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
-  title: "Medusa Next.js Starter Template",
-  description:
-    "A performant frontend ecommerce starter template with Next.js 15 and Medusa.",
+  title: SHOP_NAME,
+  description: "Browse the shop and order online.",
 }
 
 export default async function Home(props: {

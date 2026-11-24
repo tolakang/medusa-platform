@@ -1,6 +1,6 @@
 import { SHOP_NAME } from "@lib/shop"
-import { Github } from "@medusajs/icons";
 import { Button, Heading } from "@modules/common/components/ui";
+import LocalizedClientLink from "@modules/common/components/localized-client-link";
 const Hero = () => {
   return (
     <div className="h-[75vh] w-full border-b border-ui-border-base relative bg-ui-bg-subtle">
@@ -19,11 +19,9 @@ const Hero = () => {
             Browse the shop and order online.
           </Heading>
         </span>
-        <a href="https://github.com/medusajs/dtc-starter" target="_blank">
-          <Button variant="secondary">
-            View on GitHub <Github />
-          </Button>
-        </a>
+        <LocalizedClientLink href="/store">
+          <Button variant="secondary">Shop all products</Button>
+        </LocalizedClientLink>
       </div>
     </div>
   );
