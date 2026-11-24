@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Gift } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Text } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -151,7 +152,7 @@ const EventsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Events",
+  label: "Events", icon: Gift,
 })
 
 export default EventsPage

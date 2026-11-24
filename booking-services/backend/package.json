@@ -33,6 +33,7 @@
     "@medusajs/dashboard": "catalog:",
     "@medusajs/draft-order": "catalog:",
     "@medusajs/framework": "catalog:",
+    "@medusajs/icons": "catalog:",
     "@medusajs/js-sdk": "catalog:",
     "@medusajs/medusa": "catalog:",
     "@medusajs/ui": "catalog:",

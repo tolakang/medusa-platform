@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Tag } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Text, toast } from "@medusajs/ui"
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
@@ -99,7 +100,7 @@ const TicketsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Tickets",
+  label: "Tickets", icon: Tag,
 })
 
 export default TicketsPage

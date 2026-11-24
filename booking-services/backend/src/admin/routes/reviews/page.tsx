@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Star } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Text, Textarea, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -130,7 +131,7 @@ const ReviewsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Reviews",
+  label: "Reviews", icon: Star,
 })
 
 export default ReviewsPage

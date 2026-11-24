@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Users } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -375,7 +376,7 @@ const ProvidersPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Providers",
+  label: "Providers", icon: Users,
 })
 
 export default ProvidersPage

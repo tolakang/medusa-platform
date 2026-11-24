@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { ChatBubbleLeftRight } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Text, Textarea, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -216,7 +217,7 @@ const QuotesPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Quotes",
+  label: "Quotes", icon: ChatBubbleLeftRight,
 })
 
 export default QuotesPage

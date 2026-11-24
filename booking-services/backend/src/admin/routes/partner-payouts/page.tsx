@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { CurrencyDollar } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -243,7 +244,7 @@ const PartnerPayoutsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Partner payouts",
+  label: "Partner payouts", icon: CurrencyDollar,
 })
 
 export default PartnerPayoutsPage

@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { MapPin } from "@medusajs/icons"
 import { Button, Container, Heading, Input, Label, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
@@ -342,7 +343,7 @@ const TripZonesPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Trip zones",
+  label: "Trip zones", icon: MapPin,
 })
 
 export default TripZonesPage

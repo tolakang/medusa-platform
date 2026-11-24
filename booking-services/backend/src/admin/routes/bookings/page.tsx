@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Calendar } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Text } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
@@ -492,7 +493,7 @@ const BookingsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Bookings",
+  label: "Bookings", icon: Calendar,
 })
 
 export default BookingsPage

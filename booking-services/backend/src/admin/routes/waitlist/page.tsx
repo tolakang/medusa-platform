@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Clock } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
@@ -95,6 +96,6 @@ const WaitlistPage = () => {
   )
 }
 
-export const config = defineRouteConfig({ label: "Waitlist" })
+export const config = defineRouteConfig({ label: "Waitlist", icon: Clock })
 
 export default WaitlistPage
