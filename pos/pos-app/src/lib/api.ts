@@ -65,6 +65,8 @@ export type LookupVariant = {
   barcode: string | null
   price: number | null
   currency_code: string
+  /** What this register's location can still sell; null = not tracked. */
+  stock?: number | null
   product: { id: string; title: string | null; thumbnail: string | null }
 }
 

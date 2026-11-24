@@ -136,6 +136,10 @@ medusaIntegrationTestRunner({
           expect.objectContaining({ sku: "SHIRT-L-BLACK", currency_code: "usd", product: expect.objectContaining({ title: "Medusa T-Shirt" }) })
         )
         expect(variant.price).toBeGreaterThan(0)
+        // What the register's location can sell, so the till refuses a scan it
+        // couldn't sell; no internal inventory fields leak.
+        expect(variant.stock).toEqual(20)
+        expect(variant).not.toHaveProperty("inventory_items")
         await container.resolve(Modules.PRODUCT).updateProductVariants(variant.id, { barcode: "8850000000017" })
         const { data: byBarcode } = await api.get(`/pos/products/lookup?code=8850000000017&shift_id=${shift.id}`, cashier)
         expect(byBarcode.variants.map((v) => v.id)).toEqual([variant.id])
