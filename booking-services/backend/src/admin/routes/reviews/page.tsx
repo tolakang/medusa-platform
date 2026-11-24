@@ -1,8 +1,9 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Text, Textarea } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Text, Textarea, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { errorText, statusLabel } from "../../lib/format"
 
 // Reviews (TASKS P3-29): customers' reviews of bookings they had, newest
 // first. They're published at once; Hide takes one off the shop, Show puts
@@ -28,7 +29,9 @@ const Reply = ({ review, onSaved }: { review: Review; onSaved: () => void }) => 
     onSuccess: () => {
       setOpen(false)
       onSaved()
+      toast.success("Reply saved")
     },
+    onError: (e) => toast.error(errorText(e)),
   })
   if (!open) {
     return (
@@ -46,7 +49,7 @@ const Reply = ({ review, onSaved }: { review: Review; onSaved: () => void }) => 
   }
   return (
     <div className="flex flex-col gap-y-2">
-      <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Thank the customer, or answer them. Shown under the review." />
+      <Textarea aria-label="Reply to the review" value={text} onChange={(e) => setText(e.target.value)} placeholder="Thank the customer, or answer them. Shown under the review." />
       <div className="flex gap-x-2">
         <Button size="small" isLoading={save.isPending} onClick={() => save.mutate()}>
           Save reply
@@ -59,7 +62,6 @@ const Reply = ({ review, onSaved }: { review: Review; onSaved: () => void }) => 
   )
 }
 
-const errorText = (e: unknown) => (e as { message?: string })?.message ?? "Something went wrong."
 const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n)
 
 const ReviewsPage = () => {
@@ -68,6 +70,7 @@ const ReviewsPage = () => {
     queryKey: ["booking-reviews"],
     queryFn: () => sdk.client.fetch<{ reviews: Review[] }>("/admin/booking/reviews"),
   })
+  const prompt = usePrompt()
   const set = useMutation({
     mutationFn: (v: { id: string; status: Review["status"] }) =>
       sdk.client.fetch(`/admin/booking/reviews/${v.id}`, { method: "POST", body: { status: v.status } }),
@@ -103,7 +106,19 @@ const ReviewsPage = () => {
             size="small"
             variant="secondary"
             isLoading={set.isPending && set.variables?.id === r.id}
-            onClick={() => set.mutate({ id: r.id, status: r.status === "published" ? "hidden" : "published" })}
+            disabled={set.isPending}
+            onClick={async () => {
+              if (r.status === "published") {
+                const ok = await prompt({
+                  title: "Hide this review?",
+                  description: "It disappears from the shop. You can show it again later.",
+                  confirmText: "Hide",
+                  cancelText: "Keep it",
+                })
+                if (!ok) return
+              }
+              set.mutate({ id: r.id, status: r.status === "published" ? "hidden" : "published" })
+            }}
           >
             {r.status === "published" ? "Hide" : "Show"}
           </Button>

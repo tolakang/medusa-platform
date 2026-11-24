@@ -216,7 +216,7 @@ const PartnerPayoutsPage = () => {
                     · {money(c.line_total, c.currency_code)}
                   </Table.Cell>
                   <Table.Cell>
-                    {money(c.payout_amount, c.currency_code)} · {c.status}
+                    {money(c.payout_amount, c.currency_code)} · {({ pending: "Waiting", approved: "In a payout", paid: "Paid", cancelled: "Cancelled" } as Record<string, string>)[c.status] ?? c.status}
                   </Table.Cell>
                   <Table.Cell>
                     <div className="flex justify-end gap-x-2">

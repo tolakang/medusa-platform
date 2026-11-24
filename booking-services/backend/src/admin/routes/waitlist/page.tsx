@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Button, Container, Heading, Table, Text, toast } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
 
@@ -23,6 +23,7 @@ const WaitlistPage = () => {
   })
   // Take someone off the list (gap review 2026-11-24).
   const queryClient = useQueryClient()
+  const prompt = usePrompt()
   const remove = useMutation({
     mutationFn: (id: string) => sdk.client.fetch(`/admin/booking/waitlist/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -72,7 +73,15 @@ const WaitlistPage = () => {
                     variant="secondary"
                     isLoading={remove.isPending && remove.variables === w.id}
                     disabled={remove.isPending}
-                    onClick={() => remove.mutate(w.id)}
+                    onClick={async () => {
+                      const ok = await prompt({
+                        title: "Take them off the waitlist?",
+                        description: "They won't be emailed when a time frees up.",
+                        confirmText: "Remove",
+                        cancelText: "Keep",
+                      })
+                      if (ok) remove.mutate(w.id)
+                    }}
                   >
                     Remove
                   </Button>
