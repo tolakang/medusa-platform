@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Badge, Container, Heading, Table, Text } from "@medusajs/ui"
-import { useQuery } from "@tanstack/react-query"
+import { Badge, Button, Container, Heading, Table, Text, toast } from "@medusajs/ui"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
 
 // Waitlist (TASKS P3-29 follow-up): who waits for a full day of which
@@ -21,6 +21,16 @@ const WaitlistPage = () => {
     queryKey: ["booking-waitlist"],
     queryFn: () => sdk.client.fetch<{ waitlist: Entry[] }>("/admin/booking/waitlist"),
   })
+  // Take someone off the list (gap review 2026-11-24).
+  const queryClient = useQueryClient()
+  const remove = useMutation({
+    mutationFn: (id: string) => sdk.client.fetch(`/admin/booking/waitlist/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Taken off the waitlist.")
+      queryClient.invalidateQueries({ queryKey: ["booking-waitlist"] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Couldn't remove them."),
+  })
   return (
     <Container className="divide-y p-0">
       <div className="px-6 py-4">
@@ -40,6 +50,7 @@ const WaitlistPage = () => {
               <Table.HeaderCell>Service</Table.HeaderCell>
               <Table.HeaderCell>Customer</Table.HeaderCell>
               <Table.HeaderCell>Status</Table.HeaderCell>
+              <Table.HeaderCell />
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -54,6 +65,17 @@ const WaitlistPage = () => {
                   <Badge size="2xsmall" color={w.status === "notified" ? "green" : "orange"}>
                     {w.status === "notified" ? "time free, told" : "waiting"}
                   </Badge>
+                </Table.Cell>
+                <Table.Cell className="text-right">
+                  <Button
+                    size="small"
+                    variant="secondary"
+                    isLoading={remove.isPending && remove.variables === w.id}
+                    disabled={remove.isPending}
+                    onClick={() => remove.mutate(w.id)}
+                  >
+                    Remove
+                  </Button>
                 </Table.Cell>
               </Table.Row>
             ))}

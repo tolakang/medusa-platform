@@ -1,8 +1,8 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import { Notice } from "@/components/notice"
-import { bookWalkIn, cancelBooking, type FormState } from "./actions"
+import { bookWalkIn, cancelBooking, moveBooking, type FormState } from "./actions"
 
 export function WalkInForm({ resourceId, date }: { resourceId: string; date: string }) {
   const [state, action, working] = useActionState<FormState, FormData>(bookWalkIn, {})
@@ -34,25 +34,65 @@ export function WalkInForm({ resourceId, date }: { resourceId: string; date: str
 
 export function CancelButton({ bookingId }: { bookingId: string }) {
   const [state, action, working] = useActionState<FormState, FormData>(cancelBooking, {})
+  // A second step in the page instead of a browser dialog (design critique).
+  const [sure, setSure] = useState(false)
   return (
-    <form
-      action={action}
-      className="flex flex-col items-end gap-1"
-      onSubmit={(e) => {
-        if (!window.confirm("Cancel this booking? The customer is told, and refunded if the shop's rules allow.")) {
-          e.preventDefault()
-        }
-      }}
-    >
+    <form action={action} className="flex flex-col items-end gap-1">
       <input type="hidden" name="booking_id" value={bookingId} />
-      <button className="btn-secondary" type="submit" disabled={working}>
-        {working ? "Cancelling…" : "Cancel"}
-      </button>
+      {sure ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <span className="text-sm">Cancel it? The customer is told, and refunded if the shop&apos;s rules allow.</span>
+          <button className="btn-secondary" type="button" onClick={() => setSure(false)} disabled={working}>
+            Keep it
+          </button>
+          <button className="btn-primary" type="submit" disabled={working}>
+            {working ? "Cancelling…" : "Yes, cancel"}
+          </button>
+        </div>
+      ) : (
+        <button className="btn-secondary" type="button" onClick={() => setSure(true)}>
+          Cancel
+        </button>
+      )}
       {state.error && (
         <span role="alert" className="text-xs text-ui-tag-red-text">
           {state.error}
         </span>
       )}
+    </form>
+  )
+}
+
+// Move a booking to another day and time (gap review 2026-11-24).
+export function MoveButton({ bookingId, date, timezone }: { bookingId: string; date: string; timezone: string }) {
+  const [state, action, working] = useActionState<FormState, FormData>(moveBooking, {})
+  const [open, setOpen] = useState(false)
+  if (!open) {
+    return (
+      <button className="btn-secondary" type="button" onClick={() => setOpen(true)}>
+        Move
+      </button>
+    )
+  }
+  return (
+    <form action={action} className="flex flex-wrap items-end gap-2">
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="timezone" value={timezone} />
+      <label className="flex flex-col gap-1 text-sm">
+        New day
+        <input className="field" type="date" name="date" defaultValue={date} required />
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        Start
+        <input className="field" type="time" name="time" required />
+      </label>
+      <button className="btn-primary" type="submit" disabled={working}>
+        {working ? "Moving…" : "Move booking"}
+      </button>
+      <button className="btn-secondary" type="button" onClick={() => setOpen(false)} disabled={working}>
+        Close
+      </button>
+      <Notice state={state} />
     </form>
   )
 }
