@@ -216,6 +216,15 @@ medusaIntegrationTestRunner({
         expect((await api.get("/providers/me/services", dara.auth)).data.services.map((x: any) => x.title)).toEqual(["Check-up"])
         expect((await api.get("/providers/me/packages", vuthy.auth)).data.packages).toEqual([])
 
+        // Dara renames, reprices and hides it; Vuthy can't touch it (gap review 2026-11-24).
+        const pkgId = made.data.package.id
+        const edited = await call(api.post(`/providers/me/packages/${pkgId}`, { title: "Family morning", price: 15 }, dara.auth))
+        expect(edited.data.package).toMatchObject({ title: "Family morning", price: { amount: 15 } })
+        expect((await call(api.post(`/providers/me/packages/${pkgId}`, { status: "draft" }, dara.auth))).data.package.status).toBe("draft")
+        expect((await call(api.post(`/providers/me/packages/${pkgId}`, { title: "Mine" }, vuthy.auth))).status).toBe(404)
+        expect((await call(api.post(`/providers/me/packages/${pkgId}`, { price: -1 }, dara.auth))).status).toBe(400)
+        await api.post(`/providers/me/packages/${pkgId}`, { title: "Family check-up morning", price: 12, status: "published" }, dara.auth)
+
         // A customer books it on a Monday: both times on Dara's calendar, at $12.
         const query = getContainer().resolve(ContainerRegistrationKeys.QUERY)
         const regionId = (await query.graph({ entity: "region", fields: ["id"] })).data[0].id
