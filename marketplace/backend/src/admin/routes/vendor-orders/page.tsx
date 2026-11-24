@@ -1,8 +1,9 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { ShoppingCart } from "@medusajs/icons"
 import { Badge, Container, Heading, Table, Text } from "@medusajs/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
-import { adminLink, errorText, money, STATUS_COLOR } from "../../lib/marketplace"
+import { adminLink, errorText, money, STATUS_COLOR, statusLabel } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
 const PAGE_SIZE = 50
@@ -71,7 +72,7 @@ const VendorOrdersPage = () => {
                 <Table.Cell>{money(o.total, o.currency_code)}</Table.Cell>
                 <Table.Cell>
                   <Badge size="2xsmall" color={STATUS_COLOR[o.status] ?? "grey"}>
-                    {o.status.replace(/_/g, " ")}
+                    {statusLabel(o.status)}
                   </Badge>
                 </Table.Cell>
                 <Table.Cell>
@@ -103,7 +104,7 @@ const VendorOrdersPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Vendor orders",
+  label: "Vendor orders", icon: ShoppingCart,
 })
 
 export default VendorOrdersPage

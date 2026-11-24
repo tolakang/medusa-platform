@@ -2,7 +2,7 @@ import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import type { AdminOrder, DetailWidgetProps } from "@medusajs/framework/types"
 import { Container, Heading, Text } from "@medusajs/ui"
 import { useQuery } from "@tanstack/react-query"
-import { adminLink, money } from "../lib/marketplace"
+import { adminLink, money, statusLabel } from "../lib/marketplace"
 import { sdk } from "../lib/sdk"
 
 // Marketplace split on the order page (TASKS P6-07): a parent order lists its
@@ -63,7 +63,7 @@ const OrderMarketplaceWidget = ({ data: order }: DetailWidgetProps<AdminOrder>) 
               <a href={adminLink(`/orders/${c.id}`)} className="text-ui-fg-interactive hover:underline">
                 #{c.display_id}
               </a>{" "}
-              {c.vendor?.name ?? ""} · {money(c.total, c.currency_code)} · {c.status.replace(/_/g, " ")}
+              {c.vendor?.name ?? ""} · {money(c.total, c.currency_code)} · {statusLabel(c.status)}
             </Text>
           ))}
         </>

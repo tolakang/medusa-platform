@@ -1,8 +1,9 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Tag } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
-import { adminLink, errorText, STATUS_COLOR } from "../../lib/marketplace"
+import { adminLink, errorText, STATUS_COLOR, statusLabel } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
 const PAGE_SIZE = 50
@@ -117,7 +118,7 @@ const VendorProductsPage = () => {
                   <Text size="small">{p.vendor.name}</Text>
                 </Table.Cell>
                 <Table.Cell>
-                  <Badge size="2xsmall" color={STATUS_COLOR[p.status]}>{p.status}</Badge>
+                  <Badge size="2xsmall" color={STATUS_COLOR[p.status]}>{statusLabel(p.status)}</Badge>
                 </Table.Cell>
                 <Table.Cell className="text-right">
                   {p.status !== "published" && (
@@ -177,7 +178,7 @@ const VendorProductsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Product moderation",
+  label: "Product moderation", icon: Tag,
 })
 
 export default VendorProductsPage

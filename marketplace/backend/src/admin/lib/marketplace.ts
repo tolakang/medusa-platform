@@ -1,11 +1,39 @@
 // Small helpers for the marketplace admin pages (TASKS P6-07).
 
 export const errorText = (e: unknown) =>
-  (e as { message?: string })?.message ?? "Something went wrong."
+  (e as { message?: string })?.message || "Something went wrong. Try again."
 
-/** "12.50 USD" (amounts are in the currency's main unit, as Medusa stores them). */
-export const money = (amount: unknown, currency?: string) =>
-  `${Number(amount ?? 0).toFixed(2)} ${(currency ?? "").toUpperCase()}`.trim()
+/** "$12.50", "KHR 40,000": the currency's own decimals (amounts are in its
+ * main unit, as Medusa stores them). Design-system review 2026-11-24. */
+export const money = (amount: unknown, currency?: string) => {
+  const n = Number(amount ?? 0)
+  const code = (currency ?? "").toUpperCase()
+  if (!code) return Number.isFinite(n) ? n.toFixed(2) : "–"
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(n)
+  } catch {
+    return `${n.toFixed(2)} ${code}`
+  }
+}
+
+/** Status codes in staff words. */
+export const STATUS_LABEL: Record<string, string> = {
+  active: "Active",
+  published: "Published",
+  paid: "Paid",
+  pending: "Waiting",
+  proposed: "Waiting for review",
+  draft: "Draft",
+  approved: "In a payout",
+  suspended: "Suspended",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
+  canceled: "Cancelled",
+  completed: "Completed",
+  requires_action: "Needs action",
+  archived: "Archived",
+}
+export const statusLabel = (s: string) => STATUS_LABEL[s] ?? s.replace(/_/g, " ")
 
 /** The admin's own page for a record (the dashboard is served under /app). */
 export const adminLink = (path: string) => `/app${path}`

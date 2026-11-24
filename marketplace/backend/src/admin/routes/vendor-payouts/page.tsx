@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { CurrencyDollar } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
@@ -34,13 +35,16 @@ type Commission = {
 }
 
 const PayoutDetail = ({ id }: { id: string }) => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["marketplace-vendor-payout", id],
     queryFn: () =>
       sdk.client.fetch<{ vendor_payout: Payout & { commissions: Commission[] } }>(
         `/admin/vendor-payouts/${id}`
       ),
   })
+  if (error) {
+    return <Text size="small" className="text-ui-fg-error">{errorText(error)}</Text>
+  }
   if (isLoading || !data) {
     return <Text size="small">Loading…</Text>
   }
@@ -386,7 +390,7 @@ const VendorPayoutsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Vendor payouts",
+  label: "Vendor payouts", icon: CurrencyDollar,
 })
 
 export default VendorPayoutsPage

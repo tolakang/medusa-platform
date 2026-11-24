@@ -1,7 +1,9 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { CurrencyDollar } from "@medusajs/icons"
 import { Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
+import { errorText, money } from "../../lib/ui"
 
 // Seller payouts (TASKS P5-05; gap review 2026-11-24): what each seller is
 // owed now (approved commissions) and next (pending), and "Mark paid" after
@@ -16,10 +18,7 @@ type Line = {
   seller: { handle: string; name: string } | null
 }
 
-const money = (amount: number, currency: string) =>
-  new Intl.NumberFormat(undefined, { style: "currency", currency: currency.toUpperCase() }).format(amount)
 
-const errorText = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong. Try again.")
 
 function Lines({ title, help, lines, action }: { title: string; help: string; lines: Line[]; action?: (l: Line) => React.ReactNode }) {
   return (
@@ -118,7 +117,7 @@ const SellerPayoutsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Seller payouts",
+  label: "Seller payouts", icon: CurrencyDollar,
 })
 
 export default SellerPayoutsPage

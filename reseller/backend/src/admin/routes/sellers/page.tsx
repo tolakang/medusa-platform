@@ -1,8 +1,10 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Users } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { errorText, SELLER_STATUS_LABEL } from "../../lib/ui"
 
 const PAGE_SIZE = 50
 
@@ -32,10 +34,7 @@ const STATUS_COLOR: Record<Status, "green" | "orange" | "red"> = {
   pending: "orange",
   suspended: "red",
 }
-const STATUS_ORDER: Record<Status, number> = { pending: 0, active: 1, suspended: 2 }
 
-const errorText = (e: unknown) =>
-  (e as { message?: string })?.message ?? "Something went wrong."
 
 /** "" = none (domain) or the shop's default (rate). */
 const changes = (seller: Seller, draft: Draft) => {
@@ -150,9 +149,8 @@ const SellersPage = () => {
     onError: (e) => toast.error(errorText(e)),
   })
 
-  const sellers = [...(data?.sellers ?? [])].sort(
-    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.name.localeCompare(b.name)
-  )
+  // Newest first, as the server pages them (a sort here would only reorder one page).
+  const sellers = data?.sellers ?? []
   const setDraft = (id: string, patch: Draft) =>
     setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }))
 
@@ -297,7 +295,7 @@ const SellersPage = () => {
                       </div>
                     </Table.Cell>
                     <Table.Cell>
-                      <Badge size="2xsmall" color={STATUS_COLOR[s.status]}>{s.status}</Badge>
+                      <Badge size="2xsmall" color={STATUS_COLOR[s.status]}>{SELLER_STATUS_LABEL[s.status] ?? s.status}</Badge>
                     </Table.Cell>
                     <Table.Cell>
                       <Input
@@ -402,7 +400,7 @@ const SellersPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Sellers",
+  label: "Sellers", icon: Users,
 })
 
 export default SellersPage
