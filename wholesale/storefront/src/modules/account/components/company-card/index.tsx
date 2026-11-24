@@ -50,6 +50,18 @@ const CompanyCard = ({
 
   return (
     <div className="h-fit">
+      {/* Why buying is blocked (gap review 2026-11-24). */}
+      {company.status === "pending" && (
+        <div role="status" className="mb-4 rounded-lg bg-ui-tag-orange-bg p-4 text-ui-tag-orange-text">
+          Your company is waiting for approval. You can order once the shop approves your
+          account. We email you when that happens.
+        </div>
+      )}
+      {company.status === "suspended" && (
+        <div role="status" className="mb-4 rounded-lg bg-ui-tag-red-bg p-4 text-ui-tag-red-text">
+          Your company account is paused, so orders can't be placed. Contact the shop to find out why.
+        </div>
+      )}
       <Container className="p-0 overflow-hidden">
         <form
           className={clx(
