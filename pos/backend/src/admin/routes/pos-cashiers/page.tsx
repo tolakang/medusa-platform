@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Users } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Table, Text, toast } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -191,8 +192,13 @@ const CashiersPage = () => {
             ))}
           </Table.Body>
         </Table>
-        {!isLoading && !cashiers.length && (
+        {isLoading && (
           <Text size="small" className="text-ui-fg-subtle px-6 py-4">
+            Loading…
+          </Text>
+        )}
+        {!isLoading && !cashiers.length && (
+          <Text size="small" className={`px-6 py-4 ${error ? "text-ui-fg-error" : "text-ui-fg-subtle"}`}>
             {error ? `Couldn't load the cashiers: ${(error as Error).message}` : "No cashiers yet. Invite one above."}
           </Text>
         )}
@@ -202,7 +208,7 @@ const CashiersPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Cashiers",
+  label: "Cashiers", icon: Users,
 })
 
 export default CashiersPage

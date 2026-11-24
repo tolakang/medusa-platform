@@ -1,4 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { Clock } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
@@ -209,8 +210,13 @@ const ShiftReportPage = () => {
             ))}
           </Table.Body>
         </Table>
-        {!isLoading && !groups.length && (
+        {isLoading && (
           <Text size="small" className="text-ui-fg-subtle px-6 py-4">
+            Loading…
+          </Text>
+        )}
+        {!isLoading && !groups.length && (
+          <Text size="small" className={`px-6 py-4 ${error ? "text-ui-fg-error" : "text-ui-fg-subtle"}`}>
             {error ? `Couldn't load the shifts: ${(error as Error).message}` : "No shifts match these filters."}
           </Text>
         )}
@@ -318,7 +324,7 @@ const ShiftReportPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Shift report",
+  label: "Shift report", icon: Clock,
 })
 
 export default ShiftReportPage
