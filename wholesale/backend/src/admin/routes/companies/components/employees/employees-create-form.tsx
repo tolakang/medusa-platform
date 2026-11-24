@@ -4,8 +4,7 @@ import {
   Drawer,
   Input,
   Label,
-  Text,
-} from "@medusajs/ui";
+  Text, toast } from "@medusajs/ui";
 import { useState } from "react";
 import { AdminCreateEmployee, QueryCompany } from "../../../../../types";
 import { CoolSwitch } from "../../../../components/common";
@@ -47,9 +46,12 @@ export function EmployeesCreateForm({
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const spendingLimit = formData.spending_limit
-      ? parseInt(formData.spending_limit)
-      : 0;
+    // A money amount, kept with its cents; a bad one isn't sent.
+    const spendingLimit = formData.spending_limit ? Number(formData.spending_limit) : 0;
+    if (!Number.isFinite(spendingLimit) || spendingLimit < 0) {
+      toast.error("Enter a spending limit of 0 or more.");
+      return;
+    }
 
     const data = {
       ...formData,

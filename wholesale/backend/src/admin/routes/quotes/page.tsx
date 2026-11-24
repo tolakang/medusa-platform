@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
 import { DocumentText } from "@medusajs/icons";
-import { Container, Heading, Toaster } from "@medusajs/ui";
+import { Container, Heading } from "@medusajs/ui";
 import { QuotesTable } from "./components/quotes-table";
 
 const Quotes = () => {
@@ -13,7 +13,6 @@ const Quotes = () => {
 
         <QuotesTable />
       </Container>
-      <Toaster />
     </>
   );
 };

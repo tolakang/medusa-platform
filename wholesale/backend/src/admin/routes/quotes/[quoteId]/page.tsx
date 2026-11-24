@@ -6,7 +6,6 @@ import {
   Heading,
   Text,
   toast,
-  Toaster,
   usePrompt,
 } from "@medusajs/ui";
 import { useEffect, useState } from "react";
@@ -110,16 +109,16 @@ const QuoteDetails = () => {
     }
   };
 
-  if (isLoading || !quote) {
-    return <></>;
+  if (isLoading || isPreviewLoading) {
+    return <Text className="text-ui-fg-subtle">Loading…</Text>;
   }
 
-  if (isPreviewLoading) {
-    return <></>;
-  }
-
-  if (!isPreviewLoading && !preview) {
-    throw "preview not found";
+  if (!quote || !preview) {
+    return (
+      <Text className="text-ui-fg-error">
+        This quote couldn't be loaded. Go back to Quotes and open it again.
+      </Text>
+    );
   }
 
   return (
@@ -248,8 +247,6 @@ const QuoteDetails = () => {
           </Container>
         </div>
       </div>
-
-      <Toaster />
     </div>
   );
 };

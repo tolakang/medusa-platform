@@ -1,5 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { BuildingStorefront } from "@medusajs/icons";
 import {
   Avatar,
@@ -9,8 +10,7 @@ import {
   Select,
   Table,
   Text,
-  Toaster,
-} from "@medusajs/ui";
+  } from "@medusajs/ui";
 import { QueryCompany } from "../../../types";
 import { useAdminCustomerGroups, useCompanies } from "../../hooks/api";
 import { CompanyActionsMenu, CompanyCreateDrawer } from "./components";
@@ -24,8 +24,9 @@ const STATUS: Record<string, { label: string; color: "orange" | "green" | "red" 
 };
 
 const Companies = () => {
+  const navigate = useNavigate();
   const [status, setStatus] = useState("all");
-  const { data, isPending } = useCompanies({
+  const { data, isPending, error } = useCompanies({
     fields:
       "*employees,*employees.customer,*employees.company,*customer_group,*approval_settings",
     ...(status === "all" ? {} : { status }),
@@ -53,7 +54,17 @@ const Companies = () => {
             <CompanyCreateDrawer />
           </div>
         </div>
-        {isPending && <Text>Loading...</Text>}
+        {isPending && <Text className="px-6 text-ui-fg-subtle">Loading…</Text>}
+        {error && (
+          <Text className="px-6 text-ui-fg-error">
+            {(error as Error).message || "The companies couldn't be loaded. Try again."}
+          </Text>
+        )}
+        {data?.companies?.length === 0 && (
+          <Text className="px-6 pb-6 text-ui-fg-subtle">
+            {status === "all" ? "No companies yet. Add one, or wait for buyers to sign up." : "No companies with this status."}
+          </Text>
+        )}
         <Table>
           <Table.Header>
             <Table.Row>
@@ -74,9 +85,7 @@ const Companies = () => {
                 <Table.Row
                   key={company.id}
                   className="cursor-pointer hover:bg-ui-bg-base-hover"
-                  onClick={() =>
-                    (window.location.href = `/app/companies/${company.id}`)
-                  }
+                  onClick={() => navigate(`/companies/${company.id}`)}
                 >
                   <Table.Cell className="w-6 h-6 items-center justify-center">
                     <Avatar
@@ -84,7 +93,11 @@ const Companies = () => {
                       fallback={company.name.charAt(0)}
                     />
                   </Table.Cell>
-                  <Table.Cell>{company.name}</Table.Cell>
+                  <Table.Cell>
+                    <Link to={`/companies/${company.id}`} className="text-ui-fg-interactive" onClick={(e) => e.stopPropagation()}>
+                      {company.name}
+                    </Link>
+                  </Table.Cell>
                   <Table.Cell>
                     {company.status && STATUS[company.status] ? (
                       <Badge size="small" color={STATUS[company.status].color}>
@@ -119,7 +132,6 @@ const Companies = () => {
           )}
         </Table>
       </Container>
-      <Toaster />
     </>
   );
 };

@@ -31,7 +31,7 @@ export const ActionMenu = ({ groups }: ActionMenuProps) => {
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger asChild>
-        <IconButton size="small" variant="transparent">
+        <IconButton size="small" variant="transparent" aria-label="Actions">
           <EllipsisHorizontal />
         </IconButton>
       </DropdownMenu.Trigger>
