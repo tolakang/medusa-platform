@@ -3,7 +3,10 @@ import { z } from "@medusajs/framework/zod";
 
 /* Company Validators */
 export type AdminGetCompanyParamsType = z.infer<typeof AdminGetCompanyParams>;
-export const AdminGetCompanyParams = createSelectParams();
+// `?status=pending` is the sign-up approval queue (gap review 2026-11-24).
+export const AdminGetCompanyParams = createSelectParams().merge(
+  z.object({ status: z.enum(["pending", "approved", "suspended"]).optional() })
+);
 
 export type AdminCreateCompanyType = z.infer<typeof AdminCreateCompany>;
 export const AdminCreateCompany = z
