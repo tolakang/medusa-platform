@@ -57,11 +57,22 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
   }, [cleared])
 
   const add = (v: LookupVariant) => {
+    const name = v.product.title ?? v.title ?? v.sku
+    // Refuse at the scan what checkout would refuse at payment.
+    const inCart = cart.find((l) => l.variant_id === v.id)?.quantity ?? 0
+    if (v.stock != null && inCart + 1 > v.stock) {
+      setChoices(null)
+      setMessage({
+        tone: "error",
+        text: v.stock === 0 ? `${name} is out of stock here.` : `Only ${v.stock} × ${name} in stock here.`,
+      })
+      return
+    }
     setCart((c) => addLine(c, lineFromVariant(v)))
     setChoices(null)
     setCleared(null)
     setFlash(v.id)
-    setMessage({ tone: "info", text: `✓ Added ${v.product.title ?? v.title ?? v.sku}` })
+    setMessage({ tone: "info", text: `✓ Added ${name}` })
   }
 
   const lookup = async (code: string) => {

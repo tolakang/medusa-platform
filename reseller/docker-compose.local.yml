@@ -60,7 +60,11 @@ services:
       STOREFRONT_URL: http://localhost:8000
       STORE_CORS: http://localhost:8000
       ADMIN_CORS: http://localhost:9000
-      AUTH_CORS: http://localhost:9000,http://localhost:8000
+      AUTH_CORS: http://localhost:9000,http://localhost:8000,http://localhost:3000
+      # Seller portal (port 3000): its /sellers/* routes and the links in seller
+      # emails (confirm email, new password).
+      SELLER_CORS: http://localhost:3000
+      SELLER_PORTAL_URL: http://localhost:3000
       MEDUSA_WORKER_MODE: server
       DISABLE_MEDUSA_ADMIN: "false"
       RUN_MIGRATIONS: "true"
