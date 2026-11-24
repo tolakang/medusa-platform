@@ -95,7 +95,9 @@ export default async function OrdersPage({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-semibold">
-                    Order #{o.display_id} · {day(o.created_at)}
+                    <Link href={`/orders/${o.id}`} className="text-ui-fg-interactive">
+                      Order #{o.display_id} · {day(o.created_at)}
+                    </Link>
                   </h2>
                   <p className="text-ui-fg-subtle">
                     {o.status === "canceled"
