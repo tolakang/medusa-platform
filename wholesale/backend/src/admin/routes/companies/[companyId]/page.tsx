@@ -6,10 +6,9 @@ import {
   Heading,
   Table,
   Text,
-  Toaster,
-} from "@medusajs/ui";
+  } from "@medusajs/ui";
 import { QueryEmployee } from "../../../../types";
-import { useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAdminCustomerGroups, useCompany } from "../../../hooks/api";
 import { formatAmount } from "../../../utils";
 import { CompanyActionsMenu } from "../components";
@@ -20,6 +19,7 @@ import {
 
 const CompanyDetails = () => {
   const { companyId } = useParams();
+  const navigate = useNavigate();
   const { data, isPending } = useCompany(companyId!, {
     fields:
       "*employees,*employees.customer,*employees.company,*customer_group,*approval_settings",
@@ -165,11 +165,7 @@ const CompanyDetails = () => {
                   {company?.employees.map((employee: QueryEmployee) => (
                     <Table.Row
                       key={employee.id}
-                      onClick={() => {
-                        window.location.href = `/app/customers/${
-                          employee!.customer!.id
-                        }`;
-                      }}
+                      onClick={() => navigate(`/customers/${employee!.customer!.id}`)}
                       className="cursor-pointer"
                     >
                       <Table.Cell className="w-6 h-6 items-center justify-center">
@@ -180,8 +176,13 @@ const CompanyDetails = () => {
                         />
                       </Table.Cell>
                       <Table.Cell className="flex w-fit gap-2 items-center">
-                        {employee.customer?.first_name}{" "}
-                        {employee.customer?.last_name}
+                        <Link
+                          to={`/customers/${employee!.customer!.id}`}
+                          className="text-ui-fg-interactive"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {employee.customer?.first_name} {employee.customer?.last_name}
+                        </Link>
                         {employee.is_admin && (
                           <Badge
                             size="2xsmall"
@@ -226,7 +227,6 @@ const CompanyDetails = () => {
           </>
         )}
       </Container>
-      <Toaster />
     </div>
   );
 };

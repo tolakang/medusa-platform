@@ -41,7 +41,6 @@ export function CompanyCustomerGroupDrawer({
         toast.success(`Company removed from customer group successfully`);
       },
       onError: (error) => {
-        console.log(error);
         toast.error("Failed to remove company from customer group");
       },
     });

@@ -30,7 +30,7 @@ export const EmployeesActionsMenu = ({
     <>
       <DropdownMenu>
         <DropdownMenu.Trigger asChild>
-          <IconButton variant="transparent">
+          <IconButton variant="transparent" aria-label="Employee actions">
             <EllipsisHorizontal />
           </IconButton>
         </DropdownMenu.Trigger>

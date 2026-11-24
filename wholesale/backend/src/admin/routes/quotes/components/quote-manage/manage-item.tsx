@@ -294,9 +294,14 @@ function ManageItem({
                           min={0}
                           onBlur={() => {
                             field.onChange(field.value);
-
+                            const price = Number(field.value);
+                            // An empty or bad price isn't sent (design-system review 2026-11-24).
+                            if (String(field.value ?? "").trim() === "" || !Number.isFinite(price) || price < 0) {
+                              toast.error("Enter a price of 0 or more.");
+                              return;
+                            }
                             onUpdate({
-                              unit_price: parseFloat(field.value),
+                              unit_price: price,
                               quantity: item.quantity,
                             });
                           }}
@@ -312,6 +317,7 @@ function ManageItem({
 
             <IconButton
               type="button"
+              aria-label="Close"
               className="flex-shrink"
               variant="transparent"
               onClick={() => {

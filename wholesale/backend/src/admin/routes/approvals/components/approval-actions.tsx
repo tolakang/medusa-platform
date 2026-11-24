@@ -57,20 +57,23 @@ export const ApprovalActions = ({ cart }: { cart: Record<string, any> }) => {
   if (cart.approval_status.status === ApprovalStatusType.PENDING) {
     return (
       <div className="flex gap-2">
-        <IconButton
-          className="w-8 h-8"
+        <Button
+          size="small"
+          variant="secondary"
           onClick={rejectCart}
           isLoading={isRejecting}
+          disabled={isApproving}
         >
-          <XMark />
-        </IconButton>
-        <IconButton
-          className="w-8 h-8"
+          <XMark /> Reject
+        </Button>
+        <Button
+          size="small"
           onClick={approveCart}
           isLoading={isApproving}
+          disabled={isRejecting}
         >
-          <Check />
-        </IconButton>
+          <Check /> Approve
+        </Button>
       </div>
     );
   }

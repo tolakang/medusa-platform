@@ -22,7 +22,7 @@ export const QuoteDetailsHeader = ({
 
         <DropdownMenu>
           <DropdownMenu.Trigger asChild>
-            <IconButton variant="transparent">
+            <IconButton variant="transparent" aria-label="Quote actions">
               <EllipsisHorizontal />
             </IconButton>
           </DropdownMenu.Trigger>
