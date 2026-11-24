@@ -1,4 +1,5 @@
 "use client"
+import { SHOP_NAME } from "@/lib/shop"
 
 import { Text } from "@medusajs/ui"
 
@@ -24,9 +25,9 @@ const Review = ({
     <div className="flex flex-col gap-y-2">
       <div className="flex items-start gap-x-1 w-full">
         <Text className="txt-xsmall text-neutral-500 mb-1">
-          By Completing this order, I agree to Medusa&apos;s{" "}
+          By completing this order, I agree to {SHOP_NAME}&apos;s{" "}
           <LocalizedClientLink
-            href="/terms-of-sale"
+            href="/terms"
             className="hover:text-neutral-800"
             target="_blank"
           >
@@ -34,7 +35,7 @@ const Review = ({
           </LocalizedClientLink>{" "}
           and{" "}
           <LocalizedClientLink
-            href="/privacy-policy"
+            href="/privacy"
             className="hover:text-neutral-800"
             target="_blank"
           >

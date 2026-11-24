@@ -97,8 +97,10 @@ const ProductVariantsTable = ({
           "Add product variants to the shopping cart. Set a quantity for each variant to add.",
       }}
     >
-      <div className="overflow-x-auto p-px">
-        <Table className="w-full rounded-xl overflow-hidden shadow-borders-base border-none ">
+      {/* No overflow-hidden on the table: it would pin the sticky Quantity
+          column to the table instead of this scroll box. */}
+      <div className="overflow-x-auto p-px rounded-xl">
+        <Table className="w-full rounded-xl shadow-borders-base border-none">
           <Table.Header className="border-t-0">
             <Table.Row className="bg-neutral-100 border-none hover:!bg-neutral-100">
               <Table.HeaderCell className="px-4">SKU</Table.HeaderCell>
@@ -118,7 +120,10 @@ const ProductVariantsTable = ({
               <Table.HeaderCell className="px-4 border-x">
                 Availability
               </Table.HeaderCell>
-              <Table.HeaderCell className="px-4">Quantity</Table.HeaderCell>
+              {/* Pinned: the column a buyer needs stays in view when the table scrolls. */}
+              <Table.HeaderCell className="px-4 sticky right-0 bg-neutral-100 shadow-borders-base">
+                Quantity
+              </Table.HeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body className="border-none">
@@ -152,7 +157,7 @@ const ProductVariantsTable = ({
                   <Table.Cell className="px-4 border-x">
                     {isVariantInStock(variant) ? "In stock" : "Out of stock"}
                   </Table.Cell>
-                  <Table.Cell className="pl-1 !pr-1">
+                  <Table.Cell className="pl-1 !pr-1 sticky right-0 bg-white shadow-borders-base">
                     <BulkTableQuantity
                       variantId={variant.id}
                       label={`Quantity for ${variant.title ?? variant.sku}`}

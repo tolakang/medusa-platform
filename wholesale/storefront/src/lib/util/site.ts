@@ -1,7 +1,8 @@
 import "server-only"
 import { headers } from "next/headers"
+import { SHOP_NAME } from "@/lib/shop"
 
-export const STORE_NAME = "Medusa B2B Store"
+export const STORE_NAME = SHOP_NAME
 
 export const DEFAULT_COUNTRY_CODE = (
   process.env.NEXT_PUBLIC_DEFAULT_REGION || "us"

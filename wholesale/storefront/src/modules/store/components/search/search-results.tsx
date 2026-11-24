@@ -13,7 +13,7 @@ const SearchResults = ({ currencyCode }: { currencyCode: string }) => {
   const { items } = useHits<ProductHit>()
   const { nbHits } = useStats()
   const { status, error } = useInstantSearch()
-  const { isSettled } = useSearchSettled()
+  const { hasNoResultsYet } = useSearchSettled()
 
   if (status === "error") {
     const errorStatus = (error as unknown as { status?: number } | undefined)
@@ -33,7 +33,10 @@ const SearchResults = ({ currencyCode }: { currencyCode: string }) => {
     )
   }
 
-  if (!items.length && !isSettled) {
+  // The skeleton only until the first answer. Showing it on every later search
+  // with no hits unmounted the pagination widget, whose remount started another
+  // search: an empty filter result looped hundreds of requests a second.
+  if (!items.length && hasNoResultsYet) {
     return <SkeletonProductGrid />
   }
 

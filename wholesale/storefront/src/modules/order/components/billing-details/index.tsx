@@ -30,10 +30,14 @@ const BillingDetails = ({ order }: BillingDetailsProps) => {
               {order.billing_address?.address_2}
             </Text>
             <Text className="txt-medium text-ui-fg-subtle">
-              {order.billing_address?.postal_code},{" "}
-              {order.billing_address?.city},{" "}
-              {order.billing_address?.province},{" "}
-              {order.billing_address?.country_code?.toUpperCase()}
+              {[
+                order.billing_address?.postal_code,
+                order.billing_address?.city,
+                order.billing_address?.province,
+                order.billing_address?.country_code?.toUpperCase(),
+              ]
+                .filter(Boolean)
+                .join(", ")}
             </Text>
           </div>
         )}

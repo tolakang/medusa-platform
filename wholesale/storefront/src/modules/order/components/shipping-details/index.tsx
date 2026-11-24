@@ -55,10 +55,14 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
               {order.shipping_address?.address_2}
             </Text>
             <Text className="txt-medium text-ui-fg-subtle">
-              {order.shipping_address?.postal_code},{" "}
-              {order.shipping_address?.city},{" "}
-              {order.shipping_address?.province},{" "}
-              {order.shipping_address?.country_code?.toUpperCase()}
+              {[
+                order.shipping_address?.postal_code,
+                order.shipping_address?.city,
+                order.shipping_address?.province,
+                order.shipping_address?.country_code?.toUpperCase(),
+              ]
+                .filter(Boolean)
+                .join(", ")}
             </Text>
           </div>
         )}
