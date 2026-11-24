@@ -5,6 +5,7 @@ import {
   createShippingProfilesWorkflow,
 } from "@medusajs/medusa/core-flows"
 import seed from "../../src/scripts/seed"
+import seedInitialData from "../../src/scripts/seed-initial-data"
 
 // Runner + api client: docs/MEDUSA_SKILL.md §10. Preconditions as in
 // seed-initial-data.spec.ts: the shipping profile db:migrate creates, then the
@@ -86,6 +87,40 @@ medusaIntegrationTestRunner({
         })
         expect(response.status).toEqual(200)
         expect(response.data.regions.map((r) => r.name)).toEqual(["Cambodia"])
+      })
+
+      // Staging ran the demo seed after this one (TASKS, Ecommerce staging). It
+      // used to replace the currencies with EUR (default) + USD: KHR gone, and
+      // the POS till opened shifts in euros.
+      it("keeps USD as the default and KHR when the demo seed runs after it", async () => {
+        const container = getContainer()
+        const query = container.resolve(ContainerRegistrationKeys.QUERY)
+
+        await createShippingProfilesWorkflow(container).run({
+          input: { data: [{ name: "Default Shipping Profile", type: "default" }] },
+        })
+        await createDefaultsWorkflow(container).run()
+        await seed({ container })
+        await seedInitialData({ container })
+
+        const {
+          data: [store],
+        } = await query.graph({
+          entity: "store",
+          fields: ["supported_currencies.currency_code", "supported_currencies.is_default"],
+        })
+        const currencies = (store.supported_currencies ?? []).map((c) => [
+          c?.currency_code,
+          c?.is_default,
+        ])
+        expect(currencies).toEqual(
+          expect.arrayContaining([
+            ["usd", true],
+            ["khr", false],
+            ["eur", false],
+          ])
+        )
+        expect(currencies.filter(([, isDefault]) => isDefault)).toHaveLength(1)
       })
     })
   },
