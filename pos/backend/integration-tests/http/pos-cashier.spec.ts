@@ -3,6 +3,7 @@ import { Modules } from "@medusajs/framework/utils"
 import jwt from "jsonwebtoken"
 import { POS_MODULE } from "../../src/modules/pos"
 import type PosModuleService from "../../src/modules/pos/service"
+import { openPosShiftWorkflow } from "../../src/workflows/pos-shift"
 
 // TASKS P2-03: the `cashier` actor type, invite-only (BUILD_PLAN §9.2). Real
 // routes: an admin invites, the cashier registers with Medusa's emailpass
@@ -209,6 +210,29 @@ medusaIntegrationTestRunner({
           password: "new-cashier-pass-1",
         })
         expect(typeof signedIn.token).toEqual("string")
+      })
+
+      it("an admin closes a shift a cashier left open, so the register opens again", async () => {
+        const auth = await adminAuth()
+        const container = getContainer()
+        const pos = container.resolve<PosModuleService>(POS_MODULE)
+        const stores = container.resolve(Modules.STORE)
+        const [store] = await stores.listStores({}, { relations: ["supported_currencies"] })
+        if (!store?.supported_currencies?.length) {
+          await stores.updateStores(store.id, { supported_currencies: [{ currency_code: "usd", is_default: true }] })
+        }
+        const register = await pos.createPosRegisters({ name: "Left open", code: "LEFT-OPEN" })
+        const { result: shift } = await openPosShiftWorkflow(container).run({
+          input: { register_id: register.id, cashier_id: "pcash_gone", opening_cash: 20 },
+        })
+        expect((await fail(api.post(`/admin/pos/shifts/${shift.id}/close`, { counted_cash: -1 }, auth))).status).toEqual(400)
+        const { data } = await api.post(`/admin/pos/shifts/${shift.id}/close`, { counted_cash: 20 }, auth)
+        expect(data.variance).toEqual(0)
+        expect(await pos.listPosShifts({ register_id: register.id, status: "open" })).toHaveLength(0)
+        // Closing it again is refused.
+        expect((await fail(api.post(`/admin/pos/shifts/${shift.id}/close`, { counted_cash: 20 }, auth))).status).toEqual(400)
+        // No admin token, no close.
+        expect((await fail(api.post(`/admin/pos/shifts/${shift.id}/close`, { counted_cash: 0 }))).status).toEqual(401)
       })
     })
   },

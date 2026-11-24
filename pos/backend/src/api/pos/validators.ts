@@ -30,6 +30,14 @@ export const PostPosShiftClose = z.object({
 })
 export type PostPosShiftCloseType = z.infer<typeof PostPosShiftClose>
 
+// POST /admin/pos/shifts/:id/close (gap review 2026-11-24): an admin closes a
+// shift a cashier left open, so the register can open again.
+export const PostAdminPosShiftClose = z.object({
+  counted_cash: cash,
+  notes: z.string().trim().max(500).optional(),
+})
+export type PostAdminPosShiftCloseType = z.infer<typeof PostAdminPosShiftClose>
+
 export const PostPosCheckout = z.object({
   shift_id: z.string().min(1),
   items: z
