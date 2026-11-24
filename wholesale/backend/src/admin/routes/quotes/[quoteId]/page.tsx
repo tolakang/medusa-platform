@@ -35,7 +35,9 @@ const QuoteDetails = () => {
   const navigate = useNavigate();
   const { quote, isLoading } = useQuote(quoteId!, {
     fields:
-      "*draft_order.customer,*draft_order.customer.employee,*draft_order.customer.employee.company",
+      // The cards read the employee and company from `quote.customer` (QueryQuote);
+      // asking for them under draft_order.customer left "$NaN" and no company.
+      "*draft_order.customer,*customer,*customer.employee,*customer.employee.company",
   });
 
   const { order: preview, isLoading: isPreviewLoading } = useOrderPreview(
@@ -217,11 +219,13 @@ const QuoteDetails = () => {
               </Text>
 
               <Text size="small" leading="compact" className="text-pretty">
-                {formatAmount(
-                  quote?.customer?.employee?.spending_limit,
-                  (quote?.customer?.employee?.company
-                    ?.currency_code as string) || "USD"
-                )}
+                {quote?.customer?.employee?.spending_limit
+                    ? formatAmount(
+                        quote.customer.employee.spending_limit,
+                        (quote.customer.employee.company?.currency_code as string) ||
+                          "USD"
+                      )
+                    : "No limit"}
               </Text>
             </div>
           </Container>

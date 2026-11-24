@@ -194,10 +194,12 @@ const CompanyDetails = () => {
                       </Table.Cell>
                       <Table.Cell>{employee.customer?.email}</Table.Cell>
                       <Table.Cell>
-                        {formatAmount(
-                          employee.spending_limit,
-                          company?.currency_code || "USD"
-                        )}
+                        {employee.spending_limit
+                            ? formatAmount(
+                                employee.spending_limit,
+                                company?.currency_code || "USD"
+                              )
+                            : "No limit"}
                       </Table.Cell>
                       <Table.Cell onClick={(e) => e.stopPropagation()}>
                         <EmployeesActionsMenu

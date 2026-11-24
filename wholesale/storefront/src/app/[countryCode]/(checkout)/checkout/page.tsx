@@ -5,13 +5,15 @@ import CheckoutForm from "@/modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@/modules/checkout/templates/checkout-summary"
 import { B2BCart } from "@/types/global"
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { getCheckoutStep } from "@/lib/util/get-checkout-step"
+import { notFound, redirect } from "next/navigation"
 
 export const metadata: Metadata = {
   title: "Checkout",
 }
 
 export default async function Checkout(props: {
+  params: Promise<{ countryCode: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   const searchParams = await props.searchParams
@@ -20,6 +22,18 @@ export default async function Checkout(props: {
 
   if (!cart) {
     return notFound()
+  }
+
+  // Opened without a step (a bookmark, the back button, a typed URL): every
+  // section would stay closed and the address one would spin for ever. Go to
+  // the first unfinished step, as the cart drawer's checkout link does.
+  const step = getCheckoutStep(cart)
+  if (!searchParams.step && step) {
+    const { countryCode } = await props.params
+    const next = new URLSearchParams()
+    if (cartId) next.set("cartId", cartId)
+    next.set("step", step)
+    redirect(`/${countryCode}/checkout?${next}`)
   }
 
   const customer = await retrieveCustomer()

@@ -6,6 +6,7 @@ import {
   getCacheOptions,
   getCacheTag,
   getCartId,
+  removeCartId,
 } from "@/lib/data/cookies"
 import {
   QuoteFilterParams,
@@ -30,10 +31,17 @@ export const createQuote = async () => {
       body: { cart_id: cartId },
       headers,
     })
-    .then((quote) => {
+    .then(async (quote) => {
       track("quote_created", {
         quote_id: quote.quote.id,
       })
+
+      // The cart became the quote ("the cart will be converted to a quote"):
+      // forget it, as a placed order does, so the header no longer shows its
+      // items and the buyer can't also check the same goods out and get them
+      // twice. Accepting the quote makes the order.
+      await removeCartId()
+      revalidateTag(await getCacheTag("carts"), { expire: 0 })
 
       return quote
     })

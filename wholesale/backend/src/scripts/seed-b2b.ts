@@ -1,9 +1,10 @@
-import type { ExecArgs } from "@medusajs/framework/types";
+import type { ExecArgs, SearchTypes } from "@medusajs/framework/types";
 import { MedusaContainer } from "@medusajs/framework";
 import {
   ContainerRegistrationKeys,
   MathBN,
   MedusaError,
+  Modules,
 } from "@medusajs/framework/utils";
 import {
   createApiKeysWorkflow,
@@ -153,6 +154,15 @@ export async function setupB2bCatalog(container: MedusaContainer) {
     });
     logger.info(`Added ${toAdd.length} products to "${B2B_SALES_CHANNEL_NAME}".`);
   }
+  // Linking products to a sales channel emits no event (see src/search/product.ts),
+  // so the product index keeps their old channels and the B2B storefront, which
+  // searches by its key's channel, shows no products. Rebuild the index on every
+  // run, so a re-run also mends an index made stale earlier (MEDUSA_SKILL search,
+  // verified 2.22.6).
+  await container
+    .resolve<SearchTypes.ISearchModuleService>(Modules.SEARCH)
+    .reindex({ index: "product" });
+  logger.info(`Rebuilt the product search index.`);
 
   return { salesChannelId: channelId, publishableKey: key.token };
 }

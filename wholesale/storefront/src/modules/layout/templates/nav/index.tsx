@@ -1,6 +1,6 @@
 import { SEARCH_PRICE_CURRENCIES } from "@/lib/search-client"
 import LocalizedClientLink from "@/modules/common/components/localized-client-link"
-import LogoIcon from "@/modules/common/icons/logo"
+import { SHOP_NAME } from "@/lib/shop"
 import { MegaMenuWrapper } from "@/modules/layout/components/mega-menu"
 import NavSessionActions from "@/modules/layout/components/nav-session-actions"
 import Search from "@/modules/layout/components/search"
@@ -22,8 +22,7 @@ export async function NavigationHeader({
               href="/"
             >
               <span className="small:text-base text-sm font-medium flex items-center">
-                <LogoIcon className="inline mr-2" />
-                Medusa B2B Starter
+                {SHOP_NAME}
               </span>
             </LocalizedClientLink>
 
