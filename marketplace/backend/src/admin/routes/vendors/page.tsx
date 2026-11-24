@@ -1,8 +1,9 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { BuildingStorefront } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
-import { errorText, STATUS_COLOR } from "../../lib/marketplace"
+import { errorText, STATUS_COLOR, statusLabel } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
 const PAGE_SIZE = 50
@@ -152,7 +153,7 @@ const VendorsPage = () => {
                   </div>
                 </Table.Cell>
                 <Table.Cell>
-                  <Badge size="2xsmall" color={STATUS_COLOR[v.status]}>{v.status}</Badge>
+                  <Badge size="2xsmall" color={STATUS_COLOR[v.status]}>{statusLabel(v.status)}</Badge>
                 </Table.Cell>
                 <Table.Cell>
                   <div className="flex items-center gap-2">
@@ -237,7 +238,7 @@ const VendorsPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Vendors",
+  label: "Vendors", icon: BuildingStorefront,
 })
 
 export default VendorsPage
