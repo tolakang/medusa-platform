@@ -1,4 +1,4 @@
-import { inviteBody, registerBody } from "../pos-setup"
+import { inviteBody, registerBody, registerErrors } from "../pos-setup"
 
 describe("inviteBody", () => {
   it("trims and lowercases a valid invite", () => {
@@ -24,5 +24,16 @@ describe("registerBody", () => {
     expect(registerBody({ ...ok, code: " " })).toBeNull()
     expect(registerBody({ ...ok, stock_location_id: "" })).toBeNull()
     expect(registerBody({ ...ok, sales_channel_id: "" })).toBeNull()
+  })
+})
+
+describe("registerErrors", () => {
+  it("names every missing field of an empty form", () => {
+    expect(Object.keys(registerErrors({ name: "", code: " ", stock_location_id: "", sales_channel_id: "" })).sort()).toEqual(
+      ["code", "name", "sales_channel_id", "stock_location_id"]
+    )
+  })
+  it("has none for a complete form", () => {
+    expect(registerErrors({ name: "Till", code: "T1", stock_location_id: "s", sales_channel_id: "c" })).toEqual({})
   })
 })

@@ -28,7 +28,9 @@ export async function api<T>(
   }
   const data = await res.json().catch(() => ({}))
   if (res.status === 401) {
-    window.location.assign("/login")
+    // A deactivated cashier is told why on the sign-in page.
+    const message = (data as { message?: string }).message ?? ""
+    window.location.assign(/not active/i.test(message) ? "/login?reason=inactive" : "/login")
   }
   if (!res.ok) {
     throw new ApiError((data as { message?: string }).message || `Request failed (${res.status}).`, res.status)
@@ -52,6 +54,8 @@ export type Shift = {
   status: "open" | "closed"
   currency_code: string
   opened_by: string
+  /** GET /pos/registers only: the opener's name. */
+  opened_by_name?: string | null
   opened_at: string
   opening_cash: number | string
   expected_cash?: number | string | null

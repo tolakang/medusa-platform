@@ -29,7 +29,10 @@ export async function login(_: AuthState, form: FormData): Promise<AuthState> {
   }
   const token = await signIn(email, password)
   if (!token) {
-    return { error: "Wrong email or password, or this account isn't a cashier." }
+    return {
+      error:
+        "Wrong email or password, or this account isn't a cashier. First time? Set your password with your invite code.",
+    }
   }
   // A token that isn't linked to an active cashier can't use the till.
   const me = await backendFetch<{ cashier: { id: string } }>("/pos/cashiers/me", { token })

@@ -16,6 +16,8 @@ export function CloseShift({ shift, onCancel, onDone }: { shift: Shift; onCancel
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Closed | null>(null)
+  // Enter (or the button) asks once, then a second Enter closes the shift.
+  const [confirming, setConfirming] = useState(false)
   const currency = shift.currency_code
 
   const close = async () => {
@@ -27,6 +29,7 @@ export function CloseShift({ shift, onCancel, onDone }: { shift: Shift; onCancel
       setResult(await api<Closed>("shifts/close", { method: "POST", body }))
     } catch (e) {
       setError((e as Error).message)
+      setConfirming(false)
     } finally {
       setBusy(false)
     }
@@ -59,7 +62,15 @@ export function CloseShift({ shift, onCancel, onDone }: { shift: Shift; onCancel
   const valid = counted.trim() !== "" && Number.isFinite(amount) && amount >= 0
 
   return (
-    <div className="card mx-auto flex max-w-md flex-col gap-3 p-6">
+    <form
+      className="card mx-auto flex max-w-md flex-col gap-3 p-6"
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!valid || busy) return
+        if (confirming) close()
+        else setConfirming(true)
+      }}
+    >
       <h2 className="text-xl font-semibold">Close shift</h2>
       <p className="text-ui-fg-subtle">
         Count all the cash in the drawer, including the {formatMoney(shift.opening_cash, currency)} you started with.
@@ -73,7 +84,10 @@ export function CloseShift({ shift, onCancel, onDone }: { shift: Shift; onCancel
           min={0}
           step="0.01"
           value={counted}
-          onChange={(e) => setCounted(e.target.value)}
+          onChange={(e) => {
+            setCounted(e.target.value)
+            setConfirming(false)
+          }}
           autoFocus
         />
       </label>
@@ -86,15 +100,26 @@ export function CloseShift({ shift, onCancel, onDone }: { shift: Shift; onCancel
           {error}
         </p>
       )}
+      {confirming && (
+        <p role="status" className="rounded-lg bg-ui-bg-subtle p-3 text-sm">
+          Close the shift with {formatMoney(amount, currency)} counted? You can't sell on it afterwards. Press Enter or
+          Confirm to close it.
+        </p>
+      )}
       <div className="flex gap-2">
-        <button className="btn-secondary" onClick={onCancel} disabled={busy}>
-          Back to selling
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={confirming ? () => setConfirming(false) : onCancel}
+          disabled={busy}
+        >
+          {confirming ? "Change count" : "Back to selling"}
         </button>
-        <button className="btn-danger flex-1" onClick={close} disabled={!valid || busy}>
-          {busy ? "Closing…" : "Close shift"}
+        <button type="submit" className="btn-danger flex-1" disabled={!valid || busy} autoFocus={confirming}>
+          {busy ? "Closing…" : confirming ? "Confirm close" : "Close shift"}
         </button>
       </div>
-    </div>
+    </form>
   )
 }
 

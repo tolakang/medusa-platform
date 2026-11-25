@@ -10,6 +10,8 @@ export type CartLine = {
   sku: string | null
   unit_price: number | null
   quantity: number
+  /** Stock at the register's location when scanned; null/absent = not tracked. */
+  stock?: number | null
 }
 
 export type ScannedVariant = {
@@ -17,6 +19,7 @@ export type ScannedVariant = {
   title: string | null
   sku: string | null
   price: number | null
+  stock?: number | null
   product: { title: string | null }
 }
 
@@ -30,7 +33,18 @@ export function lineFromVariant(v: ScannedVariant): CartLine {
     sku: v.sku,
     unit_price: v.price,
     quantity: 1,
+    stock: v.stock ?? null,
   }
+}
+
+// Stock left at the location after this line, or null when not tracked.
+export function stockLeft(line: CartLine): number | null {
+  return line.stock == null ? null : line.stock - line.quantity
+}
+
+// "1 item", "2 items".
+export function plural(n: number, word: string): string {
+  return `${n} ${word}${n === 1 ? "" : "s"}`
 }
 
 // Scanning the same item again adds one to its line.

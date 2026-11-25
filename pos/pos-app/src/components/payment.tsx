@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { CheckoutPreview, PaymentMethod } from "@/lib/api"
 import { changeDue, formatMoney, quickTender } from "@/lib/cart"
 
@@ -19,16 +19,20 @@ const METHODS: { id: PaymentMethod; label: string }[] = [
 export function Payment({
   preview,
   currency,
+  initial,
   onPay,
   onCancel,
 }: {
   preview: CheckoutPreview
   currency: string
+  /** A retry opens on the method and cash of the try that got no answer. */
+  initial?: { method: PaymentMethod; tendered: number | null }
   onPay: (method: PaymentMethod, tendered: number | null) => Promise<void>
   onCancel: () => void
 }) {
-  const [method, setMethod] = useState<PaymentMethod>("cash")
-  const [tendered, setTendered] = useState("")
+  const [method, setMethod] = useState<PaymentMethod>(initial?.method ?? "cash")
+  const [tendered, setTendered] = useState(initial?.tendered != null ? String(initial.tendered) : "")
+  const formRef = useRef<HTMLFormElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const total = preview.total
@@ -38,10 +42,20 @@ export function Payment({
   const ready = method !== "cash" || change !== null
 
   // Keyboard paying (design critique, 2026-11-23): Esc goes back; F1–F3 pick
-  // the method. Enter in the form completes the sale.
+  // the method. Enter completes the sale from anywhere while payment is open
+  // (also with Card/QR, which have no field, or after a quick-cash click
+  // left focus on that button). Enter in the cash field submits the form.
+  const confirmRef = useRef<() => void>(() => {})
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (busy) return
+      if (e.key === "Enter" && !e.isComposing) {
+        const t = e.target as HTMLElement | null
+        if (t?.tagName === "INPUT" && formRef.current?.contains(t)) return
+        e.preventDefault()
+        confirmRef.current()
+        return
+      }
       if (e.key === "Escape") {
         e.preventDefault()
         onCancel()
@@ -67,9 +81,11 @@ export function Payment({
       setBusy(false)
     }
   }
+  confirmRef.current = confirm
 
   return (
     <form
+      ref={formRef}
       data-keep-focus
       className="flex flex-col gap-3"
       onSubmit={(e) => {
@@ -90,10 +106,6 @@ export function Payment({
             <dd className="tabular-nums">{formatMoney(preview.tax_total, currency)}</dd>
           </div>
         )}
-        <div className="flex justify-between text-lg font-semibold">
-          <dt>To pay</dt>
-          <dd className="tabular-nums">{formatMoney(total, currency)}</dd>
-        </div>
       </dl>
       <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Payment method">
         {METHODS.map((m, i) => (

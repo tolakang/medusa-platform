@@ -17,14 +17,18 @@ const REGISTER_KEY = "pos.register"
 
 export function Till({ cashier }: { cashier: Cashier }) {
   const [registers, setRegisters] = useState<Register[] | null>(null)
+  const [currency, setCurrency] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [screen, setScreen] = useState<Screen>({ name: "registers" })
 
   const load = useCallback(async () => {
     setError(null)
     try {
-      const { registers } = await api<{ registers: Register[] }>("registers")
+      const { registers, currency_code } = await api<{ registers: Register[]; currency_code?: string | null }>(
+        "registers"
+      )
       setRegisters(registers)
+      setCurrency(currency_code ?? null)
       return registers
     } catch (e) {
       setError((e as Error).message)
@@ -89,7 +93,18 @@ export function Till({ cashier }: { cashier: Cashier }) {
               </button>
             </>
           )}
-          <form action={logout}>
+          <form
+            action={logout}
+            onSubmit={(e) => {
+              // Signing out leaves the shift open for the next cashier; say so.
+              if (
+                screen.name !== "registers" &&
+                !window.confirm("Shift still open. Sign out anyway? The shift stays open until someone closes it.")
+              ) {
+                e.preventDefault()
+              }
+            }}
+          >
             <button className="btn-secondary" type="submit">
               Sign out
             </button>
@@ -107,7 +122,14 @@ export function Till({ cashier }: { cashier: Cashier }) {
           </div>
         )}
         {screen.name === "registers" && (
-          <RegisterPicker registers={registers} onSelect={startSelling} onReload={load} />
+          <RegisterPicker
+            registers={registers}
+            cashierId={cashier.id}
+            currency={currency}
+            onSelect={startSelling}
+            onCloseShift={(register, shift) => setScreen({ name: "close", register, shift })}
+            onReload={load}
+          />
         )}
         {/* Kept mounted (hidden) under Close shift, so "Back to selling" returns
             to the same sale instead of an empty cart. */}

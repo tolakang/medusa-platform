@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Clock } from "@medusajs/icons"
-import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -65,6 +65,7 @@ const ShiftReportPage = () => {
   // drawer, enter it, and the register can open again.
   const queryClient = useQueryClient()
   const [closing, setClosing] = useState<{ id: string; counted: string } | null>(null)
+  const prompt = usePrompt()
   const close = useMutation({
     mutationFn: (c: { id: string; counted: number }) =>
       sdk.client.fetch(`/admin/pos/shifts/${c.id}/close`, { method: "POST", body: { counted_cash: c.counted } }),
@@ -250,19 +251,28 @@ const ShiftReportPage = () => {
                       </Badge>
                       {closing?.id === s.id ? (
                         <form
-                          className="mt-2 flex items-center gap-2"
-                          onSubmit={(e) => {
+                          className="mt-2 flex flex-wrap items-center gap-2"
+                          onSubmit={async (e) => {
                             e.preventDefault()
                             const counted = Number(closing.counted)
                             if (closing.counted.trim() === "" || !(counted >= 0)) {
                               toast.error("Enter the cash counted in the drawer (0 or more).")
                               return
                             }
-                            close.mutate({ id: s.id, counted })
+                            // Closing ends the cashier's shift for good: ask first.
+                            const ok = await prompt({
+                              title: `Close the shift on ${s.register?.name ?? "this register"}?`,
+                              description: `Counted cash: ${formatMoney(counted, s.currency_code)}. ${
+                                s.opened_by_name ? `${s.opened_by_name} can no longer sell on it. ` : ""
+                              }This can't be undone.`,
+                              confirmText: "Close shift",
+                              cancelText: "Keep open",
+                            })
+                            if (ok) close.mutate({ id: s.id, counted })
                           }}
                         >
                           <Input
-                            size="small"
+                            className="w-40"
                             type="number"
                             min={0}
                             step="0.01"
