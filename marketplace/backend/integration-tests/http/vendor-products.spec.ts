@@ -217,6 +217,24 @@ medusaIntegrationTestRunner({
         }
       })
 
+      it("offers and accepts only currencies a region sells in (bug 2026-11-25)", async () => {
+        await getContainer().resolve(Modules.REGION).createRegions({ name: "Cambodia", currency_code: "usd" })
+        const dara = await vendor("dara@vendor.test", "Dara Crafts")
+        expect((await call(api.get("/vendors/products", dara.auth))).data.currencies).toEqual(["usd"])
+        const khr = product("Riel mat", {
+          variants: [{ title: "One", options: { Size: "One size" }, prices: [{ amount: 40000, currency_code: "khr" }] }],
+        })
+        const refused = await call(api.post("/vendors/products", khr, dara.auth))
+        expect(refused.status).toBe(400)
+        expect(refused.data.message).toMatch(/No region sells in KHR/)
+        const ok = await call(api.post("/vendors/products", product("Mat"), dara.auth))
+        expect(ok.status).toBe(201)
+        const edit = await call(
+          api.post(`/vendors/products/${ok.data.product.id}`, { price: { amount: 1, currency_code: "khr" } }, dara.auth)
+        )
+        expect(edit.status).toBe(400)
+      })
+
       it("refuses a variant linked to an existing inventory item (review 2, A1)", async () => {
         const dara = await vendor("dara@crafts.test", "Dara Crafts")
         const body = product("Borrowed stock")
@@ -291,10 +309,18 @@ medusaIntegrationTestRunner({
         expect((await call(api.post(`/vendors/products/${id}`, { title: "Mine" }, other.auth))).status).toBe(404)
         expect((await call(api.delete(`/vendors/products/${id}`, other.auth))).status).toBe(404)
 
-        // Published: the marketplace's to change.
+        // Published: an edit (here the price) sends it back to review; it
+        // can't be deleted while on sale.
         await api.post(`/admin/vendor-products/${id}/review`, { action: "publish" }, admin)
-        expect((await call(api.post(`/vendors/products/${id}`, { title: "x" }, sok.auth))).status).toBe(400)
         expect((await call(api.delete(`/vendors/products/${id}`, sok.auth))).status).toBe(400)
+        const repriced = await call(
+          api.post(`/vendors/products/${id}`, { price: { amount: 30, currency_code: "usd" }, sku: "KRAMA-2" }, sok.auth)
+        )
+        expect(repriced.status).toBe(200)
+        expect(repriced.data.product.status).toBe("proposed")
+        const after = (await call(api.get("/vendors/products", sok.auth))).data.products.find((p: { id: string }) => p.id === id)
+        expect(after.variants[0].sku).toBe("KRAMA-2")
+        expect(after.variants[0].prices).toEqual([expect.objectContaining({ amount: 30, currency_code: "usd" })])
 
         const draft = await call(api.post("/vendors/products", product("Basket"), sok.auth))
         expect((await call(api.delete(`/vendors/products/${draft.data.product.id}`, sok.auth))).data.deleted).toBe(true)

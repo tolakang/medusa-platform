@@ -122,7 +122,29 @@ medusaIntegrationTestRunner({
         for (const o of list.data.orders) {
           expect(o.parent_order_id).toBe(parentId)
           expect(["Dara Crafts", "Sok Goods"]).toContain(o.vendor.name)
+          // Fulfilment and payment state, not order.status (bug 2026-11-25).
+          expect(o).toEqual(
+            expect.objectContaining({
+              fulfillment_status: "not_fulfilled",
+              payment_status: "authorized",
+              parent_canceled: false,
+              parent_display_id: res.data.order.display_id,
+            })
+          )
         }
+        const daraChild = children.find((c) => c.vendor_id === dara.id)!.order_id
+        await api.post(`/vendors/me/orders/${daraChild}/fulfillments`, { tracking_number: "TRK-1" }, dara.auth)
+        const after = await call(api.get("/admin/vendor-orders", admin))
+        expect(after.data.orders.find((o: { id: string }) => o.id === daraChild).fulfillment_status).toBe("fulfilled")
+        // The vendor sees the customer's order number, payment and tracking.
+        const mine = await call(api.get(`/vendors/me/orders/${daraChild}`, dara.auth))
+        const order = mine.data.order ?? mine.data
+        expect(order.customer_order).toEqual({
+          display_id: res.data.order.display_id,
+          payment: "authorized",
+          canceled: false,
+        })
+        expect(order.fulfillments[0].labels[0].tracking_number).toBe("TRK-1")
         const daras = await call(api.get(`/admin/vendor-orders?vendor_id=${dara.id}`, admin))
         expect(daras.data.orders.map((o: { id: string }) => o.id)).toEqual([
           children.find((c) => c.vendor_id === dara.id)!.order_id,

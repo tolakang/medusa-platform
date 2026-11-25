@@ -15,6 +15,7 @@ import {
   trackedInventoryItems,
 } from "../../../lib/vendor-stock"
 import { vendorIdOf } from "../me/vendor-orders"
+import { assertSellableCurrencies, sellableCurrencies } from "../../../lib/sellable-currencies"
 
 export const STOCK_QUANTITY_MESSAGE =
   "additional_data.stock_quantity is a whole number, 0 or more."
@@ -96,7 +97,13 @@ const vendorProducts = async (req: AuthenticatedMedusaRequest, productIds?: stri
 export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const products = await withStock(req, await vendorProducts(req))
   // approval_required: whether the vendor portal offers "publish" (F-075).
-  res.json({ products, count: products.length, approval_required: productApprovalRequired() })
+  // currencies: the ones a region sells in, so the portal offers only those.
+  res.json({
+    products,
+    count: products.length,
+    approval_required: productApprovalRequired(),
+    currencies: await sellableCurrencies(req.scope),
+  })
 }
 
 // POST /vendors/products (TASKS P6-04): a vendor adds a product (body as the
@@ -118,6 +125,10 @@ export const POST = async (
     additional_data?: { stock_quantity?: unknown }
   }
   const status = vendorProductStatus(product.status, productApprovalRequired())
+  await assertSellableCurrencies(
+    req.scope,
+    (product.variants ?? []).flatMap((v) => (v.prices ?? []).map((p) => p.currency_code))
+  )
   // Starting stock for stock-tracked variants (F-080). Variants with
   // manage_inventory: false are made to order and get none.
   const raw = additional_data?.stock_quantity

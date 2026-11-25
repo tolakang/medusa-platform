@@ -4,6 +4,8 @@ import type {
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
+import { FULFILLMENT_FIELDS, isFullyFulfilled, remainingByItem } from "../../../lib/order-fulfillment"
+import { parentStates } from "../../../workflows/marketplace/refund-review"
 
 const GetAdminVendorOrders = z
   .object({
@@ -48,16 +50,35 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "currency_code",
       "created_at",
       "metadata",
+      ...FULFILLMENT_FIELDS,
     ],
     filters: { id: [...vendorOf.keys()] },
     pagination: { skip: offset, take: limit, order: { created_at: "DESC" } },
   })
+  // Fulfilment and payment state (bug 2026-11-25: a fulfilled child showed
+  // "Waiting", from order.status). Orders read through Query have no
+  // fulfillment_status (MEDUSA_SKILL §6), so it's counted from fulfilments;
+  // the payment is on the parent order.
+  const parents = await parentStates(req.scope, orders.map((o) => o.id))
   res.json({
-    orders: orders.map(({ metadata, ...o }) => ({
-      ...o,
-      parent_order_id: (metadata?.parent_order_id as string | undefined) ?? null,
-      vendor: vendorOf.get(o.id),
-    })),
+    orders: orders.map(({ metadata, items, fulfillments, ...o }) => {
+      const row = { items, fulfillments }
+      const sent = Object.values(remainingByItem(row))
+      const parent = parents.get(o.id)
+      return {
+        ...o,
+        fulfillment_status: isFullyFulfilled(row)
+          ? "fulfilled"
+          : sent.length && (fulfillments ?? []).some((f) => f && !f.canceled_at)
+            ? "partially_fulfilled"
+            : "not_fulfilled",
+        payment_status: parent?.payment ?? null,
+        parent_canceled: parent?.canceled ?? false,
+        parent_display_id: parent?.parent_display_id ?? null,
+        parent_order_id: (metadata?.parent_order_id as string | undefined) ?? null,
+        vendor: vendorOf.get(o.id),
+      }
+    }),
     count: metadata?.count ?? orders.length,
     limit,
     offset,

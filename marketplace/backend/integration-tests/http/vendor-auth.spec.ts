@@ -267,7 +267,20 @@ medusaIntegrationTestRunner({
       it("the admin lists the approval queue and sets the commission", async () => {
         const one = await signUp("one@vendor.test", { name: "One" })
         await signUp("two@vendor.test", { name: "Two" })
+        // Approve and the typed rate are saved together (bug 2026-11-25).
+        const approved = await call(
+          api.post(`/admin/vendors/${one.created.data.vendor.id}`, { status: "active", commission_rate: 12 }, admin)
+        )
+        expect(approved.data.vendor).toEqual(expect.objectContaining({ status: "active", commission_rate: 12 }))
+        // The vendor gets the approval email, once (bug 2026-11-25).
         await approve(one.created.data.vendor.id)
+        const { data: sent } = await getContainer().resolve("query").graph({
+          entity: "notification",
+          fields: ["to", "data"],
+          filters: { to: "one@vendor.test", template: "vendor-approved" },
+        })
+        expect(sent).toHaveLength(1)
+        expect((sent[0].data as { url: string }).url).toBe(`${PORTAL}/login`)
 
         const queue = await call(api.get("/admin/vendors?status=pending", admin))
         expect(queue.status).toBe(200)
@@ -276,6 +289,7 @@ medusaIntegrationTestRunner({
 
         const all = await call(api.get("/admin/vendors", admin))
         expect(all.data.count).toBe(2)
+        expect(all.data.default_commission_rate).toBe(10)
         expect((await call(api.get("/admin/vendors?status=open", admin))).status).toBe(400)
 
         const rate = await call(

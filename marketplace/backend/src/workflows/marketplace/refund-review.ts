@@ -160,7 +160,15 @@ export const settleRefundReviewWorkflow = createWorkflow(
   }
 )
 
-export type ParentState = { parent_id: string; canceled: boolean; captured: boolean }
+export type ParentState = {
+  parent_id: string
+  parent_display_id: number | null
+  canceled: boolean
+  captured: boolean
+  // paid: captured; authorized: payment held but not taken yet (e.g. pay
+  // later / cash on delivery with the system provider); unpaid: neither.
+  payment: "paid" | "authorized" | "unpaid"
+}
 
 /**
  * For each child order (of these), its parent order's state: cancelled, and
@@ -200,9 +208,11 @@ export async function parentStates(
     entity: "order",
     fields: [
       "id",
+      "display_id",
       "status",
       "payment_collections.status",
       "payment_collections.amount",
+      "payment_collections.authorized_amount",
       "payment_collections.captured_amount",
     ],
     filters: { id: parentIds },
@@ -218,14 +228,23 @@ export async function parentStates(
     )
     let amount = MathBN.convert(0)
     let captured = MathBN.convert(0)
+    let authorized = MathBN.convert(0)
     for (const pc of collections) {
       amount = MathBN.add(amount, pc!.amount ?? 0)
       captured = MathBN.add(captured, pc!.captured_amount ?? 0)
+      authorized = MathBN.add(authorized, pc!.authorized_amount ?? 0)
     }
+    const isCaptured = MathBN.gt(amount, 0) && MathBN.gte(captured, amount)
     result.set(child, {
       parent_id: parentId,
+      parent_display_id: p.display_id == null ? null : Number(p.display_id),
       canceled: p.status === "canceled",
-      captured: MathBN.gt(amount, 0) && MathBN.gte(captured, amount),
+      captured: isCaptured,
+      payment: isCaptured
+        ? "paid"
+        : MathBN.gt(amount, 0) && MathBN.gte(authorized, amount)
+          ? "authorized"
+          : "unpaid",
     })
   }
   return result
