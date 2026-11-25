@@ -1,4 +1,5 @@
 import { z } from "@medusajs/framework/zod"
+import { walkInContact } from "../walk-in-contact"
 
 // Provider routes (TASKS P3-31).
 const text = (max: number) => z.string().trim().min(1).max(max)
@@ -58,6 +59,7 @@ export const PostProviderWalkIn = z.object({
   starts_at: instant,
   ends_at: instant,
   notes: z.string().max(500).nullish(),
+  ...walkInContact,
 })
 export type PostProviderWalkInType = z.infer<typeof PostProviderWalkIn>
 

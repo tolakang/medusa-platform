@@ -11,6 +11,9 @@ export type CalendarBooking = {
   starts_at: string
   ends_at: string
   notes?: string | null
+  // A walk-in's own name and phone (no customer account).
+  walk_in_name?: string | null
+  walk_in_phone?: string | null
   // Where a visit at the customer's place is (kind B, P3-20).
   address?: string | null
   // A trip's drop-off (kind C, P3-21); its pickup is `address`.
@@ -74,7 +77,9 @@ export function timeRange(b: { starts_at: string; ends_at: string }, timeZone: s
 export function customerLabel(b: CalendarBooking): string {
   const c = b.customer
   const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ")
-  return name || c?.email || "Walk-in"
+  if (name || c?.email) return (name || c?.email) as string
+  const walkIn = [b.walk_in_name, b.walk_in_phone].filter(Boolean).join(" · ")
+  return walkIn ? `Walk-in: ${walkIn}` : "Walk-in"
 }
 
 export const STATUS_COLOR: Record<string, "green" | "orange" | "grey" | "red" | "blue"> = {

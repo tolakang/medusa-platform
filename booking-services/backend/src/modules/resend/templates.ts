@@ -14,6 +14,7 @@ import { WAITLIST_TEMPLATE, waitlistEmail, type WaitlistEmailData } from "../../
 import { PACKAGE_CHANGED_TEMPLATE, packageChangedEmail, type PackageChangedData } from "../../lib/package-email"
 import { REVIEW_REQUEST_TEMPLATE, reviewRequestEmail, type ReviewRequestData } from "../../lib/reviews"
 import { BOOKING_MOVED_TEMPLATE, bookingMovedEmail, type BookingMovedEmailData } from "../../lib/booking-move"
+import { BOOKING_CANCELLED_TEMPLATE, bookingCancelledEmail, type BookingCancelledEmailData } from "../../lib/booking-cancel-email"
 import { escapeHtml } from "@medusa-platform/medusa-core/lib/order-notification"
 
 export function renderEmail(
@@ -51,6 +52,10 @@ export function renderEmail(
   // An event package staff cancelled or moved (P3-30 follow-up).
   if (template === PACKAGE_CHANGED_TEMPLATE && (data as PackageChangedData | null)?.event_date) {
     return packageChangedEmail(data as PackageChangedData, escapeHtml)
+  }
+  // A single booking staff cancelled, with the refund.
+  if (template === BOOKING_CANCELLED_TEMPLATE && (data as BookingCancelledEmailData | null)?.starts_at) {
+    return bookingCancelledEmail(data as BookingCancelledEmailData, escapeHtml)
   }
   return renderCoreEmail(template, data)
 }

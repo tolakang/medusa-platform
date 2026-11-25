@@ -144,8 +144,21 @@ medusaIntegrationTestRunner({
         const walkIn = (s: string, e: string, extra = {}) =>
           api.post("/admin/booking/bookings", { resource_id: resource.id, starts_at: s, ends_at: e, ...extra }, admin)
 
-        const { data } = await walkIn(utc("09:00"), utc("10:00"), { notes: "Walked in" })
-        expect(data.booking).toMatchObject({ status: "confirmed", hold_expires_at: null, cart_id: null, notes: "Walked in" })
+        // A bad phone is refused before anything is booked.
+        expect(await failure(walkIn(utc("09:00"), utc("10:00"), { walk_in_phone: "call me" }))).toMatchObject({ status: 400 })
+        const { data } = await walkIn(utc("09:00"), utc("10:00"), {
+          notes: "Walked in",
+          walk_in_name: " Chan ",
+          walk_in_phone: "012 345 678",
+        })
+        expect(data.booking).toMatchObject({
+          status: "confirmed",
+          hold_expires_at: null,
+          cart_id: null,
+          notes: "Walked in",
+          walk_in_name: "Chan",
+          walk_in_phone: "012 345 678",
+        })
         expect(await failure(walkIn(utc("09:30"), utc("10:30")))).toEqual({
           status: 400,
           message: "This time is no longer available.",
@@ -173,7 +186,7 @@ medusaIntegrationTestRunner({
           [utc("09:00"), "confirmed"],
           [utc("13:00"), "cancelled"],
         ])
-        expect(cal.bookings[0]).toMatchObject({ notes: "Walked in", customer: null, resource: { name: "Sophea", timezone: "UTC" } })
+        expect(cal.bookings[0]).toMatchObject({ notes: "Walked in", walk_in_name: "Chan", walk_in_phone: "012 345 678", customer: null, resource: { name: "Sophea", timezone: "UTC" } })
         expect(await failure(api.get(`/admin/booking/bookings?from=yesterday&to=today`, admin))).toMatchObject({ status: 400 })
       })
 

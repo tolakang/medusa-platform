@@ -34,7 +34,7 @@ import ExtrasChooser, {
   chosenExtras,
 } from "@modules/products/components/extras-chooser"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
+import { useEffect, useMemo, useRef, useState, useTransition } from "react"
 
 // Book a service (TASKS P3-13): pick the variant (a length, or a party size for
 // a table, P3-19), a day and a free
@@ -182,7 +182,10 @@ export default function BookingPicker({
       error: e,
     }))
 
-  const loadSlots = useCallback(() => {
+  // The times load again when the service, day or trip length changes, or
+  // on Retry (the counter). Plain effect: the React Compiler memoizes it.
+  const [reload, setReload] = useState(0)
+  useEffect(() => {
     if (!variantId || !date || tripMinutes === null) {
       setLoading(false)
       return
@@ -206,11 +209,7 @@ export default function BookingPicker({
       .finally(() => {
         if (id === requestId.current) setLoading(false)
       })
-  }, [variantId, date, tripMinutes])
-
-  useEffect(() => {
-    loadSlots()
-  }, [loadSlots])
+  }, [variantId, date, tripMinutes, reload])
 
   const book = () => {
     if (!chosen) {
@@ -498,7 +497,7 @@ export default function BookingPicker({
             <button
               type="button"
               className="min-h-11 px-2 txt-small text-ui-fg-interactive underline"
-              onClick={loadSlots}
+              onClick={() => setReload((n) => n + 1)}
               data-testid="booking-slots-retry"
             >
               Retry

@@ -13,6 +13,8 @@ export type CreateWalkInBookingInput = {
   ends_at: string
   customer_id?: string | null
   notes?: string | null
+  walk_in_name?: string | null
+  walk_in_phone?: string | null
 }
 
 const createWalkInStep = createStep(
@@ -25,6 +27,8 @@ const createWalkInStep = createStep(
       ends_at: new Date(input.ends_at),
       customer_id: input.customer_id ?? null,
       notes: input.notes ?? null,
+      walk_in_name: input.walk_in_name?.trim() || null,
+      walk_in_phone: input.walk_in_phone?.trim() || null,
       walk_in: true,
     })
     return new StepResponse(created, created.id)

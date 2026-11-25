@@ -56,6 +56,7 @@ describe("booking calendar", () => {
     expect(customerLabel({ ...base, customer: { first_name: "Sok", last_name: "Dara", email: "s@x.com" } })).toEqual("Sok Dara")
     expect(customerLabel({ ...base, customer: { first_name: null, last_name: null, email: "s@x.com" } })).toEqual("s@x.com")
     expect(customerLabel(base)).toEqual("Walk-in")
+    expect(customerLabel({ ...base, walk_in_name: "Chan", walk_in_phone: "012 345 678" })).toEqual("Walk-in: Chan · 012 345 678")
   })
 
   it("turns the walk-in form's local time into UTC instants", () => {

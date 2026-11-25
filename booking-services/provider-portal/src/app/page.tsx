@@ -11,6 +11,8 @@ type Booking = {
   starts_at: string
   ends_at: string
   notes: string | null
+  walk_in_name?: string | null
+  walk_in_phone?: string | null
   // Where a visit at the customer's place is (kind B, P3-20).
   address: string | null
   // A trip's drop-off (kind C, P3-21).

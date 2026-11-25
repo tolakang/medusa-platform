@@ -8,7 +8,7 @@ import {
   when,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
-import { refundPaymentWorkflow } from "@medusajs/medusa/core-flows"
+import { emitEventStep, refundPaymentWorkflow } from "@medusajs/medusa/core-flows"
 import { providerCommissionOnCancelWorkflow } from "./provider-commission"
 import { returnPassCreditStep } from "./booking-passes"
 import { cancelDecision } from "../lib/booking-cancel-policy"
@@ -28,6 +28,11 @@ import type BookingModuleService from "../modules/booking/service"
 // refunds twice at the provider.
 
 export const PACKAGE_PIECE_CANCEL_MESSAGE = "This is part of an event package: cancel the whole package."
+
+// After a cancellation; when staff did it, the customer of a paid booking is
+// emailed with the refund (subscribers/booking-cancelled).
+export const BOOKING_CANCELLED_EVENT = "booking.cancelled"
+export type BookingCancelledData = { id: string; by: "customer" | "staff"; refunded_amount: number }
 
 export type CancelBookingInput = {
   booking_id: string
@@ -228,6 +233,15 @@ export const cancelBookingWorkflow = createWorkflow(
     providerCommissionOnCancelWorkflow.runAsStep({
       input: transform({ plan }, ({ plan }) => ({
         booking_id: plan.booking_id,
+        refunded_amount: plan.refund?.amount ?? 0,
+      })),
+    })
+
+    emitEventStep({
+      eventName: BOOKING_CANCELLED_EVENT,
+      data: transform({ plan, input }, ({ plan, input }): BookingCancelledData => ({
+        id: plan.booking_id,
+        by: input.customer_id ? "customer" : "staff",
         refunded_amount: plan.refund?.amount ?? 0,
       })),
     })
