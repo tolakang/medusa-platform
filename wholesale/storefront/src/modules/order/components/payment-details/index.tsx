@@ -1,3 +1,4 @@
+import { formatDateTime } from "@/lib/util/format-date"
 import { Container, Heading, Text } from "@medusajs/ui"
 
 import { getPaymentInfo, isStripeLike } from "@/lib/constants"
@@ -45,7 +46,7 @@ const PaymentDetails = ({ order }: PaymentDetailsProps) => {
                     : `${convertToLocale({
                         amount: payment.amount,
                         currency_code: order.currency_code,
-                      })} ${payment.captured_at ? `paid at ${new Date(payment.captured_at).toLocaleString()}` : "to pay, not received yet"}`}
+                      })} ${payment.captured_at ? `paid at ${formatDateTime(payment.captured_at as unknown as string)}` : "to pay, not received yet"}`}
                 </Text>
               </div>
             </div>

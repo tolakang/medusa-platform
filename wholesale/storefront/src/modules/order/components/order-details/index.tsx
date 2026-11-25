@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/util/format-date"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text } from "@medusajs/ui"
 
@@ -22,11 +23,7 @@ const OrderDetails = ({ order }: OrderDetailsProps) => {
 
         <div className="flex justify-between mb-2">
           <Text>Order Date</Text>
-          <Text>
-            {" "}
-            {createdAt.getDate()}-{createdAt.getMonth() + 1}-
-            {createdAt.getFullYear()}
-          </Text>
+          <Text>{formatDate(createdAt)}</Text>
         </div>
 
         <Text>
