@@ -18,6 +18,14 @@ export const Vendor = model
     email: model.text(),
     // Logo URL (uploaded through the File Module). Null until set.
     logo: model.text().nullable(),
+    // Shown on the shop page; contact and payout details the vendor keeps
+    // up to date in the portal's settings (2026-11-25). payout_account: the
+    // bank / ABA account the marketplace pays into (free text, e.g.
+    // "ABA 000 123 456, Dara Sok").
+    description: model.text().nullable(),
+    phone: model.text().nullable(),
+    telegram: model.text().nullable(),
+    payout_account: model.text().nullable(),
     // pending: signed up, waiting for the admin's approval (P6-03);
     // active: may sell; suspended: stopped by the admin.
     status: model.enum(["pending", "active", "suspended"]).default("pending"),
