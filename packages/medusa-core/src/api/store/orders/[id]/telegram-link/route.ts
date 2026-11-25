@@ -4,8 +4,9 @@ import { telegramCustomerConfig, telegramStartUrl } from "../../../../../lib/tel
 
 // GET /store/orders/:id/telegram-link → { url } for the order page's "Get order
 // updates on Telegram" button (TASKS P1-17). Store route: needs the
-// publishable key. Like GET /store/orders/:id, knowing the order ID is the
-// access check; the link is signed so it only works for this order.
+// publishable key. Like GET /store/orders/:id, only the owner or the browser
+// that placed the order (requireOrderAccess in ../../../../order-access.ts,
+// wired in each app's middlewares.ts); the link is signed for this order.
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const config = telegramCustomerConfig()
   if (!config) {

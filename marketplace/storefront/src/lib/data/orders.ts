@@ -3,11 +3,15 @@
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { getAuthHeaders } from "./cookies"
+import { orderAccessHeaders } from "./order-access"
 import { HttpTypes } from "@medusajs/types"
 
 export const retrieveOrder = async (id: string) => {
+  // The backend answers only the owner or the browser that placed the order
+  // (signed proof from order-access.ts); anyone else gets 404.
   const headers = {
     ...(await getAuthHeaders()),
+    ...(await orderAccessHeaders(id)),
   }
 
   // Read fresh (TASKS F-052): staff capture and refund in the admin, and
@@ -35,7 +39,7 @@ export const retrieveOrderTelegramLink = async (
   return sdk.client
     .fetch<{ url: string }>(`/store/orders/${id}/telegram-link`, {
       method: "GET",
-      headers: { ...(await getAuthHeaders()) },
+      headers: { ...(await getAuthHeaders()), ...(await orderAccessHeaders(id)) },
       cache: "no-store",
     })
     .then(({ url }) => url)

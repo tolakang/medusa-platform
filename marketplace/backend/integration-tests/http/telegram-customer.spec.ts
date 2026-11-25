@@ -5,6 +5,15 @@ import telegramCustomerUpdates, {
   config as subscriberConfig,
 } from "../../src/subscribers/telegram-customer-updates"
 import { notifyOrderStatusWorkflow } from "@medusa-platform/medusa-core/workflows"
+import { ORDER_ACCESS_HEADER, signOrderAccess } from "@medusa-platform/medusa-core/api/order-access"
+// GET /store/orders/:id/* needs the owner or the placing browser's signed
+// proof (packages/medusa-core/src/api/order-access.ts).
+process.env.ORDER_ACCESS_SECRET = "test_order_access_secret"
+const withOrderProof = (store: { headers: Record<string, string> }, orderId: string) => {
+  const exp = Math.floor(Date.now() / 1000) + 3600
+  const sig = signOrderAccess("test_order_access_secret", orderId, exp)
+  return { headers: { ...store.headers, [ORDER_ACCESS_HEADER]: `${exp}.${sig}` } }
+}
 
 // Customer order updates on Telegram (TASKS P1-17). The route and webhook read
 // these at request time. No TELEGRAM_CUSTOMER_BOT_TOKEN, so the
@@ -69,7 +78,7 @@ medusaIntegrationTestRunner({
       it("links a chat from the order page button and sends the confirmation", async () => {
         const { query, order, store } = await setup()
 
-        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, withOrderProof(store, order.id))
         expect(data.url).toMatch(/^https:\/\/t\.me\/example_shop_bot\?start=[A-Za-z0-9_-]{1,64}$/)
         const payload = new URL(data.url).searchParams.get("start")!
 
@@ -113,7 +122,7 @@ medusaIntegrationTestRunner({
 
       it("tells the staff group and linked chats when the order is canceled, once", async () => {
         const { query, order, store } = await setup()
-        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, withOrderProof(store, order.id))
         await webhook(`/start ${new URL(data.url).searchParams.get("start")}`)
 
         expect(subscriberConfig.event).toEqual(
@@ -135,7 +144,7 @@ medusaIntegrationTestRunner({
 
       it("still tells staff when the customer must not be notified", async () => {
         const { query, order, store } = await setup()
-        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, withOrderProof(store, order.id))
         await webhook(`/start ${new URL(data.url).searchParams.get("start")}`)
         await notifyOrderStatusWorkflow(getContainer()).run({
           input: { order_id: order.id, status: "shipped", notify_customer: false },
@@ -154,7 +163,7 @@ medusaIntegrationTestRunner({
 
       it("tells staff and customers about each parcel of an order, once each", async () => {
         const { query, order, store } = await setup()
-        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, withOrderProof(store, order.id))
         await webhook(`/start ${new URL(data.url).searchParams.get("start")}`)
         const shipped = (fulfillment_id: string) =>
           notifyOrderStatusWorkflow(getContainer()).run({
@@ -177,7 +186,7 @@ medusaIntegrationTestRunner({
 
       it("keeps one link when Start is tapped twice at the same moment", async () => {
         const { query, order, store } = await setup()
-        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, store)
+        const { data } = await api.get(`/store/orders/${order.id}/telegram-link`, withOrderProof(store, order.id))
         const start = `/start ${new URL(data.url).searchParams.get("start")}`
         const replies = await Promise.all([webhook(start), webhook(start), webhook(start)])
         expect(replies.map((r) => r.status)).toEqual([200, 200, 200])

@@ -8,6 +8,7 @@ import { HttpTypes, StoreCart } from "@medusajs/types"
 import { track } from "@vercel/analytics/server"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
+import { grantOrderAccess } from "./order-access"
 import {
   getAuthHeaders,
   getCacheOptions,
@@ -564,6 +565,9 @@ export async function placeOrder(
   revalidateTag(cartsTag, { expire: 0 })
   revalidateTag(ordersTag, { expire: 0 })
   revalidateTag(approvalsTag, { expire: 0 })
+
+  // Lets this browser read the order (x-order-access proof, order-access.ts).
+  await grantOrderAccess(response.order.id)
 
   await removeCartId()
 

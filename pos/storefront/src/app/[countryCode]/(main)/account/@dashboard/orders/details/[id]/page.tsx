@@ -27,8 +27,8 @@ export default async function OrderDetailPage(props: Props) {
   const order = await retrieveOrder(params.id).catch(() => null)
   const customer = await retrieveCustomer().catch(() => null)
 
-  // Only the customer's own orders: /store/orders/:id answers anyone with
-  // the id, so the account page checks the owner itself.
+  // Only the customer's own orders (the backend also refuses others, but
+  // the cookie proof of a guest order would pass it there).
   if (!order || !customer || order.customer_id !== customer.id) {
     notFound()
   }
