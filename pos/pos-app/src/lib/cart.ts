@@ -110,3 +110,11 @@ export function formatMoney(amount: number | string | null | undefined, currency
     return `${Number(amount).toFixed(2)} ${currency.toUpperCase()}`
   }
 }
+
+// A checkout that failed with no answer (no connection, status 0) or a
+// server or gateway error (5xx) may still have recorded the sale. A 4xx is a
+// refusal: pos-checkout rolled the sale back. While a sale may be recorded,
+// the till keeps its client_ref and the cart locked (owner, 2026-11-25).
+export function saleMayBeRecorded(status: number): boolean {
+  return status === 0 || status >= 500
+}

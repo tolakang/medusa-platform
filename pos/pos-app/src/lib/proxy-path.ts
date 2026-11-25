@@ -7,6 +7,8 @@ const ALLOWED: { method: "GET" | "POST"; pattern: RegExp }[] = [
   { method: "GET", pattern: /^registers$/ },
   { method: "POST", pattern: /^shifts\/(open|close)$/ },
   { method: "POST", pattern: /^checkout$/ },
+  { method: "POST", pattern: /^checkout\/preview$/ },
+  { method: "GET", pattern: /^checkout$/ },
   { method: "GET", pattern: /^customers$/ },
   { method: "POST", pattern: /^customers$/ },
   { method: "GET", pattern: /^products\/lookup$/ },

@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import type { PaymentMethod } from "@/lib/api"
+import type { CheckoutPreview, PaymentMethod } from "@/lib/api"
 import { changeDue, formatMoney, quickTender } from "@/lib/cart"
 
 // Payment (TASKS P2-10). Cash: enter what the customer gave, see the change.
 // Card and QR: the money is taken on the shop's terminal or KHQR stand first;
-// the sale only records it (TASKS F-038). Promotions can lower the final
-// total, so cash change is shown again on the receipt from the real total.
+// the sale only records it (TASKS F-038). The total is the server's price
+// preview (promotions and tax, owner 2026-11-25), so change, quick tender and
+// the terminal prompt use what the sale will charge.
 
 const METHODS: { id: PaymentMethod; label: string }[] = [
   { id: "cash", label: "Cash" },
@@ -16,12 +17,12 @@ const METHODS: { id: PaymentMethod; label: string }[] = [
 ]
 
 export function Payment({
-  total,
+  preview,
   currency,
   onPay,
   onCancel,
 }: {
-  total: number
+  preview: CheckoutPreview
   currency: string
   onPay: (method: PaymentMethod, tendered: number | null) => Promise<void>
   onCancel: () => void
@@ -30,6 +31,7 @@ export function Payment({
   const [tendered, setTendered] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const total = preview.total
 
   const cash = Number(tendered)
   const change = method === "cash" && tendered !== "" ? changeDue(total, cash) : null
@@ -75,6 +77,24 @@ export function Payment({
         confirm()
       }}
     >
+      <dl className="flex flex-col gap-1 text-sm">
+        {preview.discount_total > 0 && (
+          <div className="flex justify-between text-ui-fg-subtle">
+            <dt>Discount</dt>
+            <dd className="tabular-nums">−{formatMoney(preview.discount_total, currency)}</dd>
+          </div>
+        )}
+        {preview.tax_total > 0 && (
+          <div className="flex justify-between text-ui-fg-subtle">
+            <dt>Tax</dt>
+            <dd className="tabular-nums">{formatMoney(preview.tax_total, currency)}</dd>
+          </div>
+        )}
+        <div className="flex justify-between text-lg font-semibold">
+          <dt>To pay</dt>
+          <dd className="tabular-nums">{formatMoney(total, currency)}</dd>
+        </div>
+      </dl>
       <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Payment method">
         {METHODS.map((m, i) => (
           <button

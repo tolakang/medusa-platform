@@ -111,7 +111,9 @@ Cashier: the **POS app** (`pos-app/`, P2-10) does all of this on screen: sign in
 1. `GET /pos/registers` lists the registers; pick one, then `POST /pos/shifts/open` `{ register_id, opening_cash }`.
 2. `GET /pos/products/lookup?code=<scanned>&shift_id=` finds the product by barcode, EAN, UPC or SKU, with its price.
 3. Optionally find or add the customer: `GET /pos/customers?q=` or `POST /pos/customers` `{ first_name, phone | email }`.
-4. `POST /pos/checkout` `{ shift_id, items: [{ variant_id, quantity }], payment_method: cash | card | qr, customer_id?, promo_codes? }` records the sale and returns the order for the receipt.
+4. `POST /pos/checkout` `{ shift_id, items: [{ variant_id, quantity }], payment_method: cash | card | qr, customer_id?, promo_codes? }` records the sale and returns the order for the receipt. Optional `client_ref` (uuid): a repeat returns the sale already recorded (200).
+   - `POST /pos/checkout/preview` `{ shift_id, items, customer_id?, promo_codes? }` returns `{ preview: { subtotal, discount_total, tax_total, total, currency_code } }`, priced with a throwaway cart (same prices, promotions and tax; deleted at once, so no sale number is used). The till calls it when Pay opens and charges that total.
+   - `GET /pos/checkout?shift_id&client_ref` returns the recorded sale, or 404 when it was not recorded. After a checkout with no answer the till locks the cart and offers *Retry sale* (same `client_ref`) or *Check and start new* (this lookup).
 5. `POST /pos/shifts/close` `{ shift_id, counted_cash }` returns the expected cash and the variance.
 
 Card and QR payments are taken on the shop's own terminal or KHQR stand, and the sale only records them (TASKS F-038).

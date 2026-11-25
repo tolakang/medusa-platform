@@ -24,7 +24,9 @@ import {
   createOrderPaymentCollectionWorkflow,
   createOrderWorkflow,
   createRemoteLinkStep,
+  createCartWorkflow,
   releaseLockStep,
+  removeRemoteLinkStep,
   useQueryGraphStep,
 } from "@medusajs/medusa/core-flows"
 import { POS_MODULE } from "../modules/pos"
@@ -95,7 +97,7 @@ const refuseRepeatedPosSaleStep = createStep(
   }
 )
 
-const validatePosCheckoutStep = createStep(
+export const validatePosCheckoutStep = createStep(
   "validate-pos-checkout",
   async (input: PosCheckoutInput, { container }) => {
     if (!POS_PAYMENT_METHODS.includes(input.payment_method)) {
@@ -192,7 +194,7 @@ type ShopStockInput = {
 // The shop must hold the items (P2-11): stocked minus reserved at the
 // register's location, for every inventory item of a managed variant.
 // Variants that allow backorder or don't manage inventory always pass.
-const checkPosShopStockStep = createStep("check-pos-shop-stock", async (input: ShopStockInput, { container }) => {
+export const checkPosShopStockStep = createStep("check-pos-shop-stock", async (input: ShopStockInput, { container }) => {
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const { data: variants } = await query.graph({
     entity: "product_variant",
@@ -299,12 +301,52 @@ const movePosReservationsStep = createStep(
   }
 )
 
+type PosSaleContext = {
+  register_id: string
+  sales_channel_id: string
+  region_id: string
+  currency_code: string
+}
+
+// The draft order of a sale: the same for the sale and its price preview, so
+// the preview's total is the total the sale charges.
+function posDraftOrderInput(input: Omit<PosCheckoutInput, "payment_method">, context: PosSaleContext) {
+  // The admin draft-order route passes is_draft_order the same way
+  // (@medusajs/medusa api/admin/draft-orders/route.js); CreateOrderDTO lacks it.
+  const data: CreateOrderWorkflowInput & { is_draft_order: boolean } = {
+    status: OrderStatus.DRAFT,
+    is_draft_order: true,
+    region_id: context.region_id,
+    sales_channel_id: context.sales_channel_id,
+    currency_code: context.currency_code,
+    customer_id: input.customer_id,
+    email: input.email,
+    // Title and price come from the variant (createOrderWorkflow prices
+    // variant items itself, like the admin route's items without them).
+    items: input.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })) as CreateOrderWorkflowInput["items"],
+    promo_codes: input.promo_codes ?? [],
+    metadata: {
+      pos_register_id: context.register_id,
+      pos_shift_id: input.shift_id,
+      pos_cashier_id: input.cashier_id,
+      ...(input.client_ref ? { [POS_CLIENT_REF_KEY]: input.client_ref } : {}),
+    },
+  }
+  return data
+}
+
 export const posCheckoutWorkflow = createWorkflow("pos-checkout", function (input: PosCheckoutInput) {
   // Same key as close-pos-shift: a sale and the shift close never interleave.
   const lockKey = transform({ input }, ({ input }) => `pos-shift:${input.shift_id}`)
   acquireLockStep({ key: lockKey, timeout: 10, ttl: 120 })
   refuseRepeatedPosSaleStep(input)
   const context = validatePosCheckoutStep(input)
+  // Two registers of one shop sell from the same stock: one sale at a time
+  // per stock location, from the stock check to the fulfilment, so the last
+  // units can't be sold twice. Always taken after the shift lock (close
+  // takes only the shift lock), so the two locks can't deadlock.
+  const locationLockKey = transform({ context }, ({ context }) => `pos-location:${context.stock_location_id}`)
+  acquireLockStep({ key: locationLockKey, timeout: 10, ttl: 120 }).config({ name: "acquire-pos-location-lock" })
   const stockInput = transform({ input, context }, ({ input, context }) => ({
     items: input.items,
     stock_location_id: context.stock_location_id,
@@ -315,30 +357,7 @@ export const posCheckoutWorkflow = createWorkflow("pos-checkout", function (inpu
     input: transform({ context }, ({ context }) => ({ stock_location_id: context.stock_location_id })),
   })
 
-  const draftInput = transform({ input, context }, ({ input, context }) => {
-    // The admin draft-order route passes is_draft_order the same way
-    // (@medusajs/medusa api/admin/draft-orders/route.js); CreateOrderDTO lacks it.
-    const data: CreateOrderWorkflowInput & { is_draft_order: boolean } = {
-      status: OrderStatus.DRAFT,
-      is_draft_order: true,
-      region_id: context.region_id,
-      sales_channel_id: context.sales_channel_id,
-      currency_code: context.currency_code,
-      customer_id: input.customer_id,
-      email: input.email,
-      // Title and price come from the variant (createOrderWorkflow prices
-      // variant items itself, like the admin route's items without them).
-      items: input.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })) as CreateOrderWorkflowInput["items"],
-      promo_codes: input.promo_codes ?? [],
-      metadata: {
-        pos_register_id: context.register_id,
-        pos_shift_id: input.shift_id,
-        pos_cashier_id: input.cashier_id,
-        ...(input.client_ref ? { [POS_CLIENT_REF_KEY]: input.client_ref } : {}),
-      },
-    }
-    return data
-  })
+  const draftInput = transform({ input, context }, ({ input, context }) => posDraftOrderInput(input, context))
   const draft = createOrderWorkflow.runAsStep({ input: draftInput })
   const orderId = transform({ draft }, ({ draft }) => draft.id)
   convertDraftOrderWorkflow.runAsStep({ input: { id: orderId } })
@@ -392,6 +411,7 @@ export const posCheckoutWorkflow = createWorkflow("pos-checkout", function (inpu
     { [POS_MODULE]: { pos_shift_id: input.shift_id }, [Modules.ORDER]: { order_id: orderId } },
   ])
   createRemoteLinkStep(shiftLink).config({ name: "link-pos-shift-order" })
+  releaseLockStep({ key: locationLockKey }).config({ name: "release-pos-location-lock" })
   releaseLockStep({ key: lockKey })
 
   const result = transform({ orderId, total, input }, ({ orderId, total, input }) => ({
@@ -401,3 +421,64 @@ export const posCheckoutWorkflow = createWorkflow("pos-checkout", function (inpu
   }))
   return new WorkflowResponse(result)
 })
+
+export type PosCheckoutPreviewInput = Omit<PosCheckoutInput, "payment_method" | "client_ref">
+
+const toNumber = (v: unknown) => MathBN.convert((v ?? 0) as number).toNumber()
+
+// Deletes the preview's cart. On rollback there is nothing to undo: the
+// cart only priced the sale.
+const deletePosPreviewCartStep = createStep("delete-pos-preview-cart", async (cartId: string, { container }) => {
+  await container.resolve(Modules.CART).deleteCarts([cartId])
+  return new StepResponse(undefined)
+})
+
+// pos-checkout-preview (owner, 2026-11-25): the total the till shows before
+// payment. It prices the sale with a throwaway cart (createCartWorkflow: the
+// region's prices for the sales channel, promo_codes through
+// updateCartPromotionsWorkflow, tax lines through updateTaxLinesWorkflow),
+// reads the totals and deletes the cart with its links. Not a draft order:
+// an order takes the next display_id, so every preview would leave a gap in
+// the shop's sale numbers. Nothing is reserved, paid or linked to the shift.
+export const posCheckoutPreviewWorkflow = createWorkflow(
+  "pos-checkout-preview",
+  function (input: PosCheckoutPreviewInput) {
+    const context = validatePosCheckoutStep(
+      transform({ input }, ({ input }) => ({ ...input, payment_method: "cash" as PosPaymentMethod }))
+    )
+    checkPosShopStockStep(
+      transform({ input, context }, ({ input, context }) => ({
+        items: input.items,
+        stock_location_id: context.stock_location_id,
+        stock_location_name: context.stock_location_name,
+      }))
+    )
+    // No email: createCartWorkflow would create a guest customer for it.
+    const cart = createCartWorkflow.runAsStep({
+      input: transform({ input, context }, ({ input, context }) => ({
+        region_id: context.region_id,
+        sales_channel_id: context.sales_channel_id,
+        currency_code: context.currency_code,
+        customer_id: input.customer_id,
+        items: input.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })),
+        promo_codes: input.promo_codes ?? [],
+      })),
+    })
+    const cartId = transform({ cart }, ({ cart }) => cart.id)
+    const { data: carts } = useQueryGraphStep({
+      entity: "cart",
+      fields: ["id", "currency_code", "item_subtotal", "discount_total", "tax_total", "total"],
+      filters: { id: cartId },
+    }).config({ name: "get-pos-preview-total" })
+    removeRemoteLinkStep({ [Modules.CART]: { cart_id: cartId } }).config({ name: "remove-pos-preview-cart-links" })
+    deletePosPreviewCartStep(cartId)
+    const preview = transform({ carts }, ({ carts }) => ({
+      currency_code: carts[0].currency_code as string,
+      subtotal: toNumber(carts[0].item_subtotal),
+      discount_total: toNumber(carts[0].discount_total),
+      tax_total: toNumber(carts[0].tax_total),
+      total: toNumber(carts[0].total),
+    }))
+    return new WorkflowResponse(preview)
+  }
+)

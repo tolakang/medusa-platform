@@ -54,6 +54,18 @@ export const PostPosCheckout = z.object({
 })
 export type PostPosCheckoutType = z.infer<typeof PostPosCheckout>
 
+// POST /pos/checkout/preview (owner, 2026-11-25): the sale as checkout gets
+// it, without the payment and the sale's id.
+export const PostPosCheckoutPreview = PostPosCheckout.omit({ payment_method: true, client_ref: true })
+export type PostPosCheckoutPreviewType = z.infer<typeof PostPosCheckoutPreview>
+
+// GET /pos/checkout (owner, 2026-11-25): was the sale with this id recorded?
+export const GetPosCheckout = z.object({
+  shift_id: z.string().min(1),
+  client_ref: z.string().uuid(),
+})
+export type GetPosCheckoutType = z.infer<typeof GetPosCheckout>
+
 // A customer created at the till: a name plus a phone or an email, so the
 // shop can find them again.
 export const PostPosCustomer = z
