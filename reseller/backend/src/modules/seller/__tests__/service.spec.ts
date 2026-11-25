@@ -1,7 +1,9 @@
 import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { SELLER_MODULE } from ".."
 import { Seller } from "../models/seller"
+import { SellerAdjustment } from "../models/seller-adjustment"
 import { SellerCommission } from "../models/seller-commission"
+import { SellerPayout } from "../models/seller-payout"
 import SellerModuleService from "../service"
 
 jest.setTimeout(60 * 1000)
@@ -10,7 +12,7 @@ jest.setTimeout(60 * 1000)
 // (BUILD_PLAN §9.5).
 moduleIntegrationTestRunner<SellerModuleService>({
   moduleName: SELLER_MODULE,
-  moduleModels: [Seller, SellerCommission],
+  moduleModels: [Seller, SellerCommission, SellerAdjustment, SellerPayout],
   resolve: "./src/modules/seller",
   testSuite: ({ service }) => {
     const seller = (overrides: Record<string, unknown> = {}) =>
