@@ -1,6 +1,7 @@
 import type { AuthenticatedMedusaRequest } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { remainingByItem } from "../../../lib/order-fulfillment"
+import { parentStates } from "../../../workflows/marketplace/refund-review"
 
 // The signed-in vendor's child orders (TASKS P6-09, P6-10): every vendor
 // order route goes through here, so a vendor only ever sees and fulfils its
@@ -37,6 +38,8 @@ export const VENDOR_ORDER_FIELDS = [
   "fulfillments.canceled_at",
   "fulfillments.items.line_item_id",
   "fulfillments.items.quantity",
+  "fulfillments.labels.tracking_number",
+  "fulfillments.labels.tracking_url",
 ]
 
 export async function vendorIdOf(req: AuthenticatedMedusaRequest): Promise<string> {
@@ -85,6 +88,9 @@ export async function vendorOrders(req: AuthenticatedMedusaRequest, ids: string[
     filters: { order_id: ids },
   })
   const commissionOf = new Map(commissions.map((c) => [c.order_id, c]))
+  // The customer's order: its number, payment and whether it was cancelled,
+  // so a vendor doesn't ship what isn't paid (bug 2026-11-25).
+  const parents = await parentStates(req.scope, ids)
   return orders.map((o) => {
     const remaining = remainingByItem(o)
     const { order_id: _o, ...commission } = commissionOf.get(o.id) ?? ({} as Record<string, unknown>)
@@ -94,6 +100,13 @@ export async function vendorOrders(req: AuthenticatedMedusaRequest, ids: string[
       remaining,
       fully_fulfilled: Object.values(remaining).every((q) => q === 0),
       commission: commissionOf.has(o.id) ? commission : null,
+      customer_order: parents.has(o.id)
+        ? {
+            display_id: parents.get(o.id)!.parent_display_id,
+            payment: parents.get(o.id)!.payment,
+            canceled: parents.get(o.id)!.canceled,
+          }
+        : null,
     }
   })
 }

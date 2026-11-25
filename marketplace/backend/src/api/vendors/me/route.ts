@@ -21,9 +21,13 @@ export const PostVendorMe = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
     logo: z.string().trim().url().max(500).nullable().optional(),
+    description: z.string().trim().max(2000).nullable().optional(),
+    phone: z.string().trim().regex(/^[0-9+\-() ]{6,30}$/, "Enter a phone number.").nullable().optional(),
+    telegram: z.string().trim().max(64).nullable().optional(),
+    payout_account: z.string().trim().max(300).nullable().optional(),
   })
   .strict()
-  .refine((b) => Object.keys(b).length > 0, { message: "Send name or logo." })
+  .refine((b) => Object.keys(b).length > 0, { message: "Send a field to change." })
 
 export const POST = async (req: AuthenticatedMedusaRequest<z.infer<typeof PostVendorMe>>, res: MedusaResponse) => {
   const id = await vendorIdOf(req)

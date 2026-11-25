@@ -80,10 +80,28 @@ export async function editProduct(_: EditState, form: FormData): Promise<EditSta
   }
   const intent = form.get("intent")
   const status = intent === "publish" ? "published" : intent === "propose" ? "proposed" : "draft"
+  // Price, currency and SKU can change too (bug 2026-11-25).
+  const currency = String(form.get("currency") ?? "").trim().toLowerCase()
+  const priceText = String(form.get("price") ?? "").trim()
+  let price: { amount: number; currency_code: string } | undefined
+  if (priceText) {
+    const amount = Number(priceText)
+    if (!Number.isFinite(amount) || amount <= 0 || !/^[a-z]{3}$/.test(currency)) {
+      return { error: "Enter a price above 0 and choose a currency." }
+    }
+    price = { amount: currency === "khr" ? Math.round(amount) : Math.round(amount * 100) / 100, currency_code: currency }
+  }
+  const sku = form.has("sku") ? String(form.get("sku") ?? "").trim() : undefined
   const result = await backendFetch(`/vendors/products/${id}`, {
     token,
     method: "POST",
-    body: { title, description: String(form.get("description") ?? "").trim(), status },
+    body: {
+      title,
+      description: String(form.get("description") ?? "").trim(),
+      status,
+      ...(price ? { price } : {}),
+      ...(sku !== undefined ? { sku: sku || null } : {}),
+    },
   })
   if (!result.ok) {
     return { error: result.message }

@@ -20,6 +20,7 @@ import {
   requireStrongPassword,
 } from '@medusa-platform/medusa-core/api/auth-guards'
 import { requireVendor, vendorCors } from './vendor-auth'
+import { refuseSuspendedVendorItems } from '../lib/vendor-suspension'
 import { refuseExistingInventoryItems, refuseVendorOrderMetadata } from './marketplace-guards'
 import { PostVendorCreate } from './vendors/validators'
 import { PostVendorProductStock } from './vendors/products/[id]/stock/route'
@@ -157,7 +158,18 @@ export default defineMiddlewares({
       // Cambodia, the email elsewhere.
       method: ['POST'],
       matcher: '/store/carts/:id/complete',
-      middlewares: [requireContact],
+      middlewares: [requireContact, refuseSuspendedVendorItems],
+    },
+    {
+      // A suspended vendor's products can't be bought (bug 2026-11-25).
+      method: ['POST'],
+      matcher: '/store/carts/:id/line-items',
+      middlewares: [refuseSuspendedVendorItems],
+    },
+    {
+      method: ['POST'],
+      matcher: '/store/carts/:id/complete-vendor',
+      middlewares: [refuseSuspendedVendorItems],
     },
     {
       // The same check before a payment starts (PayWay can complete the

@@ -56,7 +56,9 @@ export default async function VendorPage(props: Props) {
           <Heading level="h1" className="text-2xl-semi" data-testid="vendor-name">
             {shop.vendor.name}
           </Heading>
-          <Text className="text-ui-fg-subtle">Sold on this marketplace</Text>
+          <Text className="text-ui-fg-subtle">
+            {shop.vendor.description || "Sold on this marketplace"}
+          </Text>
         </div>
       </div>
       {shop.product_ids.length ? (

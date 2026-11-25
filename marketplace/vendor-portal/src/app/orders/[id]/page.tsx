@@ -5,7 +5,7 @@ import { day, money, toFulfil } from "@/lib/format"
 import { requireVendor } from "@/lib/server/vendor"
 import { backendFetch } from "@/lib/server/medusa"
 import { FulfilButton } from "../fulfil-button"
-import type { VendorOrder } from "../page"
+import { OrderFacts, type VendorOrder } from "../page"
 
 type Detail = VendorOrder & {
   fulfillments?: { id: string; created_at: string; canceled_at: string | null; items: { line_item_id: string; quantity: number }[] }[]
@@ -41,6 +41,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </div>
           {o.status !== "canceled" && left > 0 && <FulfilButton orderId={o.id} />}
         </div>
+        <OrderFacts o={o} />
         <div>
           <h3 className="mb-1 font-medium">Items</h3>
           <ul className="flex flex-col gap-1">

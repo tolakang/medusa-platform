@@ -134,6 +134,18 @@ medusaIntegrationTestRunner({
         expect(res.data.vendor).toEqual(expect.objectContaining({ name: "Dara Silk", logo: "https://cdn.example/l.png" }))
         expect((await call(api.post("/vendors/me", { handle: "x" }, dara.auth))).status).toBe(400)
         expect((await call(api.post("/vendors/me", { logo: "not a url" }, dara.auth))).status).toBe(400)
+        // Contact and payout details (vendor settings, 2026-11-25).
+        const details = await call(
+          api.post(
+            "/vendors/me",
+            { phone: "012 345 678", telegram: "darasilk", payout_account: "ABA 000 123 456", description: "Silk" },
+            dara.auth
+          )
+        )
+        expect(details.data.vendor).toEqual(
+          expect.objectContaining({ phone: "012 345 678", telegram: "darasilk", payout_account: "ABA 000 123 456" })
+        )
+        expect((await call(api.post("/vendors/me", { phone: "call me" }, dara.auth))).status).toBe(400)
       })
 
       it("refuses other callers", async () => {

@@ -15,6 +15,10 @@ export type Vendor = {
   name: string
   email: string
   logo: string | null
+  description?: string | null
+  phone?: string | null
+  telegram?: string | null
+  payout_account?: string | null
   status: "pending" | "active" | "suspended"
   commission_rate: number | null
 }

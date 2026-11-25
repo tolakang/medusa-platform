@@ -8,7 +8,7 @@ export default async function SettingsPage() {
   const { vendor } = await requireVendor()
   return (
     <Shell vendor={vendor} active="/settings">
-      <SettingsForm name={vendor.name} logo={vendor.logo} handle={vendor.handle} />
+      <SettingsForm name={vendor.name} logo={vendor.logo} handle={vendor.handle} details={vendor} />
     </Shell>
   )
 }

@@ -10,7 +10,9 @@ export const money = (amount: unknown, currency?: string) => {
   const code = (currency ?? "").toUpperCase()
   if (!code) return Number.isFinite(n) ? n.toFixed(2) : "–"
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(n)
+    // Riel without decimals (owner 2026-11-25), as the backend rounds it.
+    const digits = code === "KHR" ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: code, ...digits }).format(n)
   } catch {
     return `${n.toFixed(2)} ${code}`
   }

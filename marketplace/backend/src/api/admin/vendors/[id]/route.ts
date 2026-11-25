@@ -10,6 +10,8 @@ import type { PostAdminVendorType } from "../validators"
 import { ensureVendorStockLocation } from "../../../../lib/vendor-stock"
 import { emailVerified } from "@medusa-platform/medusa-core/lib/email-verified"
 import { VENDOR_EMAIL_NOT_VERIFIED_MESSAGE } from "../../../../lib/vendor-email"
+import { setVendorProductsOnSale } from "../../../../lib/vendor-suspension"
+import { sendVendorApprovedEmail } from "../../../../lib/vendor-approved-email"
 
 const vendorById = async (req: AuthenticatedMedusaRequest, id: string) => {
   const {
@@ -45,9 +47,21 @@ export const POST = async (
   await req.scope
     .resolve<MarketplaceModuleService>(MARKETPLACE_MODULE)
     .updateVendors({ id: vendor.id, ...req.validatedBody })
+  const next = req.validatedBody.status
   // An approved vendor gets its own stock location (F-080, P6-15).
-  if (req.validatedBody.status === "active") {
+  if (next === "active") {
     await ensureVendorStockLocation(req.scope, vendor.id)
+  }
+  // Suspended: its products leave the store; back to active: they return
+  // (bug 2026-11-25).
+  if (next === "suspended" && vendor.status !== "suspended") {
+    await setVendorProductsOnSale(req.scope, vendor.id, false)
+  } else if (next && next !== "suspended" && vendor.status === "suspended") {
+    await setVendorProductsOnSale(req.scope, vendor.id, true)
+  }
+  // First approval: tell the vendor (the pending screen promises it).
+  if (next === "active" && vendor.status === "pending") {
+    await sendVendorApprovedEmail(req.scope, vendor)
   }
   res.json({ vendor: await vendorById(req, vendor.id) })
 }

@@ -32,6 +32,14 @@ export type VendorOrder = {
   shipping_methods: { name: string }[];
   remaining: Record<string, number>;
   fully_fulfilled: boolean;
+  // The customer's order (bug 2026-11-25): its number, whether it's paid,
+  // and whether it was cancelled, so nothing unpaid is shipped.
+  customer_order?: {
+    display_id: number | null;
+    payment: "paid" | "authorized" | "unpaid";
+    canceled: boolean;
+  } | null;
+
   commission: {
     rate: number;
     amount: number;
@@ -112,6 +120,7 @@ export default async function OrdersPage({
                   <FulfilButton orderId={o.id} />
                 )}
               </div>
+              <OrderFacts o={o} />
               <ul>
                 {o.items.map((i) => (
                   <li key={i.id}>
@@ -164,5 +173,42 @@ export default async function OrdersPage({
         </p>
       )}
     </Shell>
+  );
+}
+
+const PAYMENT: Record<string, string> = {
+  paid: "Paid",
+  authorized: "Not paid yet (pay later): wait for the marketplace before you ship",
+  unpaid: "Unpaid: don't ship yet",
+};
+
+/** Customer order number, payment, cancelled parent and tracking numbers. */
+export function OrderFacts({
+  o,
+}: {
+  o: Pick<VendorOrder, "customer_order"> & {
+    fulfillments?: { id: string; labels?: { tracking_number: string | null }[] }[];
+  };
+}) {
+  const c = o.customer_order;
+  const tracking = (o.fulfillments ?? [])
+    .flatMap((f) => f.labels ?? [])
+    .map((l) => l.tracking_number)
+    .filter(Boolean);
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      {c?.canceled && (
+        <p role="alert" className="rounded-lg bg-ui-tag-red-bg px-3 py-2 text-ui-tag-red-text">
+          The customer&apos;s order was cancelled. Don&apos;t ship it.
+        </p>
+      )}
+      {c && (
+        <p className={c.payment === "paid" ? "text-ui-fg-subtle" : "text-ui-tag-orange-text"}>
+          {c.display_id ? `Customer order #${c.display_id} · ` : ""}
+          {PAYMENT[c.payment]}
+        </p>
+      )}
+      {tracking.length > 0 && <p className="text-ui-fg-subtle">Tracking: {tracking.join(", ")}</p>}
+    </div>
   );
 }

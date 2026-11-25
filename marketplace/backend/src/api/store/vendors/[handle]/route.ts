@@ -10,14 +10,20 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     data: [vendor],
   } = await req.scope.resolve(ContainerRegistrationKeys.QUERY).graph({
     entity: "vendor",
-    fields: ["id", "handle", "name", "logo", "status", "products.id", "products.status"],
+    fields: ["id", "handle", "name", "logo", "description", "status", "products.id", "products.status"],
     filters: { handle: req.params.handle },
   })
   if (!vendor || vendor.status !== "active") {
     throw new MedusaError(MedusaError.Types.NOT_FOUND, "Vendor not found.")
   }
   res.json({
-    vendor: { id: vendor.id, handle: vendor.handle, name: vendor.name, logo: vendor.logo },
+    vendor: {
+      id: vendor.id,
+      handle: vendor.handle,
+      name: vendor.name,
+      logo: vendor.logo,
+      description: vendor.description,
+    },
     product_ids: (vendor.products ?? [])
       .filter((p) => p?.status === "published")
       .map((p) => p!.id),

@@ -10,6 +10,7 @@ type Product = {
   description: string | null
   status: "draft" | "proposed" | "published" | "rejected"
   metadata: Record<string, unknown> | null
+  variants?: { sku: string | null; prices?: { amount: number; currency_code: string }[] }[]
 }
 
 // Fix a draft or rejected product and send it for review (gap review
@@ -20,7 +21,11 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   if (vendor.status !== "active") {
     return <Shell vendor={vendor} active="/products">{null}</Shell>
   }
-  const { products, approval_required } = await vendorGet<{ products: Product[]; approval_required?: boolean }>(
+  const { products, approval_required, currencies } = await vendorGet<{
+    products: Product[]
+    approval_required?: boolean
+    currencies?: string[]
+  }>(
     token,
     "/vendors/products"
   )
@@ -37,13 +42,17 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           The marketplace rejected this product{note ? `: ${note}` : "."} Fix it below and send it for review again.
         </p>
       )}
-      {product.status === "published" ? (
-        <p className="card p-4 text-sm">
-          “{product.title}” is on sale. Ask the marketplace to unpublish it if you need to change it.
-        </p>
-      ) : (
-        <EditProductForm product={product} approvalRequired={approval_required !== false} />
-      )}
+      {/* A product on sale can be edited too (bug 2026-11-25); with approval
+          required the edit goes back to review. */}
+      <EditProductForm
+        product={{
+          ...product,
+          price: product.variants?.[0]?.prices?.[0] ?? null,
+          sku: product.variants?.[0]?.sku ?? null,
+        }}
+        approvalRequired={approval_required !== false}
+        currencies={currencies ?? []}
+      />
     </Shell>
   )
 }

@@ -13,7 +13,7 @@ import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import type MarketplaceModuleService from "../../modules/marketplace/service"
 import { groupPayouts, PAYOUTS_LOCK } from "../../lib/vendor-commission"
-import { childOrdersWithRefundedParent } from "./refund-review"
+import { childOrdersWithRefundedParent, parentStates } from "./refund-review"
 
 
 type CreatePayoutsInput = { cutoff: Date; period: string }
@@ -40,7 +40,14 @@ const createPayoutsStep = createStep(
       container,
       due.filter((c) => c.refund_review !== "settled").map((c) => c.order_id)
     )
-    const held = due.filter((c) => c.refund_review !== "settled" && refunded.has(c.order_id))
+    // A cancelled parent (bug 2026-11-25): held for the admin as a refund,
+    // even if its fulfilled child couldn't be cancelled.
+    const parents = await parentStates(container, due.map((c) => c.order_id))
+    const held = due.filter(
+      (c) =>
+        c.refund_review !== "settled" &&
+        (refunded.has(c.order_id) || parents.get(c.order_id)?.canceled)
+    )
     const toFlag = held.filter((c) => c.refund_review !== "to_review")
     if (toFlag.length) {
       await marketplace.updateVendorCommissions(
@@ -51,7 +58,11 @@ const createPayoutsStep = createStep(
     // Owner decision 2026-11-25: only a fulfilled child order is paid out; an
     // unfulfilled one stays pending for a later payout.
     const fulfilled = await fulfilledOrderIds(container, notHeld.map((c) => c.order_id))
-    const pending = notHeld.filter((c) => fulfilled.has(c.order_id))
+    // And only once the customer's payment is captured (bug 2026-11-25: a
+    // "pay later" order was paid out to the vendor before the customer paid).
+    const pending = notHeld.filter(
+      (c) => fulfilled.has(c.order_id) && parents.get(c.order_id)?.captured
+    )
     const lines = groupPayouts(pending)
     const existing = await marketplace.listVendorPayouts({ period: input.period })
     const taken = new Set(existing.map((p) => `${p.vendor_id}:${p.currency_code}`))

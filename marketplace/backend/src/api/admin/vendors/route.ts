@@ -4,6 +4,7 @@ import type {
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { GetAdminVendors } from "./validators"
+import { defaultCommissionRate } from "../../../lib/vendor-commission"
 
 export const ADMIN_VENDOR_FIELDS = [
   "id",
@@ -36,5 +37,13 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       filters: status ? { status } : {},
       pagination: { skip: offset, take: limit, order: { created_at: "DESC" } },
     })
-  res.json({ vendors, count: metadata?.count ?? vendors.length, limit, offset })
+  // default_commission_rate: what a vendor without its own rate pays, so the
+  // admin shows the number instead of "default" (bug 2026-11-25).
+  res.json({
+    vendors,
+    count: metadata?.count ?? vendors.length,
+    limit,
+    offset,
+    default_commission_rate: defaultCommissionRate(),
+  })
 }

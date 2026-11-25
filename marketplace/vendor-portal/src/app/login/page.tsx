@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"login" | "signup">("login")
   // Controlled, so a wrong password doesn't empty the form.
   const [email, setEmail] = useState("")
+  // Kept in state so a sign-up error doesn't wipe them (bug 2026-11-25).
+  const [names, setNames] = useState({ name: "", first_name: "", last_name: "" })
   const [loginState, loginAction, loggingIn] = useActionState<AuthState, FormData>(login, {})
   const [signUpState, signUpAction, signingUp] = useActionState<AuthState, FormData>(signUp, {})
   const state = mode === "login" ? loginState : signUpState
@@ -27,16 +29,16 @@ export default function LoginPage() {
             <>
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Shop name</span>
-                <input className="field" name="name" required maxLength={120} />
+                <input className="field" name="name" required maxLength={120} value={names.name} onChange={(e) => setNames((n) => ({ ...n, name: e.target.value }))} />
               </label>
               <div className="flex gap-2">
                 <label className="flex flex-1 flex-col gap-1">
                   <span className="text-sm font-medium">First name</span>
-                  <input className="field" name="first_name" autoComplete="given-name" maxLength={80} />
+                  <input className="field" name="first_name" autoComplete="given-name" maxLength={80} value={names.first_name} onChange={(e) => setNames((n) => ({ ...n, first_name: e.target.value }))} />
                 </label>
                 <label className="flex flex-1 flex-col gap-1">
                   <span className="text-sm font-medium">Last name</span>
-                  <input className="field" name="last_name" autoComplete="family-name" maxLength={80} />
+                  <input className="field" name="last_name" autoComplete="family-name" maxLength={80} value={names.last_name} onChange={(e) => setNames((n) => ({ ...n, last_name: e.target.value }))} />
                 </label>
               </div>
             </>

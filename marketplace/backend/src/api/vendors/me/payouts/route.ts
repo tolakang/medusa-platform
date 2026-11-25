@@ -26,22 +26,26 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   })
   const { data: pending } = await query.graph({
     entity: "vendor_commission",
-    fields: ["payout_amount", "currency_code"],
+    fields: ["payout_amount", "currency_code", "refund_review"],
     filters: { vendor_id: vendorId, status: "pending" },
   })
-  // Summed exactly, rounded once per currency.
-  const sums = new Map<string, ReturnType<typeof MathBN.convert>>()
-  const upcoming = new Map<string, number>()
-  for (const c of pending) {
-    const sum = MathBN.add(sums.get(c.currency_code) ?? 0, c.payout_amount)
-    sums.set(c.currency_code, sum)
-    upcoming.set(c.currency_code, roundToCurrency(sum, c.currency_code))
+  // Held for the admin (a refund or cancelled customer order): not counted as
+  // earned until settled (bug 2026-11-25).
+  const sum = (rows: typeof pending) => {
+    const sums = new Map<string, ReturnType<typeof MathBN.convert>>()
+    const out = new Map<string, number>()
+    for (const c of rows) {
+      const s = MathBN.add(sums.get(c.currency_code) ?? 0, c.payout_amount)
+      sums.set(c.currency_code, s)
+      out.set(c.currency_code, roundToCurrency(s, c.currency_code))
+    }
+    return [...out.entries()].map(([currency_code, amount]) => ({ currency_code, amount }))
   }
+  const onHold = pending.filter((c) => c.refund_review === "to_review")
+  const earned = pending.filter((c) => c.refund_review !== "to_review")
   res.json({
     vendor_payouts: payouts,
-    not_yet_paid_out: [...upcoming.entries()].map(([currency_code, amount]) => ({
-      currency_code,
-      amount,
-    })),
+    not_yet_paid_out: sum(earned),
+    on_hold: sum(onHold),
   })
 }

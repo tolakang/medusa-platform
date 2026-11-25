@@ -159,3 +159,115 @@ export const settleRefundReviewWorkflow = createWorkflow(
     return new WorkflowResponse(result)
   }
 )
+
+export type ParentState = {
+  parent_id: string
+  parent_display_id: number | null
+  canceled: boolean
+  captured: boolean
+  // paid: captured; authorized: payment held but not taken yet (e.g. pay
+  // later / cash on delivery with the system provider); unpaid: neither.
+  payment: "paid" | "authorized" | "unpaid"
+}
+
+/**
+ * For each child order (of these), its parent order's state: cancelled, and
+ * whether its payment is captured. A commission is only paid out once the
+ * customer's payment is captured (pay later / authorized-only orders wait),
+ * and never for a cancelled parent. "Captured" = the payment collections'
+ * captured_amount covers their amount (MEDUSA_SKILL §6: with the system
+ * provider a completed order is authorized, not captured, until
+ * POST /admin/payments/:id/capture).
+ */
+export async function parentStates(
+  container: MedusaContainer,
+  childOrderIds: string[]
+): Promise<Map<string, ParentState>> {
+  const result = new Map<string, ParentState>()
+  if (!childOrderIds.length) {
+    return result
+  }
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const { data: children } = await query.graph({
+    entity: "order",
+    fields: ["id", "metadata"],
+    filters: { id: [...new Set(childOrderIds)] },
+  })
+  const parentOf = new Map<string, string>()
+  for (const c of children) {
+    const parent = c.metadata?.[PARENT_ORDER_KEY] as string | undefined
+    if (parent) {
+      parentOf.set(c.id, parent)
+    }
+  }
+  const parentIds = [...new Set(parentOf.values())]
+  if (!parentIds.length) {
+    return result
+  }
+  const { data: parents } = await query.graph({
+    entity: "order",
+    fields: [
+      "id",
+      "display_id",
+      "status",
+      "payment_collections.status",
+      "payment_collections.amount",
+      "payment_collections.authorized_amount",
+      "payment_collections.captured_amount",
+    ],
+    filters: { id: parentIds },
+  })
+  const byId = new Map(parents.map((p) => [p.id, p]))
+  for (const [child, parentId] of parentOf) {
+    const p = byId.get(parentId)
+    if (!p) {
+      continue
+    }
+    const collections = (p.payment_collections ?? []).filter(
+      (pc) => pc && pc.status !== "canceled"
+    )
+    let amount = MathBN.convert(0)
+    let captured = MathBN.convert(0)
+    let authorized = MathBN.convert(0)
+    for (const pc of collections) {
+      amount = MathBN.add(amount, pc!.amount ?? 0)
+      captured = MathBN.add(captured, pc!.captured_amount ?? 0)
+      authorized = MathBN.add(authorized, pc!.authorized_amount ?? 0)
+    }
+    const isCaptured = MathBN.gt(amount, 0) && MathBN.gte(captured, amount)
+    result.set(child, {
+      parent_id: parentId,
+      parent_display_id: p.display_id == null ? null : Number(p.display_id),
+      canceled: p.status === "canceled",
+      captured: isCaptured,
+      payment: isCaptured
+        ? "paid"
+        : MathBN.gt(amount, 0) && MathBN.gte(authorized, amount)
+          ? "authorized"
+          : "unpaid",
+    })
+  }
+  return result
+}
+
+/**
+ * A cancelled parent order: its children's pending commissions that the
+ * cascade couldn't cancel (a fulfilled child) are held for the admin
+ * (`to_review`, as a refund, F-078), so they're never paid automatically.
+ */
+export async function flagCanceledParent(container: MedusaContainer, childOrderIds: string[]) {
+  if (!childOrderIds.length) {
+    return { flagged: 0 }
+  }
+  const marketplace = container.resolve<MarketplaceModuleService>(MARKETPLACE_MODULE)
+  const commissions = await marketplace.listVendorCommissions({ order_id: childOrderIds })
+  const pending = commissions.filter(
+    (c) => c.status === "pending" && c.refund_review !== "to_review"
+  )
+  if (pending.length) {
+    await marketplace.updateVendorCommissions(
+      pending.map((c) => ({ id: c.id, refund_review: "to_review" as const }))
+    )
+  }
+  return { flagged: pending.length }
+}

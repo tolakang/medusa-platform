@@ -10,6 +10,8 @@ describe("format (TASKS P6-09)", () => {
     assert.equal(money(12.5, "usd"), "$12.50")
     assert.equal(money("3", "USD"), "$3.00")
     assert.equal(money(null, "usd"), "$0.00")
+    // Riel without decimals (bug 2026-11-25).
+    assert.match(money(40050, "khr"), /^KHR\s40,050$/)
     assert.match(money(1, "zzz"), /^ZZZ\s1\.00$/)
     assert.equal(day("2026-11-10T15:00:00Z"), "2026-11-10")
     assert.equal(day(null), "")

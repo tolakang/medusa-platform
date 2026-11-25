@@ -4,7 +4,9 @@ import { useActionState } from "react"
 import { addProduct, type ProductFormState } from "./actions"
 
 // TASKS P6-09: the new-product form (one price; options come later).
-export function ProductForm() {
+export function ProductForm({ currencies }: { currencies: string[] }) {
+  // Only currencies a region sells in (bug 2026-11-25; GET /vendors/products).
+  const options = currencies.length ? currencies : ["usd"]
   const [state, action, saving] = useActionState<ProductFormState, FormData>(addProduct, {})
   return (
     <form action={action} className="card flex flex-col gap-3 p-4">
@@ -24,9 +26,12 @@ export function ProductForm() {
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium">Currency</span>
-          <select className="field" name="currency" defaultValue="usd">
-            <option value="usd">USD</option>
-            <option value="khr">KHR</option>
+          <select className="field" name="currency" defaultValue={options[0]}>
+            {options.map((c) => (
+              <option key={c} value={c}>
+                {c.toUpperCase()}
+              </option>
+            ))}
           </select>
         </label>
         <label className="flex flex-col gap-1">
