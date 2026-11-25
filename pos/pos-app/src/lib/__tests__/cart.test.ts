@@ -10,6 +10,7 @@ import {
   lineFromVariant,
   lineTotal,
   quickTender,
+  saleMayBeRecorded,
   setQuantity,
   type CartLine,
 } from "../cart.ts"
@@ -93,5 +94,16 @@ describe("cart (TASKS P2-10)", () => {
     assert.equal(formatMoney(12.5, "usd"), "$12.50")
     assert.equal(formatMoney(null, "usd"), "–")
     assert.ok(formatMoney(4000, "khr").includes("4,000"))
+  })
+})
+
+describe("saleMayBeRecorded (owner, 2026-11-25)", () => {
+  it("keeps the sale's ref after no answer or a server error, not after a refusal", () => {
+    assert.equal(saleMayBeRecorded(0), true)
+    assert.equal(saleMayBeRecorded(502), true)
+    assert.equal(saleMayBeRecorded(500), true)
+    assert.equal(saleMayBeRecorded(400), false)
+    assert.equal(saleMayBeRecorded(404), false)
+    assert.equal(saleMayBeRecorded(409), false)
   })
 })

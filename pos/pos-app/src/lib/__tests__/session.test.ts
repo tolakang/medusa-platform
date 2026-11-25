@@ -32,6 +32,8 @@ describe("proxy allow-list (TASKS P2-10)", () => {
     assert.equal(backendPosPath("POST", ["shifts", "open"]), "/pos/shifts/open")
     assert.equal(backendPosPath("POST", ["shifts", "close"]), "/pos/shifts/close")
     assert.equal(backendPosPath("POST", ["checkout"]), "/pos/checkout")
+    assert.equal(backendPosPath("POST", ["checkout", "preview"]), "/pos/checkout/preview")
+    assert.equal(backendPosPath("GET", ["checkout"]), "/pos/checkout")
     assert.equal(backendPosPath("GET", ["customers"]), "/pos/customers")
     assert.equal(backendPosPath("POST", ["customers"]), "/pos/customers")
     assert.equal(backendPosPath("GET", ["products", "lookup"]), "/pos/products/lookup")
@@ -39,7 +41,7 @@ describe("proxy allow-list (TASKS P2-10)", () => {
   })
 
   it("refuses other methods, paths and tricks", () => {
-    assert.equal(backendPosPath("GET", ["checkout"]), null)
+    assert.equal(backendPosPath("GET", ["checkout", "preview"]), null)
     assert.equal(backendPosPath("POST", ["registers"]), null)
     assert.equal(backendPosPath("DELETE", ["customers"]), null)
     assert.equal(backendPosPath("POST", ["cashiers", "accept"]), null)

@@ -12,6 +12,7 @@ import {
 import {
   PostPosCashierAccept,
   PostPosCheckout,
+  PostPosCheckoutPreview,
   PostPosCustomer,
   PostPosShiftClose,
   PostAdminPosShiftClose,
@@ -254,6 +255,11 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/pos/checkout',
       middlewares: [validateAndTransformBody(PostPosCheckout)],
+    },
+    {
+      method: ['POST'],
+      matcher: '/pos/checkout/preview',
+      middlewares: [validateAndTransformBody(PostPosCheckoutPreview)],
     },
     {
       method: ['POST'],

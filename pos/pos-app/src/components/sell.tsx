@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { api, type Customer, type LookupVariant, type PaymentMethod, type ReceiptOrder, type Register, type Shift } from "@/lib/api"
+import { api, ApiError, type CheckoutPreview, type Customer, type LookupVariant, type PaymentMethod, type ReceiptOrder, type Register, type Shift } from "@/lib/api"
 import {
   addLine,
   cartTotal,
@@ -10,6 +10,7 @@ import {
   itemCount,
   lineFromVariant,
   lineTotal,
+  saleMayBeRecorded,
   setQuantity,
   type CartLine,
 } from "@/lib/cart"
@@ -19,8 +20,12 @@ import { Receipt } from "./receipt"
 import { Scanner } from "./scanner"
 
 // One sale at a time (TASKS P2-10): scan → cart → optional customer and promo
-// code → payment → receipt. POST /pos/checkout (P2-05/P2-06) prices the sale,
-// applies promotions, records the payment and links the order to the shift.
+// code → price preview → payment → receipt. POST /pos/checkout/preview prices
+// the sale as checkout will (promotions, tax) before payment opens; POST
+// /pos/checkout (P2-05/P2-06) records the payment and links the order to the
+// shift. After a checkout with no answer the sale may be recorded: the cart
+// locks and keeps its ref until a retry succeeds, a check finds it not
+// recorded, or the cashier clears it (owner, 2026-11-25).
 
 type Done = { order: ReceiptOrder; method: PaymentMethod; tendered: number | null; customer: Customer | null }
 
@@ -42,11 +47,17 @@ export function Sell({
   const [choices, setChoices] = useState<LookupVariant[] | null>(null)
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null)
   // This sale's id (review 2, S7): new whenever the sale changes, the same
-  // for every try of one sale.
+  // for every try of one sale. The sale can't change while `uncertain`.
   const saleRef = useRef("")
   useEffect(() => {
     saleRef.current = crypto.randomUUID()
   }, [cart, customer, promo])
+  // The server's price for this cart, fetched when payment opens.
+  const [preview, setPreview] = useState<CheckoutPreview | null>(null)
+  const [pricing, setPricing] = useState(false)
+  // Set when a checkout got no answer: the sale may be recorded.
+  const [uncertain, setUncertain] = useState<{ method: PaymentMethod; tendered: number | null } | null>(null)
+  const [checking, setChecking] = useState(false)
   const [looking, setLooking] = useState(false)
   const [paying, setPaying] = useState(false)
   const [done, setDone] = useState<Done | null>(null)
@@ -86,6 +97,10 @@ export function Sell({
   }
 
   const lookup = async (code: string) => {
+    if (uncertain) {
+      setMessage({ tone: "error", text: "Finish this sale first: retry it, or check it and start a new one." })
+      return
+    }
     setLooking(true)
     setMessage(null)
     try {
@@ -115,9 +130,65 @@ export function Sell({
     }
     if (customer) body.customer_id = customer.id
     if (promo.trim()) body.promo_codes = [promo.trim()]
-    const { order } = await api<{ order: ReceiptOrder }>("checkout", { method: "POST", body })
-    setDone({ order, method, tendered, customer })
-    setPaying(false)
+    try {
+      const { order } = await api<{ order: ReceiptOrder }>("checkout", { method: "POST", body })
+      setDone({ order, method, tendered, customer })
+      setPaying(false)
+      setUncertain(null)
+    } catch (e) {
+      if (e instanceof ApiError && saleMayBeRecorded(e.status)) {
+        setUncertain({ method, tendered })
+        throw new ApiError(
+          `${e.message} The sale may already be recorded: press Complete sale again to retry it (it won't be recorded twice).`,
+          e.status
+        )
+      }
+      throw e
+    }
+  }
+
+  // Payment opens on the server's total, never the scan estimate.
+  const openPayment = async () => {
+    if (pricing) return
+    setPricing(true)
+    setMessage(null)
+    try {
+      const body: Record<string, unknown> = { shift_id: shift.id, items: checkoutItems(cart) }
+      if (customer) body.customer_id = customer.id
+      if (promo.trim()) body.promo_codes = [promo.trim()]
+      const { preview } = await api<{ preview: CheckoutPreview }>("checkout/preview", { method: "POST", body })
+      setPreview(preview)
+      setPaying(true)
+    } catch (e) {
+      setMessage({ tone: "error", text: (e as Error).message })
+    } finally {
+      setPricing(false)
+    }
+  }
+
+  // After no answer: was the sale recorded? Yes → its receipt. No → the cart
+  // unlocks with a new ref, so an edited sale is a new sale.
+  const checkSale = async () => {
+    if (!uncertain || checking) return
+    setChecking(true)
+    setMessage(null)
+    try {
+      const { order } = await api<{ order: ReceiptOrder }>("checkout", {
+        query: { shift_id: shift.id, client_ref: saleRef.current },
+      })
+      setDone({ order, method: uncertain.method, tendered: uncertain.tendered, customer })
+      setUncertain(null)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        saleRef.current = crypto.randomUUID()
+        setUncertain(null)
+        setMessage({ tone: "info", text: "The sale was not recorded. Edit the cart if needed and press Pay again." })
+      } else {
+        setMessage({ tone: "error", text: (e as Error).message })
+      }
+    } finally {
+      setChecking(false)
+    }
   }
 
   const clearSale = () => {
@@ -126,6 +197,7 @@ export function Sell({
     setCustomer(null)
     setPromo("")
     setMessage(null)
+    setUncertain(null)
   }
 
   const undoClear = () => {
@@ -138,7 +210,7 @@ export function Sell({
 
   const total = cartTotal(cart)
   const unpriced = cart.some((l) => l.unit_price === null)
-  const canPay = cart.length > 0 && !unpriced
+  const canPay = cart.length > 0 && !unpriced && !uncertain && !pricing
 
   // F9 opens payment from anywhere on the sale screen (design critique, 2026-11-23).
   useEffect(() => {
@@ -146,12 +218,12 @@ export function Sell({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "F9" && canPay) {
         e.preventDefault()
-        setPaying(true)
+        openPayment()
       }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [done, paying, canPay, active])
+  }, [done, paying, canPay, active, cart, customer, promo])
 
   const newSale = () => {
     setCart([])
@@ -159,6 +231,7 @@ export function Sell({
     setPromo("")
     setDone(null)
     setMessage(null)
+    setPreview(null)
   }
 
   if (done) {
@@ -202,7 +275,7 @@ export function Sell({
           </div>
         )}
 
-        <div className="card divide-y divide-ui-border-base">
+        <fieldset disabled={!!uncertain} className="card divide-y divide-ui-border-base">
           {!cart.length && !cleared && <p className="p-6 text-center text-ui-fg-subtle">Scan an item to start the sale.</p>}
           {!cart.length && cleared && (
             <div role="status" className="flex items-center justify-between gap-3 p-4">
@@ -250,10 +323,11 @@ export function Sell({
               </button>
             </div>
           ))}
-        </div>
+        </fieldset>
       </section>
 
       <aside className="flex flex-col gap-3">
+        <fieldset disabled={!!uncertain} className="flex flex-col gap-3">
         <CustomerPicker customer={customer} onChange={setCustomer} />
         <div className="card p-4">
           <label className="flex flex-col gap-1">
@@ -267,21 +341,38 @@ export function Sell({
             />
           </label>
         </div>
+        </fieldset>
         <div className="card flex flex-col gap-3 p-4">
           <div className="flex items-baseline justify-between">
             <span className="text-ui-fg-subtle">{itemCount(cart)} items</span>
             <span className="text-3xl font-semibold tabular-nums">{formatMoney(total, currency)}</span>
           </div>
           <p className="text-xs text-ui-fg-subtle">
-            Estimate before promotions and tax; the receipt shows the final total.
+            Estimate before promotions and tax; Pay shows the final total.
           </p>
           {unpriced && <p className="text-sm text-ui-fg-error">Some items have no price in {currency.toUpperCase()}.</p>}
-          {paying ? (
-            <Payment total={total} currency={currency} onPay={pay} onCancel={() => setPaying(false)} />
+          {paying && preview ? (
+            <Payment preview={preview} currency={currency} onPay={pay} onCancel={() => setPaying(false)} />
+          ) : uncertain ? (
+            <div role="alert" className="flex flex-col gap-2">
+              <p className="text-sm text-ui-fg-error">
+                The last try got no answer, so this sale may already be recorded. The cart is locked until you retry
+                it or check it.
+              </p>
+              <button className="btn-primary w-full" onClick={() => setPaying(true)} disabled={!preview || checking}>
+                Retry sale
+              </button>
+              <button className="btn-secondary w-full" onClick={checkSale} disabled={checking}>
+                {checking ? "Checking…" : "Check and start new"}
+              </button>
+              <button className="self-start py-2 text-sm text-ui-fg-error" onClick={clearSale} disabled={checking}>
+                Abandon sale
+              </button>
+            </div>
           ) : (
             <>
-              <button className="btn-primary w-full" onClick={() => setPaying(true)} disabled={!canPay} aria-keyshortcuts="F9">
-                Pay <kbd className="ml-2 hidden text-xs opacity-70 lg:inline">F9</kbd>
+              <button className="btn-primary w-full" onClick={openPayment} disabled={!canPay} aria-keyshortcuts="F9">
+                {pricing ? "Pricing…" : "Pay"} <kbd className="ml-2 hidden text-xs opacity-70 lg:inline">F9</kbd>
               </button>
               <button className="self-start py-2 text-sm text-ui-fg-error" onClick={clearSale} disabled={!cart.length}>
                 Clear sale

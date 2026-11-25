@@ -1,11 +1,13 @@
 import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import type { MedusaContainer } from "@medusajs/framework/types"
+import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils"
+import { parsePosQuery } from "../../pos-query"
 import {
   findPosSale,
   POS_SALE_RECORDED_MESSAGE,
   posCheckoutWorkflow,
 } from "../../../workflows/pos-checkout"
-import type { PostPosCheckoutType } from "../validators"
+import { GetPosCheckout, type PostPosCheckoutType } from "../validators"
 
 // POST /pos/checkout (TASKS P2-06): a sale on the open shift (pos-checkout,
 // P2-05). Returns the order with what the receipt prints. A retry with the
@@ -31,10 +33,15 @@ export const POST = async (req: AuthenticatedMedusaRequest<PostPosCheckoutType>,
     orderId = recorded
     status = 200
   }
-  const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
+  const order = await posReceiptOrder(req.scope, orderId)
+  res.status(status).json({ order, payment_method: req.validatedBody.payment_method })
+}
+
+// What the receipt prints.
+async function posReceiptOrder(container: MedusaContainer, orderId: string) {
   const {
     data: [order],
-  } = await query.graph({
+  } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
     entity: "order",
     fields: [
       "id",
@@ -57,5 +64,22 @@ export const POST = async (req: AuthenticatedMedusaRequest<PostPosCheckoutType>,
     ],
     filters: { id: orderId },
   })
-  res.status(status).json({ order, payment_method: req.validatedBody.payment_method })
+  return order
+}
+
+// GET /pos/checkout?shift_id&client_ref (owner, 2026-11-25): after a lost
+// answer the till asks whether the sale was recorded. 404 means it was not:
+// pos-checkout records a sale in one workflow, so a sale is either complete
+// or not there. Asked while that sale is still running, the shift lock makes
+// the answer wait for it.
+export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
+  const { shift_id, client_ref } = parsePosQuery(GetPosCheckout, req.query)
+  const locking = req.scope.resolve(Modules.LOCKING)
+  const orderId = await locking.execute(`pos-shift:${shift_id}`, () => findPosSale(req.scope, shift_id, client_ref), {
+    timeout: 10,
+  })
+  if (!orderId) {
+    throw new MedusaError(MedusaError.Types.NOT_FOUND, "This sale was not recorded.")
+  }
+  res.json({ order: await posReceiptOrder(req.scope, orderId) })
 }

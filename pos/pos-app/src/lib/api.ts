@@ -78,6 +78,15 @@ export type Customer = {
   phone: string | null
 }
 
+// POST /pos/checkout/preview: the sale priced as checkout prices it.
+export type CheckoutPreview = {
+  currency_code: string
+  subtotal: number
+  discount_total: number
+  tax_total: number
+  total: number
+}
+
 export type ReceiptOrder = {
   id: string
   display_id: number
