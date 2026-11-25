@@ -3,6 +3,7 @@ import { cookies as nextCookies } from "next/headers"
 
 import CartTotals from "@modules/common/components/cart-totals"
 import Help from "@modules/order/components/help"
+import { CONTACT_URL } from "@lib/shop"
 import EventTickets from "@modules/order/components/event-tickets"
 import Items from "@modules/order/components/items"
 import OnboardingCta from "@modules/order/components/onboarding-cta"

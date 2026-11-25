@@ -12,6 +12,12 @@ export function ProductForm({ products }: { products: Product[] }) {
   // action, so a failed save put the boxes back to the saved selection while
   // the count kept the unsaved one. The Save bar stays in view with the count.
   const [picked, setPicked] = useState(() => new Set(products.filter((p) => p.selected).map((p) => p.id)))
+  // Search over a long list (ui-compare, 2026-11-25). Rows that don't match are
+  // hidden, not removed, so their ticks are still sent on Save.
+  const [query, setQuery] = useState("")
+  const q = query.trim().toLowerCase()
+  const matches = (p: Product) => !q || p.title.toLowerCase().includes(q) || p.handle.toLowerCase().includes(q)
+  const shown = products.filter(matches).length
   const toggle = (id: string, on: boolean) =>
     setPicked((prev) => {
       const next = new Set(prev)
@@ -24,9 +30,25 @@ export function ProductForm({ products }: { products: Product[] }) {
       {products.length === 0 && (
         <p className="text-sm text-ui-fg-subtle">The shop has no published products yet.</p>
       )}
+      {products.length > 0 && (
+        <label className="flex flex-col gap-1">
+          <span className="sr-only">Search products</span>
+          <input
+            className="field"
+            type="search"
+            placeholder="Search products"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.preventDefault()
+            }}
+          />
+        </label>
+      )}
+      {q && shown === 0 && <p className="text-sm text-ui-fg-subtle">No products match “{query.trim()}”.</p>}
       <ul className="flex flex-col divide-y divide-ui-border-base">
         {products.map((product) => (
-          <li key={product.id} className="flex items-center gap-3 py-2">
+          <li key={product.id} className={`${matches(product) ? "flex" : "hidden"} items-center gap-3 py-2`}>
             {product.selected && <input type="hidden" name="current" value={product.id} />}
             <input
               id={`p-${product.id}`}
