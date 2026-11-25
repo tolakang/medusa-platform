@@ -33,8 +33,14 @@ const Payment = ({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentComplete, setPaymentComplete] = useState(false)
+  // A single method that needs no card form is chosen for the shopper.
+  const onlyMethod =
+    availablePaymentMethods?.length === 1 &&
+    !isStripeLike(availablePaymentMethods[0].id)
+      ? availablePaymentMethods[0].id
+      : ""
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    activeSession?.provider_id ?? ""
+    activeSession?.provider_id ?? onlyMethod
   )
 
   const searchParams = useSearchParams()

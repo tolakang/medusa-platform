@@ -19,7 +19,9 @@
 
   input:focus ~ label,
   input:not(:placeholder-shown) ~ label {
-    @apply -translate-y-2 text-xsmall-regular;
+    /* Up far enough, and with no line-height, that it never sits on the
+       typed text (role test 2026-11-25). */
+    @apply -translate-y-[10px] text-xsmall-regular leading-none;
   }
 
   input:focus ~ label {

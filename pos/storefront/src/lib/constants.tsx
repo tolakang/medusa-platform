@@ -1,5 +1,5 @@
 import { MANUAL_PAYMENT_LABEL } from "@lib/shop"
-import { CreditCard } from "@medusajs/icons"
+import { Cash, CreditCard } from "@medusajs/icons"
 import Bancontact from "@modules/common/icons/bancontact"
 import Ideal from "@modules/common/icons/ideal"
 import PayPal from "@modules/common/icons/paypal"
@@ -32,7 +32,8 @@ export const paymentInfoMap: Record<
   },
   pp_system_default: {
     title: MANUAL_PAYMENT_LABEL,
-    icon: <CreditCard />,
+    // Cash or bank transfer, not a card (role test 2026-11-25).
+    icon: <Cash />,
   },
   // ABA PayWay (TASKS P1-03): the customer picks ABA Pay, KHQR or a card on
   // PayWay's own page.

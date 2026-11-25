@@ -8,6 +8,7 @@ import { convertToLocale } from "@lib/util/money"
 import {
   CATEGORY_ATTRIBUTE,
   LABELS_ATTRIBUTE,
+  humanizeLabel,
   OPTION_VALUES_ATTRIBUTE,
 } from "./attributes"
 
@@ -41,7 +42,6 @@ function refinementLabel(refinement: Refinement, currencyCode: string) {
     const amount = convertToLocale({
       amount: Number(value),
       currency_code: indexedCurrency(currencyCode),
-      maximumFractionDigits: 0,
     })
 
     return operator === "<=" || operator === "<"
@@ -54,7 +54,7 @@ function refinementLabel(refinement: Refinement, currencyCode: string) {
   }
 
   if (attribute === LABELS_ATTRIBUTE) {
-    return `Label: ${label}`
+    return `Label: ${humanizeLabel(label)}`
   }
 
   return label

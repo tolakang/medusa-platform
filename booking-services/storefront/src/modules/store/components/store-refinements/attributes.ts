@@ -5,6 +5,12 @@ export const CATEGORY_ATTRIBUTE = "category"
 // The index calls the product's tags "labels".
 export const LABELS_ATTRIBUTE = "labels"
 
+/** "last-chance" -> "Last chance": tags are stored as slugs. */
+export function humanizeLabel(value: string) {
+  const words = value.replace(/[-_]+/g, " ").trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
 export const getSortOptions = (currencyCode: string) => {
   const minPrice = priceAttribute("min_price", currencyCode)
 
