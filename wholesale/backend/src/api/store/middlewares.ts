@@ -5,6 +5,7 @@ import { storeCatalogMiddlewares } from "./catalog/middlewares";
 import { storeCompaniesMiddlewares } from "./companies/middlewares";
 import { storeFreeShippingMiddlewares } from "./free-shipping/middlewares";
 import { storeInvoicesMiddlewares } from "./invoices/middlewares";
+import { storePriceTiersMiddlewares } from "./price-tiers/middlewares";
 import { storeQuotesMiddlewares } from "./quotes/middlewares";
 import { requireProviderForTerms } from "./payment-terms-middleware";
 import { storeSearchMiddlewares } from "./search/middlewares";
@@ -16,6 +17,7 @@ export const storeMiddlewares: MiddlewareRoute[] = [
   ...storeCompaniesMiddlewares,
   ...storeQuotesMiddlewares,
   ...storeFreeShippingMiddlewares,
+  ...storePriceTiersMiddlewares,
   ...storeApprovalsMiddlewares,
   ...storeSearchMiddlewares,
   ...storeInvoicesMiddlewares,
