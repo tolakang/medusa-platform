@@ -26,9 +26,9 @@ export function AddServiceForm({ currency }: { currency: string }) {
             min={5}
             max={720}
             step={5}
-            placeholder="Minutes"
+            placeholder={i === 0 ? "Minutes, like 30" : "Minutes"}
             aria-label={`Length ${i + 1} in minutes`}
-            defaultValue={i === 0 ? 30 : undefined}
+            onFocus={(e) => e.currentTarget.select()}
           />
           <input
             className="field"

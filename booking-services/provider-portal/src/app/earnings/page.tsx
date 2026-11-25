@@ -106,11 +106,20 @@ export default async function EarningsPage() {
                         {when}
                         {b?.order_display_id ? <span className="text-ui-fg-subtle"> · #{b.order_display_id}</span> : null}
                       </td>
-                      <td>{money(c.line_total, c.currency_code)}</td>
+                      <td>{c.status === "cancelled" ? <s>{money(c.line_total, c.currency_code)}</s> : money(c.line_total, c.currency_code)}</td>
+                      {/* A cancelled (refunded) booking earns nothing: no commission, nothing owed. */}
                       <td>
-                        {money(c.amount, c.currency_code)} ({c.rate}%)
+                        {c.status === "cancelled" ? (
+                          <>
+                            <s className="text-ui-fg-subtle" aria-hidden>{money(c.amount, c.currency_code)}</s> {money(0, c.currency_code)}
+                          </>
+                        ) : (
+                          <>
+                            {money(c.amount, c.currency_code)} ({c.rate}%)
+                          </>
+                        )}
                       </td>
-                      <td>{money(c.payout_amount, c.currency_code)}</td>
+                      <td>{money(c.status === "cancelled" ? 0 : c.payout_amount, c.currency_code)}</td>
                       <td>{c.refund_review === "to_review" ? "On hold (refund)" : STATUS[c.status]}</td>
                     </tr>
                   )

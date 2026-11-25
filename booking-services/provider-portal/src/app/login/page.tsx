@@ -104,13 +104,13 @@ export default function LoginPage() {
             <>
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Your name</span>
-                <input className="field" name="name" required maxLength={120} autoComplete="name" />
+                <input className="field" name="name" aria-label="Your name" required maxLength={120} autoComplete="name" />
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">
                   Area you serve <span className="font-normal text-ui-fg-muted">(optional)</span>
                 </span>
-                <input className="field" name="area" maxLength={200} />
+                <input className="field" name="area" aria-label="Area you serve (optional)" maxLength={200} />
               </label>
             </>
           )}
@@ -119,6 +119,7 @@ export default function LoginPage() {
             <input
               className="field"
               name="email"
+              aria-label="Email"
               type="email"
               autoComplete="username"
               required
@@ -134,6 +135,7 @@ export default function LoginPage() {
               <input
                 className="field font-mono uppercase tracking-wider"
                 name="invite_code"
+                aria-label="Invite code"
                 required
                 maxLength={40}
                 autoComplete="off"
@@ -184,6 +186,7 @@ export default function LoginPage() {
                 <input
                   className="field"
                   name="confirm"
+                  aria-label="Type the password again"
                   type={show ? "text" : "password"}
                   autoComplete="new-password"
                   minLength={MIN_PASSWORD}
