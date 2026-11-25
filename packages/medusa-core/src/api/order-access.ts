@@ -44,7 +44,18 @@ export function hasValidOrderProof(
   return safeEqual(sig, signOrderAccess(secret, orderId, exp))
 }
 
-export async function requireOrderAccess(
+/**
+ * An app's own extra rule, asked only when the signed-in customer does not own
+ * the order (wholesale: an admin of the buyer's company). True lets it through.
+ */
+export type ExtraOrderAccess = (
+  scope: MedusaRequest["scope"],
+  order: { id: string; customer_id?: string | null },
+  customerId: string
+) => Promise<boolean>
+
+export const requireOrderAccessWith = (extra?: ExtraOrderAccess) =>
+  async function requireOrderAccess(
   req: MedusaRequest,
   _res: MedusaResponse,
   next: MedusaNextFunction
@@ -66,7 +77,13 @@ export async function requireOrderAccess(
     const {
       data: [order],
     } = await query.graph({ entity: "order", fields: ["id", "customer_id"], filters: { id: orderId } })
-    if (!order || order.customer_id !== actorId.actor_id) {
+    if (!order) {
+      return notFound()
+    }
+    if (
+      order.customer_id !== actorId.actor_id &&
+      !(extra && (await extra(req.scope, order, actorId.actor_id)))
+    ) {
       return notFound()
     }
     next()
@@ -74,3 +91,5 @@ export async function requireOrderAccess(
     next(e)
   }
 }
+
+export const requireOrderAccess = requireOrderAccessWith()

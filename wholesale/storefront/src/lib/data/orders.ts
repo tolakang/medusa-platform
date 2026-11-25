@@ -5,10 +5,14 @@ import { addToCartBulk } from "@/lib/data/cart"
 import { getAuthHeaders, getCacheOptions } from "@/lib/data/cookies"
 import medusaError from "@/lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
+import { orderAccessHeaders } from "./order-access"
 
 export const retrieveOrder = async (id: string) => {
+  // The backend answers only the buyer, their company admin or the browser
+  // that placed the order (signed proof from order-access.ts); else 404.
   const headers = {
     ...(await getAuthHeaders()),
+    ...(await orderAccessHeaders(id)),
   }
 
   const next = {
