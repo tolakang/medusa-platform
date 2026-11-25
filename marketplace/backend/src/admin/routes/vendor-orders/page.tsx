@@ -21,7 +21,24 @@ type VendorOrder = {
   currency_code: string
   created_at: string
   parent_order_id: string | null
+  parent_display_id?: number | null
+  parent_canceled?: boolean
+  fulfillment_status?: "fulfilled" | "partially_fulfilled" | "not_fulfilled"
+  payment_status?: "paid" | "authorized" | "unpaid" | null
   vendor: { id: string; name: string }
+}
+
+// Fulfilment and payment in staff words (bug 2026-11-25: a fulfilled order
+// showed "Waiting", from order.status).
+const FULFILMENT: Record<string, [string, "green" | "orange" | "grey"]> = {
+  fulfilled: ["Fulfilled", "green"],
+  partially_fulfilled: ["Partly fulfilled", "orange"],
+  not_fulfilled: ["Not fulfilled", "grey"],
+}
+const PAYMENT: Record<string, [string, "green" | "orange" | "red"]> = {
+  paid: ["Paid", "green"],
+  authorized: ["Not captured (pay later)", "orange"],
+  unpaid: ["Unpaid", "red"],
 }
 
 const VendorOrdersPage = () => {
@@ -53,7 +70,9 @@ const VendorOrdersPage = () => {
       <div>
         <Heading>Vendor orders</Heading>
         <Text className="text-ui-fg-subtle">
-          One per vendor per checkout. The customer's payment is on the parent order.
+          One per vendor per checkout. The customer's payment is on the parent order. Medusa's
+          own Orders list shows both the customer orders and these vendor orders, so count
+          revenue from the customer orders only.
         </Text>
       </div>
       {error && <Text className="text-ui-fg-error">{errorText(error)}</Text>}
@@ -74,13 +93,21 @@ const VendorOrdersPage = () => {
               <Table.HeaderCell>Order</Table.HeaderCell>
               <Table.HeaderCell>Vendor</Table.HeaderCell>
               <Table.HeaderCell>Total</Table.HeaderCell>
-              <Table.HeaderCell>Status</Table.HeaderCell>
+              <Table.HeaderCell>Fulfilment</Table.HeaderCell>
+              <Table.HeaderCell>Payment</Table.HeaderCell>
               <Table.HeaderCell>Customer order</Table.HeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
             {data.orders.map((o) => (
-              <Table.Row key={o.id}>
+              <Table.Row
+                key={o.id}
+                className="cursor-pointer"
+                onClick={(e) => {
+                  // The whole row opens the vendor order (links inside keep theirs).
+                  if (!(e.target as HTMLElement).closest("a")) window.location.assign(adminLink(`/orders/${o.id}`))
+                }}
+              >
                 <Table.Cell>
                   <a href={adminLink(`/orders/${o.id}`)} className="text-ui-fg-interactive hover:underline">
                     #{o.display_id}
@@ -89,14 +116,29 @@ const VendorOrdersPage = () => {
                 <Table.Cell>{o.vendor.name}</Table.Cell>
                 <Table.Cell>{money(o.total, o.currency_code)}</Table.Cell>
                 <Table.Cell>
-                  <Badge size="2xsmall" color={STATUS_COLOR[o.status] ?? "grey"}>
-                    {statusLabel(o.status)}
-                  </Badge>
+                  {o.status === "canceled" ? (
+                    <Badge size="2xsmall" color={STATUS_COLOR.canceled}>{statusLabel("canceled")}</Badge>
+                  ) : (
+                    <Badge size="2xsmall" color={FULFILMENT[o.fulfillment_status ?? ""]?.[1] ?? "grey"}>
+                      {FULFILMENT[o.fulfillment_status ?? ""]?.[0] ?? statusLabel(o.status)}
+                    </Badge>
+                  )}
+                </Table.Cell>
+                <Table.Cell>
+                  {o.parent_canceled ? (
+                    <Badge size="2xsmall" color="red">Customer order cancelled</Badge>
+                  ) : o.payment_status ? (
+                    <Badge size="2xsmall" color={PAYMENT[o.payment_status][1]}>{PAYMENT[o.payment_status][0]}</Badge>
+                  ) : (
+                    "–"
+                  )}
                 </Table.Cell>
                 <Table.Cell>
                   {o.parent_order_id && (
                     <a href={adminLink(`/orders/${o.parent_order_id}`)} className="text-ui-fg-interactive hover:underline">
-                      {parentNumber.has(o.parent_order_id)
+                      {o.parent_display_id
+                        ? `#${o.parent_display_id}`
+                        : parentNumber.has(o.parent_order_id)
                         ? `#${parentNumber.get(o.parent_order_id)}`
                         : "Customer order"}
                     </a>

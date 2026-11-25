@@ -27,6 +27,10 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "products.status",
       "products.thumbnail",
       "products.created_at",
+      // What a moderator judges on (bug 2026-11-25): description and price.
+      "products.description",
+      "products.variants.prices.amount",
+      "products.variants.prices.currency_code",
     ],
     filters: vendor_id ? { id: vendor_id } : {},
   })

@@ -1,9 +1,9 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Tag } from "@medusajs/icons"
-import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Select, Table, Text, toast } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
-import { adminLink, errorText, STATUS_COLOR, statusLabel } from "../../lib/marketplace"
+import { adminLink, errorText, money, STATUS_COLOR, statusLabel } from "../../lib/marketplace"
 import { sdk } from "../../lib/sdk"
 
 const PAGE_SIZE = 50
@@ -18,6 +18,8 @@ type VendorProduct = {
   handle: string
   status: string
   thumbnail: string | null
+  description?: string | null
+  variants?: { prices?: { amount: number; currency_code: string }[] }[]
   created_at: string
   vendor: { id: string; name: string; status: string }
 }
@@ -37,7 +39,6 @@ const VendorProductsPage = () => {
         query: { ...(status === "all" ? {} : { status }), limit: PAGE_SIZE, offset: page * PAGE_SIZE },
       }),
   })
-  const prompt = usePrompt()
   const review = useMutation({
     mutationFn: ({ id, action, note }: { id: string; action: "publish" | "reject"; title: string; note?: string }) =>
       sdk.client.fetch(`/admin/vendor-products/${id}/review`, {
@@ -53,22 +54,15 @@ const VendorProductsPage = () => {
   const busyId = review.isPending ? review.variables?.id : undefined
   // Reject with a reason the vendor sees (gap review 2026-11-24).
   const [rejecting, setRejecting] = useState<{ id: string; note: string } | null>(null)
-  const reject = async (p: VendorProduct) => {
+  // One confirmation (bug 2026-11-25): "Reject" opens the reason field,
+  // "Reject now" sends it; the vendor can fix and resend, so no extra prompt.
+  const reject = (p: VendorProduct) => {
     if (rejecting?.id !== p.id) {
       setRejecting({ id: p.id, note: "" })
       return
     }
-    const ok = await prompt({
-      title: `Reject ${p.title}?`,
-      description: `${p.vendor.name} sees it as rejected${rejecting.note.trim() ? ", with your reason," : ""} and it doesn't sell. They can fix it and send it again.`,
-      variant: "danger",
-      confirmText: "Reject",
-      cancelText: "Back",
-    })
-    if (ok) {
-      review.mutate({ id: p.id, action: "reject", title: p.title, note: rejecting.note })
-      setRejecting(null)
-    }
+    review.mutate({ id: p.id, action: "reject", title: p.title, note: rejecting.note })
+    setRejecting(null)
   }
 
   return (
@@ -110,9 +104,31 @@ const VendorProductsPage = () => {
             {data.products.map((p) => (
               <Table.Row key={p.id}>
                 <Table.Cell>
-                  <a href={adminLink(`/products/${p.id}`)} className="text-ui-fg-interactive hover:underline">
-                    {p.title}
-                  </a>
+                  <div className="flex items-start gap-3 py-2">
+                    {p.thumbnail ? (
+                      <img src={p.thumbnail} alt="" className="h-12 w-12 rounded object-cover" />
+                    ) : (
+                      <div className="bg-ui-bg-subtle text-ui-fg-muted flex h-12 w-12 items-center justify-center rounded text-[10px]">
+                        No image
+                      </div>
+                    )}
+                    <div className="flex max-w-sm flex-col">
+                      <a href={adminLink(`/products/${p.id}`)} className="text-ui-fg-interactive hover:underline">
+                        {p.title}
+                      </a>
+                      <Text size="small" className="text-ui-fg-subtle">
+                        {(() => {
+                          const price = p.variants?.[0]?.prices?.[0]
+                          return price ? money(price.amount, price.currency_code) : "No price"
+                        })()}
+                      </Text>
+                      {p.description && (
+                        <Text size="small" className="text-ui-fg-subtle line-clamp-2">
+                          {p.description}
+                        </Text>
+                      )}
+                    </div>
+                  </div>
                 </Table.Cell>
                 <Table.Cell>
                   <Text size="small">{p.vendor.name}</Text>

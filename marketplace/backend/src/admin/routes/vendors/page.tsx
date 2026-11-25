@@ -35,7 +35,7 @@ const VendorsPage = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ["marketplace-vendors", status, page],
     queryFn: () =>
-      sdk.client.fetch<{ vendors: Vendor[]; count: number }>("/admin/vendors", {
+      sdk.client.fetch<{ vendors: Vendor[]; count: number; default_commission_rate?: number }>("/admin/vendors", {
         query: { ...(status === "all" ? {} : { status }), limit: PAGE_SIZE, offset: page * PAGE_SIZE },
       }),
   })
@@ -164,7 +164,11 @@ const VendorsPage = () => {
                       max={100}
                       step="0.1"
                       className="w-24"
-                      placeholder="default"
+                      placeholder={
+                        data.default_commission_rate === undefined
+                          ? "default"
+                          : `${data.default_commission_rate} (default)`
+                      }
                       aria-label={`Commission % for ${v.name}`}
                       aria-invalid={rates[v.id] !== undefined && rateValue(rates[v.id]) === undefined}
                       value={rates[v.id] ?? (v.commission_rate === null ? "" : String(v.commission_rate))}
@@ -196,9 +200,20 @@ const VendorsPage = () => {
                       size="small"
                       disabled={!!busyId}
                       isLoading={busyId === v.id && update.variables?.body.status === "active"}
-                      onClick={() =>
-                        update.mutate({ id: v.id, body: { status: "active" }, done: `${v.name} ${v.status === "pending" ? "approved" : "reactivated"}` })
-                      }
+                      onClick={() => {
+                        // A rate typed but not saved goes with the approval
+                        // (bug 2026-11-25: it was dropped silently).
+                        const typed = rates[v.id] === undefined ? undefined : rateValue(rates[v.id])
+                        if (rates[v.id] !== undefined && typed === undefined) {
+                          toast.error("Commission is a percentage from 0 to 100, or empty for the default.")
+                          return
+                        }
+                        update.mutate({
+                          id: v.id,
+                          body: { status: "active", ...(typed !== undefined ? { commission_rate: typed } : {}) },
+                          done: `${v.name} ${v.status === "pending" ? "approved" : "reactivated"}`,
+                        })
+                      }}
                     >
                       {v.status === "pending" ? "Approve" : "Reactivate"}
                     </Button>
