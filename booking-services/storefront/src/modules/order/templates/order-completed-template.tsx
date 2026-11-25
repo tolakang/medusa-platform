@@ -3,6 +3,7 @@ import { cookies as nextCookies } from "next/headers"
 
 import CartTotals from "@modules/common/components/cart-totals"
 import Help from "@modules/order/components/help"
+import { retrieveCustomer } from "@lib/data/customer"
 import { CONTACT_URL } from "@lib/shop"
 import EventTickets from "@modules/order/components/event-tickets"
 import Items from "@modules/order/components/items"
@@ -21,6 +22,7 @@ type OrderCompletedTemplateProps = {
 export default async function OrderCompletedTemplate({
   order,
 }: OrderCompletedTemplateProps) {
+  const customer = await retrieveCustomer().catch(() => null)
   const cookies = await nextCookies()
 
   const isOnboarding = cookies.get("_medusa_onboarding")?.value === "true"
@@ -52,7 +54,8 @@ export default async function OrderCompletedTemplate({
           <CartTotals totals={order} />
           <ShippingDetails order={order} />
           <PaymentDetails order={order} />
-          <Help servicesOnly={isServiceOnlyCart(order)} />
+          {/* Guests get the box only when the shop has a contact link. */}
+          {(customer || CONTACT_URL) && <Help servicesOnly={isServiceOnlyCart(order)} showOrders={!!customer} />}
         </div>
       </div>
     </div>
