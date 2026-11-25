@@ -9,7 +9,6 @@ import {
 import {
   createCollectionsWorkflow,
   createDefaultsWorkflow,
-  createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductOptionsWorkflow,
   createProductsWorkflow,
@@ -21,6 +20,7 @@ import {
   linkSalesChannelsToStockLocationWorkflow,
   updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows";
+import { stockAllLocations } from "./stock-all-locations";
 
 export default async function initial_data_seed({
   container,
@@ -810,20 +810,10 @@ export default async function initial_data_seed({
 
   logger.info("Seeding inventory levels.");
 
-  const { data: inventoryItems } = await query.graph({
-    entity: "inventory_item",
-    fields: ["id"],
-  });
-
-  await createInventoryLevelsWorkflow(container).run({
-    input: {
-      inventory_levels: inventoryItems.map((item) => ({
-        location_id: stockLocation.id,
-        stocked_quantity: 1000000,
-        inventory_item_id: item.id,
-      })),
-    },
-  });
+  // Every location, not only the warehouse this script creates: the Cambodia
+  // location from seed.ts is where POS registers sell from (role test
+  // 2026-11-25).
+  await stockAllLocations(container, 1000000);
 
   logger.info("Finished seeding inventory levels data.");
 }

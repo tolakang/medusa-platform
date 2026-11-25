@@ -10,7 +10,6 @@
  */
 import {
   createCollectionsWorkflow,
-  createInventoryLevelsWorkflow,
   createProductOptionsWorkflow,
   createProductTagsWorkflow,
   createProductsWorkflow,
@@ -22,6 +21,7 @@ import {
   ProductStatus,
 } from '@medusajs/framework/utils'
 import type { ExecArgs } from '@medusajs/framework/types'
+import { stockAllLocations } from './stock-all-locations'
 
 const PRODUCT_COUNT = 50
 const HANDLE_PREFIX = 'demo'
@@ -331,58 +331,31 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
     logger.info(`Created ${created}/${products.length} demo products`)
   }
 
-  // ---- Stock at the seeded location ----------------------------------------
+  // ---- Stock at every stock location --------------------------------------
 
   // createProductsWorkflow makes an inventory item per variant (manage_inventory
   // defaults to true) but no level, so every demo product showed "out of
-  // stock". Same step as seed-initial-data.ts: a level at the first stock
-  // location for each demo item that has none there yet (also fixes shops
-  // seeded before this change).
-  const { data: locations } = await query.graph({
-    entity: 'stock_location',
-    fields: ['id'],
+  // stock". Each demo item gets stock at every location where it has none
+  // (the Cambodia location from seed.ts, used by POS registers, and the
+  // starter's warehouse if seeded); this also fixes shops seeded earlier.
+  const { data: demoVariants } = await query.graph({
+    entity: 'product_variant',
+    fields: ['sku', 'inventory_items.inventory_item_id'],
   })
-  const location = locations[0]
-
-  if (!location) {
-    logger.warn('No stock location found; demo products have no stock.')
-  } else {
-    // Variant -> inventory item link, the same graph path pos-checkout reads.
-    const { data: variants } = await query.graph({
-      entity: 'product_variant',
-      fields: [
-        'sku',
-        'inventory_items.inventory_item_id',
-        'inventory_items.inventory.location_levels.location_id',
-      ],
-    })
-    const needLevel = new Map<string, true>()
-    for (const variant of variants) {
-      if (!String(variant.sku ?? '').startsWith(`${HANDLE_PREFIX.toUpperCase()}-`)) {
-        continue
-      }
+  const demoItems = new Set<string>()
+  for (const variant of demoVariants) {
+    if (String(variant.sku ?? '').startsWith(`${HANDLE_PREFIX.toUpperCase()}-`)) {
       for (const link of variant.inventory_items ?? []) {
-        const levels = (link?.inventory as { location_levels?: { location_id?: string }[] } | undefined)
-          ?.location_levels ?? []
-        if (link?.inventory_item_id && !levels.some((level) => level?.location_id === location.id)) {
-          needLevel.set(link.inventory_item_id as string, true)
+        if (link?.inventory_item_id) {
+          demoItems.add(link.inventory_item_id as string)
         }
       }
     }
-
-    if (needLevel.size) {
-      await createInventoryLevelsWorkflow(container).run({
-        input: {
-          inventory_levels: [...needLevel.keys()].map((inventory_item_id) => ({
-            inventory_item_id,
-            location_id: location.id as string,
-            stocked_quantity: DEMO_STOCK,
-          })),
-        },
-      })
-      logger.info(`Stocked ${needLevel.size} demo variant(s)`)
-    }
   }
+  const stocked = await stockAllLocations(container, DEMO_STOCK, (id) =>
+    demoItems.has(id)
+  )
+  logger.info(`Added ${stocked} stock level(s) for demo variants`)
 
   if (!products.length) {
     logger.info('Every demo product already exists.')
