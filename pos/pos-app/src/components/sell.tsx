@@ -10,10 +10,13 @@ import {
   itemCount,
   lineFromVariant,
   lineTotal,
+  plural,
   saleMayBeRecorded,
+  stockLeft,
   setQuantity,
   type CartLine,
 } from "@/lib/cart"
+import { clearSale as forgetSale, loadSale, saleIdentity, saveSale } from "@/lib/sale-store"
 import { CustomerPicker } from "./customer-picker"
 import { Payment } from "./payment"
 import { Receipt } from "./receipt"
@@ -41,22 +44,31 @@ export function Sell({
   active?: boolean
 }) {
   const currency = shift.currency_code
-  const [cart, setCart] = useState<CartLine[]>([])
-  const [customer, setCustomer] = useState<Customer | null>(null)
-  const [promo, setPromo] = useState("")
+  // The sale survives a reload (kept per shift in the browser), including the
+  // unsure-sale lock and its client_ref, so a retry after a refresh can't
+  // record the sale twice. Sell mounts only in the browser (Till).
+  const [saved] = useState(() => loadSale(shift.id))
+  const [cart, setCart] = useState<CartLine[]>(saved?.cart ?? [])
+  const [customer, setCustomer] = useState<Customer | null>(saved?.customer ?? null)
+  const [promo, setPromo] = useState(saved?.promo ?? "")
   const [choices, setChoices] = useState<LookupVariant[] | null>(null)
   const [message, setMessage] = useState<{ tone: "error" | "info"; text: string } | null>(null)
   // This sale's id (review 2, S7): new whenever the sale changes, the same
   // for every try of one sale. The sale can't change while `uncertain`.
-  const saleRef = useRef("")
-  useEffect(() => {
-    saleRef.current = crypto.randomUUID()
-  }, [cart, customer, promo])
+  const identity = saleIdentity(cart, customer?.id ?? null, promo)
+  const saleRef = useRef(
+    saved ? { key: saleIdentity(saved.cart, saved.customer?.id ?? null, saved.promo), ref: saved.saleRef } : { key: "", ref: "" }
+  )
+  if (saleRef.current.key !== identity) {
+    saleRef.current = { key: identity, ref: crypto.randomUUID() }
+  }
   // The server's price for this cart, fetched when payment opens.
-  const [preview, setPreview] = useState<CheckoutPreview | null>(null)
+  const [preview, setPreview] = useState<CheckoutPreview | null>(saved?.preview ?? null)
   const [pricing, setPricing] = useState(false)
   // Set when a checkout got no answer: the sale may be recorded.
-  const [uncertain, setUncertain] = useState<{ method: PaymentMethod; tendered: number | null } | null>(null)
+  const [uncertain, setUncertain] = useState<{ method: PaymentMethod; tendered: number | null } | null>(
+    saved?.uncertain ?? null
+  )
   const [checking, setChecking] = useState(false)
   const [looking, setLooking] = useState(false)
   const [paying, setPaying] = useState(false)
@@ -65,6 +77,21 @@ export function Sell({
   const [flash, setFlash] = useState<string | null>(null)
   // A cleared sale, kept for 10 seconds so Clear can be undone.
   const [cleared, setCleared] = useState<{ cart: CartLine[]; customer: Customer | null; promo: string } | null>(null)
+
+  useEffect(() => {
+    if (done) {
+      forgetSale(shift.id)
+      return
+    }
+    saveSale(shift.id, { cart, customer, promo, saleRef: saleRef.current.ref, uncertain, preview })
+  }, [shift.id, cart, customer, promo, uncertain, preview, done, identity])
+
+  // Scan messages fade after a few seconds; the next action clears them too.
+  useEffect(() => {
+    if (!message) return
+    const t = window.setTimeout(() => setMessage(null), message.tone === "error" ? 8000 : 5000)
+    return () => window.clearTimeout(t)
+  }, [message])
 
   useEffect(() => {
     if (!flash) return
@@ -126,7 +153,7 @@ export function Sell({
       payment_method: method,
       // Same id when "Complete sale" is pressed again after a lost answer, so
       // the backend doesn't record the sale twice (review 2, S7).
-      client_ref: saleRef.current,
+      client_ref: saleRef.current.ref,
     }
     if (customer) body.customer_id = customer.id
     if (promo.trim()) body.promo_codes = [promo.trim()]
@@ -174,13 +201,13 @@ export function Sell({
     setMessage(null)
     try {
       const { order } = await api<{ order: ReceiptOrder }>("checkout", {
-        query: { shift_id: shift.id, client_ref: saleRef.current },
+        query: { shift_id: shift.id, client_ref: saleRef.current.ref },
       })
       setDone({ order, method: uncertain.method, tendered: uncertain.tendered, customer })
       setUncertain(null)
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
-        saleRef.current = crypto.randomUUID()
+        saleRef.current = { key: identity, ref: crypto.randomUUID() }
         setUncertain(null)
         setMessage({ tone: "info", text: "The sale was not recorded. Edit the cart if needed and press Pay again." })
       } else {
@@ -295,12 +322,20 @@ export function Sell({
                 <div className="truncate text-sm text-ui-fg-subtle">
                   {[l.variant_title, l.sku].filter(Boolean).join(" · ")} · {formatMoney(l.unit_price, currency)}
                 </div>
+                {stockLeft(l) !== null && (
+                  <div className={`text-xs ${stockLeft(l)! <= 0 ? "text-ui-fg-error" : "text-ui-fg-muted"}`}>
+                    {stockLeft(l)! <= 0 ? "None left in stock" : `${stockLeft(l)} left in stock`}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <button
                   className="btn-secondary h-11 w-11 p-0"
                   aria-label={`One less ${l.title}`}
-                  onClick={() => setCart((c) => setQuantity(c, l.variant_id, l.quantity - 1))}
+                  onClick={() => {
+                    setMessage(null)
+                    setCart((c) => setQuantity(c, l.variant_id, l.quantity - 1))
+                  }}
                 >
                   −
                 </button>
@@ -308,7 +343,10 @@ export function Sell({
                 <button
                   className="btn-secondary h-11 w-11 p-0"
                   aria-label={`One more ${l.title}`}
-                  onClick={() => setCart((c) => setQuantity(c, l.variant_id, l.quantity + 1))}
+                  onClick={() => {
+                    setMessage(null)
+                    setCart((c) => setQuantity(c, l.variant_id, l.quantity + 1))
+                  }}
                 >
                   +
                 </button>
@@ -317,7 +355,10 @@ export function Sell({
               <button
                 className="min-h-11 px-2 text-sm text-ui-fg-error"
                 aria-label={`Remove ${l.title}`}
-                onClick={() => setCart((c) => setQuantity(c, l.variant_id, 0))}
+                onClick={() => {
+                  setMessage(null)
+                  setCart((c) => setQuantity(c, l.variant_id, 0))
+                }}
               >
                 Remove
               </button>
@@ -343,16 +384,28 @@ export function Sell({
         </div>
         </fieldset>
         <div className="card flex flex-col gap-3 p-4">
+          {/* One total: the estimate before Pay, the server's price after. */}
           <div className="flex items-baseline justify-between">
-            <span className="text-ui-fg-subtle">{itemCount(cart)} items</span>
-            <span className="text-3xl font-semibold tabular-nums">{formatMoney(total, currency)}</span>
+            <span className="text-ui-fg-subtle">
+              {plural(itemCount(cart), "item")}
+              {paying && preview && " · To pay"}
+            </span>
+            <span className="text-3xl font-semibold tabular-nums">
+              {formatMoney(paying && preview ? preview.total : total, currency)}
+            </span>
           </div>
-          <p className="text-xs text-ui-fg-subtle">
-            Estimate before promotions and tax; Pay shows the final total.
-          </p>
+          {!(paying && preview) && (
+            <p className="text-xs text-ui-fg-subtle">Estimate before promotions and tax; Pay shows the final total.</p>
+          )}
           {unpriced && <p className="text-sm text-ui-fg-error">Some items have no price in {currency.toUpperCase()}.</p>}
           {paying && preview ? (
-            <Payment preview={preview} currency={currency} onPay={pay} onCancel={() => setPaying(false)} />
+            <Payment
+              preview={preview}
+              currency={currency}
+              initial={uncertain ?? undefined}
+              onPay={pay}
+              onCancel={() => setPaying(false)}
+            />
           ) : uncertain ? (
             <div role="alert" className="flex flex-col gap-2">
               <p className="text-sm text-ui-fg-error">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useActionState, useEffect, useState } from "react"
 import { login, setupAccount, type AuthState } from "./actions"
 
 // Cashier sign-in (TASKS P2-10). First time: the admin has invited the email
@@ -11,6 +11,15 @@ export default function LoginPage() {
   // Controlled: React resets an uncontrolled form after each action, which
   // emptied the email after a wrong password.
   const [email, setEmail] = useState("")
+  // Also controlled, so a wrong invite code doesn't wipe the passwords.
+  const [password, setPassword] = useState("")
+  const [confirm, setConfirm] = useState("")
+  const [code, setCode] = useState("")
+  // Set when the till sent a deactivated cashier back here (api.ts, page.tsx).
+  const [inactive, setInactive] = useState(false)
+  useEffect(() => {
+    setInactive(new URLSearchParams(window.location.search).get("reason") === "inactive")
+  }, [])
   const [loginState, loginAction, loggingIn] = useActionState<AuthState, FormData>(login, {})
   const [setupState, setupAction, settingUp] = useActionState<AuthState, FormData>(setupAccount, {})
   const state = mode === "login" ? loginState : setupState
@@ -23,10 +32,17 @@ export default function LoginPage() {
           {mode === "login" ? "Sign in to open the till." : "First time here? Set a password with your invited email and invite code."}
         </p>
 
+        {inactive && (
+          <p role="alert" className="mt-4 rounded-lg bg-ui-tag-red-bg px-3 py-2 text-sm text-ui-tag-red-text">
+            Your account was deactivated. Ask the shop admin to turn it back on.
+          </p>
+        )}
+
         <form action={mode === "login" ? loginAction : setupAction} className="mt-6 flex flex-col gap-3">
-          <label className="flex flex-col gap-1">
+          <label htmlFor="login-email" className="flex flex-col gap-1">
             <span className="text-sm font-medium">Email</span>
             <input
+              id="login-email"
               className="field"
               name="email"
               type="email"
@@ -37,11 +53,14 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
-          <label className="flex flex-col gap-1">
+          <label htmlFor="login-password" className="flex flex-col gap-1">
             <span className="text-sm font-medium">Password</span>
             <input
+              id="login-password"
               className="field"
               name="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               type="password"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               minLength={mode === "setup" ? 8 : undefined}
@@ -49,15 +68,28 @@ export default function LoginPage() {
             />
           </label>
           {mode === "setup" && (
-            <label className="flex flex-col gap-1">
+            <label htmlFor="login-confirm" className="flex flex-col gap-1">
               <span className="text-sm font-medium">Repeat password</span>
-              <input className="field" name="confirm" type="password" autoComplete="new-password" minLength={8} required />
+              <input
+                id="login-confirm"
+                className="field"
+                name="confirm"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+              />
             </label>
           )}
           {mode === "setup" && (
-            <label className="flex flex-col gap-1">
+            <label htmlFor="login-invite" className="flex flex-col gap-1">
               <span className="text-sm font-medium">Invite code</span>
               <input
+                id="login-invite"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
                 className="field uppercase"
                 name="invite_code"
                 autoComplete="off"

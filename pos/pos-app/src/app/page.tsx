@@ -21,7 +21,7 @@ export default async function Home() {
     // backend that is down shows the error page instead of sending the till
     // to sign-in (REVIEW_FIXES C5).
     if (me.status === 401 || me.status === 403) {
-      redirect("/login")
+      redirect(/not active/i.test(me.message) ? "/login?reason=inactive" : "/login")
     }
     throw new Error(me.message)
   }

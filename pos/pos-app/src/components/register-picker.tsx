@@ -9,17 +9,27 @@ import { formatMoney } from "@/lib/cart"
 
 export function RegisterPicker({
   registers,
+  cashierId,
+  currency,
   onSelect,
+  onCloseShift,
   onReload,
 }: {
   registers: Register[] | null
+  cashierId: string
+  /** The currency a new shift opens in (the store default), for the cash field. */
+  currency: string | null
   onSelect: (register: Register, shift: Shift) => void
+  /** Close a shift someone else left open before starting your own. */
+  onCloseShift: (register: Register, shift: Shift) => void
   onReload: () => Promise<unknown>
 }) {
   const [opening, setOpening] = useState<Register | null>(null)
   const [cash, setCash] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // A shift another cashier opened: confirm the handover before selling on it.
+  const [handover, setHandover] = useState<string | null>(null)
 
   if (!registers) {
     return <p className="text-ui-fg-subtle">Loading registers…</p>
@@ -70,12 +80,36 @@ export function RegisterPicker({
           {r.open_shift ? (
             <>
               <p className="text-sm">
-                Shift open since {new Date(r.open_shift.opened_at).toLocaleString()} with{" "}
+                Shift opened by{" "}
+                {r.open_shift.opened_by === cashierId ? "you" : (r.open_shift.opened_by_name ?? "another cashier")} at{" "}
+                {new Date(r.open_shift.opened_at).toLocaleString()} with{" "}
                 {formatMoney(r.open_shift.opening_cash, r.open_shift.currency_code)} in the drawer.
               </p>
-              <button className="btn-primary" onClick={() => onSelect(r, r.open_shift!)}>
-                Continue shift
-              </button>
+              {handover === r.id ? (
+                <div role="alertdialog" aria-label="Shift opened by someone else" className="flex flex-col gap-2">
+                  <p className="rounded-lg bg-ui-bg-subtle p-3 text-sm">
+                    {r.open_shift.opened_by_name ?? "Another cashier"} opened this shift. Continue selling on it, or
+                    close it first (count the drawer) and open your own.
+                  </p>
+                  <div className="flex gap-2">
+                    <button className="btn-secondary flex-1" onClick={() => onCloseShift(r, r.open_shift!)}>
+                      Close it first
+                    </button>
+                    <button className="btn-primary flex-1" onClick={() => onSelect(r, r.open_shift!)} autoFocus>
+                      Continue shift
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  className="btn-primary"
+                  onClick={() =>
+                    r.open_shift!.opened_by === cashierId ? onSelect(r, r.open_shift!) : setHandover(r.id)
+                  }
+                >
+                  Continue shift
+                </button>
+              )}
             </>
           ) : opening?.id === r.id ? (
             // A form, so Enter opens the shift and Esc cancels (keyboard at the till).
@@ -91,8 +125,14 @@ export function RegisterPicker({
             >
               <label className="flex flex-col gap-1">
                 <span className="text-sm font-medium">Cash in the drawer now</span>
-                <input
-                  className="field"
+                <span className="relative flex items-center">
+                  {currency && (
+                    <span aria-hidden className="pointer-events-none absolute left-3 text-ui-fg-subtle">
+                      {currencySymbol(currency)}
+                    </span>
+                  )}
+                  <input
+                  className={`field w-full ${currency ? "pl-10" : ""}`}
                   inputMode="decimal"
                   type="number"
                   min={0}
@@ -101,6 +141,7 @@ export function RegisterPicker({
                   onChange={(e) => setCash(e.target.value)}
                   autoFocus
                 />
+                </span>
               </label>
               {error && <p className="text-sm text-ui-fg-error">{error}</p>}
               <div className="flex gap-2">
@@ -128,4 +169,17 @@ export function RegisterPicker({
       ))}
     </div>
   )
+}
+
+// "$" for USD, "៛" for KHR: the symbol Intl prints for the currency.
+function currencySymbol(currency: string): string {
+  try {
+    return (
+      new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase(), currencyDisplay: "narrowSymbol" })
+        .formatToParts(0)
+        .find((p) => p.type === "currency")?.value ?? currency.toUpperCase()
+    )
+  } catch {
+    return currency.toUpperCase()
+  }
 }

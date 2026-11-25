@@ -7,6 +7,8 @@ import {
   checkoutItems,
   formatMoney,
   itemCount,
+  plural,
+  stockLeft,
   lineFromVariant,
   lineTotal,
   quickTender,
@@ -35,6 +37,7 @@ describe("cart (TASKS P2-10)", () => {
       sku: "SHIRT-L-BLACK",
       unit_price: 10.1,
       quantity: 1,
+      stock: null,
     })
     assert.equal(mug.variant_title, null)
   })
@@ -105,5 +108,18 @@ describe("saleMayBeRecorded (owner, 2026-11-25)", () => {
     assert.equal(saleMayBeRecorded(400), false)
     assert.equal(saleMayBeRecorded(404), false)
     assert.equal(saleMayBeRecorded(409), false)
+  })
+})
+
+describe("labels and stock", () => {
+  it("pluralises counts", () => {
+    assert.equal(plural(1, "item"), "1 item")
+    assert.equal(plural(2, "item"), "2 items")
+    assert.equal(plural(0, "item"), "0 items")
+  })
+  it("shows stock left after the line", () => {
+    const l = lineFromVariant({ id: "v", title: null, sku: null, price: 1, stock: 5, product: { title: "A" } })
+    assert.equal(stockLeft({ ...l, quantity: 2 }), 3)
+    assert.equal(stockLeft({ ...l, stock: null }), null)
   })
 })

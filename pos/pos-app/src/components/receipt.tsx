@@ -56,7 +56,9 @@ export function Receipt({
           <div key={i.id} className="mb-1">
             <div className="flex justify-between gap-2">
               <span className="truncate">{i.title}</span>
-              <span className="tabular-nums">{formatMoney(i.total, currency)}</span>
+              {/* Gross line price; the order's discount is its own line below, so
+                  the line doesn't read as discounted twice. */}
+              <span className="tabular-nums">{formatMoney((Math.round(Number(i.unit_price) * 100) * Number(i.quantity)) / 100, currency)}</span>
             </div>
             <div className="text-xs text-ui-fg-subtle">
               {Number(i.quantity)} × {formatMoney(i.unit_price, currency)}
