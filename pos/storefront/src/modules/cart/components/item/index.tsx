@@ -52,6 +52,36 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
       : MAX_CART_QUANTITY
   )
 
+  // On phones the quantity sits under the title so the row fits the screen
+  // (role test 2026-11-25); from `small` up it has its own column.
+  const quantityControls = (
+    <>
+          <div className="flex gap-2 items-center w-28">
+            <DeleteButton id={item.id} data-testid="product-delete-button" />
+            <CartItemSelect
+              value={item.quantity}
+              onChange={(value) => changeQuantity(parseInt(value.target.value))}
+              className="w-16 h-11 p-4"
+              data-testid="product-select-button"
+            >
+              {Array.from(
+                {
+                  length: maxQuantity,
+                },
+                (_, i) => (
+                  <option value={i + 1} key={i}>
+                    {i + 1}
+                  </option>
+                )
+              )}
+
+            </CartItemSelect>
+            {updating && <Spinner />}
+          </div>
+          <ErrorMessage error={error} data-testid="product-error-message" />
+    </>
+  )
+
   return (
     <Table.Row className="w-full" data-testid="product-row">
       <Table.Cell className="!pl-0 p-4 w-24">
@@ -78,33 +108,14 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {type === "full" && (
+          <div className="mt-2 small:hidden">{quantityControls}</div>
+        )}
       </Table.Cell>
 
       {type === "full" && (
-        <Table.Cell>
-          <div className="flex gap-2 items-center w-28">
-            <DeleteButton id={item.id} data-testid="product-delete-button" />
-            <CartItemSelect
-              value={item.quantity}
-              onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              className="w-16 h-11 p-4"
-              data-testid="product-select-button"
-            >
-              {Array.from(
-                {
-                  length: maxQuantity,
-                },
-                (_, i) => (
-                  <option value={i + 1} key={i}>
-                    {i + 1}
-                  </option>
-                )
-              )}
-
-            </CartItemSelect>
-            {updating && <Spinner />}
-          </div>
-          <ErrorMessage error={error} data-testid="product-error-message" />
+        <Table.Cell className="hidden small:table-cell">
+          {quantityControls}
         </Table.Cell>
       )}
 

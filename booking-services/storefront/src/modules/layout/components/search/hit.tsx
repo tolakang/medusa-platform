@@ -6,6 +6,7 @@ import type { Hit as HitType } from "instantsearch.js"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import PlaceholderImage from "@modules/common/icons/placeholder-image"
 import { Text } from "@modules/common/components/ui"
+import HitPrice, { HitPricing } from "@modules/store/components/store-hits/price"
 
 export type ProductHit = HitType<{
   title: string | null
@@ -16,9 +17,10 @@ export type ProductHit = HitType<{
 type SearchHitProps = {
   hit: ProductHit
   onNavigate?: () => void
+  currencyCode?: string
 }
 
-const SearchHit = ({ hit, onNavigate }: SearchHitProps) => {
+const SearchHit = ({ hit, onNavigate, currencyCode }: SearchHitProps) => {
   if (!hit.handle) {
     return null
   }
@@ -47,9 +49,17 @@ const SearchHit = ({ hit, onNavigate }: SearchHitProps) => {
             </div>
           )}
         </div>
-        <Text className="txt-medium text-ui-fg-base line-clamp-2">
-          {hit.title}
-        </Text>
+        <div className="flex min-w-0 flex-col gap-y-1">
+          <Text className="txt-medium text-ui-fg-base line-clamp-2">
+            {hit.title}
+          </Text>
+          {currencyCode && (
+            <HitPrice
+              hit={hit as unknown as HitPricing}
+              currencyCode={currencyCode}
+            />
+          )}
+        </div>
       </LocalizedClientLink>
     </li>
   )

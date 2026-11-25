@@ -35,14 +35,16 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
         data-testid="product-container"
       >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
+        {/* Phones: image, then buy box, then description (role test
+            2026-11-25); from `small` up the three columns as before. */}
+        <div className="order-3 small:order-none flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
           <ProductInfo product={product} />
           <ProductTabs product={product} />
         </div>
-        <div className="block w-full relative">
+        <div className="order-1 small:order-none block w-full relative">
           <ImageGallery images={images} title={product.title} />
         </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
+        <div className="order-2 small:order-none flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
           <ProductOnboardingCta />
           <Suspense
             fallback={

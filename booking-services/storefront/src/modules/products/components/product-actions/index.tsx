@@ -5,6 +5,7 @@ import { useIntersection } from "@lib/hooks/use-in-view"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
 import Divider from "@modules/common/components/divider"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { isEqual } from "lodash"
 import { useParams, usePathname, useSearchParams } from "next/navigation"
@@ -120,6 +121,18 @@ export default function ProductActions({
 
   const actionsRef = useRef<HTMLDivElement>(null)
 
+  // "Added to your cart" for a few seconds after a successful add.
+  const [added, setAdded] = useState(false)
+  useEffect(() => {
+    if (!added) return
+    const timer = setTimeout(() => setAdded(false), 4000)
+    return () => clearTimeout(timer)
+  }, [added])
+
+  // The first option still to choose, for the button ("Choose a size").
+  const missingOption = (product.options ?? []).find((o) => !options[o.id])
+    ?.title
+
   const inView = useIntersection(actionsRef, "0px")
 
   // add the selected variant to the cart
@@ -138,6 +151,7 @@ export default function ProductActions({
         quantity: 1,
         countryCode,
       })
+      setAdded(true)
     } catch {
       setAddError("We couldn't add this to your cart. Please try again.")
     } finally {
@@ -187,11 +201,28 @@ export default function ProductActions({
           data-testid="add-product-button"
         >
           {!selectedVariant
-            ? "Select variant"
+            ? missingOption
+              ? `Choose a ${missingOption.toLowerCase()}`
+              : "Choose an option"
             : !inStock || !isValidVariant
             ? "Out of stock"
             : "Add to cart"}
         </Button>
+        {/* Confirms the add; the mini-cart is hidden on phones. */}
+        <p
+          role="status"
+          className={added ? "text-small-regular text-center text-ui-fg-base" : "sr-only"}
+          data-testid="add-to-cart-success"
+        >
+          {added ? (
+            <>
+              Added to your cart.{" "}
+              <LocalizedClientLink href="/cart" className="underline">
+                View cart
+              </LocalizedClientLink>
+            </>
+          ) : null}
+        </p>
         {addError && (
           <p className="text-rose-500 text-center" role="alert" data-testid="add-to-cart-error">
             {addError}

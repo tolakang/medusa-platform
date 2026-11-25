@@ -1,5 +1,7 @@
 "use client"
 
+import clsx from "clsx"
+import { useState } from "react"
 import { useSortBy } from "react-instantsearch"
 
 import FilterRadioGroup from "@modules/common/components/filter-radio-group"
@@ -30,8 +32,29 @@ const SortProducts = ({ currencyCode }: { currencyCode: string }) => {
 }
 
 const StoreRefinements = ({ currencyCode }: { currencyCode: string }) => {
+  // On phones the filters sit behind a button so the products come first
+  // (role test 2026-11-25); from `small` up they are a sidebar as before.
+  const [open, setOpen] = useState(false)
+
   return (
-    <div className="flex flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:w-[250px] small:shrink-0 small:ml-[1.675rem]">
+    <div className="small:w-[250px] small:shrink-0 small:ml-[1.675rem]">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls="store-filters"
+        className="small:hidden mb-4 w-full rounded-md border border-ui-border-base px-4 py-2 text-left txt-compact-small-plus"
+        data-testid="store-filters-toggle"
+      >
+        {open ? "Hide filters" : "Sort & filter"}
+      </button>
+      <div
+        id="store-filters"
+        className={clsx(
+          "flex-col gap-12 py-4 mb-8 small:px-0 small:flex",
+          open ? "flex" : "hidden"
+        )}
+      >
       <SortProducts currencyCode={currencyCode} />
       <CurrentRefinements currencyCode={currencyCode} />
       <OptionRefinements />
@@ -39,6 +62,7 @@ const StoreRefinements = ({ currencyCode }: { currencyCode: string }) => {
       <OnSaleToggle currencyCode={currencyCode} />
       <RefinementGroup attribute={CATEGORY_ATTRIBUTE} title="Category" />
       <RefinementGroup attribute={LABELS_ATTRIBUTE} title="Labels" />
+      </div>
     </div>
   )
 }
