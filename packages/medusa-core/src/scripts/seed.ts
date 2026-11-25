@@ -24,6 +24,9 @@ const REGION_NAME = "Cambodia";
 const COUNTRY_CODE = "kh";
 // Placeholder rate in USD; change it in the admin (Settings → Locations & Shipping).
 const PHNOM_PENH_DELIVERY_USD = 1.5;
+// The store's name in the admin and emails; Medusa's first boot names it
+// "Medusa Store". SHOP_NAME (backend env) sets it, else a neutral name.
+const STORE_NAME = process.env.SHOP_NAME?.trim() || "Online Shop";
 
 export default async function seed({
   container,
@@ -90,6 +93,7 @@ export default async function seed({
     input: {
       selector: { id: store.id },
       update: {
+        name: STORE_NAME,
         supported_currencies: [...currencyCodes].map((currency_code) => ({
           currency_code,
           is_default: currency_code === "usd",

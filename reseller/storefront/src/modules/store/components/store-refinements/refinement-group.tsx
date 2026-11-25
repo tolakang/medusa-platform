@@ -3,6 +3,8 @@
 import clsx from "clsx"
 import { useRefinementList } from "react-instantsearch"
 
+import { LABELS_ATTRIBUTE, humanizeLabel } from "./attributes"
+
 type RefinementGroupProps = {
   attribute: string
   title: string
@@ -41,7 +43,9 @@ const RefinementGroup = ({ attribute, title }: RefinementGroupProps) => {
                   "text-ui-fg-subtle": !item.isRefined,
                 })}
               >
-                {item.label}
+                {attribute === LABELS_ATTRIBUTE
+                  ? humanizeLabel(item.label)
+                  : item.label}
               </span>
               <span className="text-small-regular shrink-0 text-ui-fg-muted">
                 ({item.count})

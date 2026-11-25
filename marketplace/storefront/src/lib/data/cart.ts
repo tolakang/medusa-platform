@@ -2,6 +2,7 @@
 
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
+import { grantOrderAccess } from "./order-access"
 import { HttpTypes } from "@medusajs/types"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
@@ -299,27 +300,61 @@ export async function startPaywayPayment(): Promise<{
   return { checkout_url: data.checkout_url, form: data.form }
 }
 
-export async function applyPromotions(codes: string[]) {
+// Returns { error } instead of throwing: a server action that throws reaches
+// the client as a minified React error in production (#441), not the message.
+// Medusa matches codes exactly (core-flows getPromotionCodesToApply filters
+// { code: promo_codes } and throws "The promotion code X is invalid"), so a
+// code that fails as typed is tried once more in upper case ("kh10" -> "KH10").
+export async function applyPromotions(
+  codes: string[]
+): Promise<{ error: string | null }> {
   const cartId = await getCartId()
 
   if (!cartId) {
-    throw new Error("No existing cart found")
+    return { error: "Your cart has expired. Please reload the page." }
   }
 
   const headers = {
     ...(await getAuthHeaders()),
   }
 
-  return sdk.store.cart
-    .update(cartId, { promo_codes: codes }, {}, headers)
-    .then(async () => {
-      const cartCacheTag = await getCacheTag("carts")
-      revalidateTag(cartCacheTag, { expire: 0 })
+  const update = (promo_codes: string[]) =>
+    sdk.store.cart.update(cartId, { promo_codes }, {}, headers)
 
-      const fulfillmentCacheTag = await getCacheTag("fulfillment")
-      revalidateTag(fulfillmentCacheTag, { expire: 0 })
-    })
-    .catch(medusaError)
+  try {
+    try {
+      await update(codes)
+    } catch (e) {
+      // Only the newly typed (last) code; applied ones are as stored.
+      const last = codes[codes.length - 1] ?? ""
+      const upper = [...codes.slice(0, -1), last.toUpperCase()]
+      if (last === last.toUpperCase()) {
+        throw e
+      }
+      await update(upper)
+    }
+  } catch (e) {
+    const message = (() => {
+      try {
+        medusaError(e)
+      } catch (err) {
+        return err instanceof Error ? err.message : ""
+      }
+    })()
+    return {
+      error: /promotion code .* is invalid/i.test(message ?? "")
+        ? "This code isn't valid"
+        : "We couldn't apply this code. Please try again.",
+    }
+  }
+
+  const cartCacheTag = await getCacheTag("carts")
+  revalidateTag(cartCacheTag, { expire: 0 })
+
+  const fulfillmentCacheTag = await getCacheTag("fulfillment")
+  revalidateTag(fulfillmentCacheTag, { expire: 0 })
+
+  return { error: null }
 }
 
 export async function applyGiftCard(code: string) {
@@ -481,6 +516,10 @@ export async function placeOrder(cartId?: string) {
 
     const orderCacheTag = await getCacheTag("orders")
     revalidateTag(orderCacheTag, { expire: 0 })
+
+    // Only this browser (or the signed-in owner) sees the details.
+
+    await grantOrderAccess(cartRes.order.id)
 
     removeCartId()
     redirect(`/${countryCode}/order/${cartRes?.order.id}/confirmed`)

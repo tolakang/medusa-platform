@@ -1,3 +1,4 @@
+import { retrieveCustomer } from "@lib/data/customer"
 import { listMyBookings } from "@lib/data/booking"
 import { retrieveOrder } from "@lib/data/orders"
 import OrderDetailsTemplate from "@modules/order/templates/order-details-template"
@@ -25,8 +26,11 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function OrderDetailPage(props: Props) {
   const params = await props.params
   const order = await retrieveOrder(params.id).catch(() => null)
+  const customer = await retrieveCustomer().catch(() => null)
 
-  if (!order) {
+  // Only the customer's own orders: /store/orders/:id answers anyone with
+  // the id, so the account page checks the owner itself.
+  if (!order || !customer || order.customer_id !== customer.id) {
     notFound()
   }
 

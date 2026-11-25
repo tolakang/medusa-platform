@@ -2,6 +2,17 @@ import { HttpTypes } from "@medusajs/types"
 import { clx } from "@modules/common/components/ui"
 import React from "react"
 
+// Clothing sizes in wearing order (S, M, L, XL), not as stored. Other values
+// keep their order.
+const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "2XL", "XXXL", "3XL"]
+const sortSizes = (values: string[]) =>
+  values.every((v) => SIZE_ORDER.includes(v.toUpperCase()))
+    ? [...values].sort(
+        (a, b) =>
+          SIZE_ORDER.indexOf(a.toUpperCase()) - SIZE_ORDER.indexOf(b.toUpperCase())
+      )
+    : values
+
 type OptionSelectProps = {
   option: HttpTypes.StoreProductOption
   current: string | undefined
@@ -19,7 +30,7 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
   "data-testid": dataTestId,
   disabled,
 }) => {
-  const filteredOptions = (option.values ?? []).map((v) => v.value)
+  const filteredOptions = sortSizes((option.values ?? []).map((v) => v.value))
 
   return (
     <div className="flex flex-col gap-y-3">

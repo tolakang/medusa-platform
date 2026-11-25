@@ -21,6 +21,7 @@ import {
   ProductStatus,
 } from '@medusajs/framework/utils'
 import type { ExecArgs } from '@medusajs/framework/types'
+import { stockAllLocations } from './stock-all-locations'
 
 const PRODUCT_COUNT = 50
 const HANDLE_PREFIX = 'demo'
@@ -30,6 +31,8 @@ const BATCH_SIZE = 10
 const MAX_VARIANTS = 12
 /** Products per awaited search-ingestion call. */
 const INGEST_CHUNK_SIZE = 25
+/** Stock per variant at the seeded stock location, so demo products can be bought. */
+const DEMO_STOCK = 100
 
 /**
  * Deterministic PRNG (mulberry32). Keeps re-runs identical, so the same handle
@@ -247,7 +250,11 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
       continue
     }
 
-    const title = `${pick(ADJECTIVES)} ${pick(MATERIALS)} ${type}`
+    // Adjective and material come from the index too, so the 50 titles are
+    // unique (index -> type by index % 10, adjective by index / 10).
+    const title = `${ADJECTIVES[Math.floor(index / TYPES.length) % ADJECTIVES.length]} ${
+      MATERIALS[index % MATERIALS.length]
+    } ${type}`
 
     // Size is always present; the rest vary so the facet has uneven counts.
     const chosenOptions = [
@@ -285,8 +292,8 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
     products.push({
       title,
       handle,
-      subtitle: `${type} — demo data`,
-      description: `A ${title.toLowerCase()} generated to fill out the demo catalogue. Not a real product.`,
+      subtitle: type,
+      description: `A ${title.toLowerCase()} for everyday wear. Soft, easy to care for and made to last.`,
       status: ProductStatus.PUBLISHED,
       thumbnail,
       images: [{ url: thumbnail }],
@@ -309,11 +316,6 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
     })
   }
 
-  if (!products.length) {
-    logger.info('Every demo product already exists. Nothing to do.')
-    return
-  }
-
   // ---- Create them --------------------------------------------------------
 
   let created = 0
@@ -327,6 +329,37 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
 
     created += batch.length
     logger.info(`Created ${created}/${products.length} demo products`)
+  }
+
+  // ---- Stock at every stock location --------------------------------------
+
+  // createProductsWorkflow makes an inventory item per variant (manage_inventory
+  // defaults to true) but no level, so every demo product showed "out of
+  // stock". Each demo item gets stock at every location where it has none
+  // (the Cambodia location from seed.ts, used by POS registers, and the
+  // starter's warehouse if seeded); this also fixes shops seeded earlier.
+  const { data: demoVariants } = await query.graph({
+    entity: 'product_variant',
+    fields: ['sku', 'inventory_items.inventory_item_id'],
+  })
+  const demoItems = new Set<string>()
+  for (const variant of demoVariants) {
+    if (String(variant.sku ?? '').startsWith(`${HANDLE_PREFIX.toUpperCase()}-`)) {
+      for (const link of variant.inventory_items ?? []) {
+        if (link?.inventory_item_id) {
+          demoItems.add(link.inventory_item_id as string)
+        }
+      }
+    }
+  }
+  const stocked = await stockAllLocations(container, DEMO_STOCK, (id) =>
+    demoItems.has(id)
+  )
+  logger.info(`Added ${stocked} stock level(s) for demo variants`)
+
+  if (!products.length) {
+    logger.info('Every demo product already exists.')
+    return
   }
 
   // ---- Make sure the search index caught up -------------------------------

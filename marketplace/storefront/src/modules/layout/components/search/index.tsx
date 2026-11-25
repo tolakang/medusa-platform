@@ -14,14 +14,23 @@ import {
 import useSearchSettled from "@lib/hooks/use-search-settled"
 import useToggleState from "@lib/hooks/use-toggle-state"
 import { PRODUCT_INDEX_NAME, searchClient } from "@lib/search-client"
+import { HttpTypes } from "@medusajs/types"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { Text } from "@modules/common/components/ui"
+import { useParams } from "next/navigation"
 import SearchDrawer from "./drawer"
 import SearchHit, { ProductHit } from "./hit"
 
 const HITS_PER_PAGE = 12
 const DEBOUNCE_MS = 250
 
-const SearchPanel = ({ onNavigate }: { onNavigate: () => void }) => {
+const SearchPanel = ({
+  onNavigate,
+  currencyCode,
+}: {
+  onNavigate: () => void
+  currencyCode?: string
+}) => {
   const timer = useRef<number | undefined>(undefined)
 
   const queryHook = useCallback(
@@ -88,11 +97,29 @@ const SearchPanel = ({ onNavigate }: { onNavigate: () => void }) => {
             Searching&hellip;
           </Text>
         ) : hasResults ? (
-          <ul className="py-2" data-testid="search-results">
-            {items.map((hit) => (
-              <SearchHit key={hit.objectID} hit={hit} onNavigate={onNavigate} />
-            ))}
-          </ul>
+          <>
+            <ul className="py-2" data-testid="search-results">
+              {items.map((hit) => (
+                <SearchHit
+                  key={hit.objectID}
+                  hit={hit}
+                  onNavigate={onNavigate}
+                  currencyCode={currencyCode}
+                />
+              ))}
+            </ul>
+            {/* The store page reads this query through its URL routing. */}
+            <LocalizedClientLink
+              href={`/store?${new URLSearchParams({
+                [`${PRODUCT_INDEX_NAME}[query]`]: query,
+              }).toString()}`}
+              onClick={onNavigate}
+              className="block px-4 pb-4 txt-compact-small-plus underline"
+              data-testid="search-see-all"
+            >
+              See all results
+            </LocalizedClientLink>
+          </>
         ) : isPending || !query.trim() ? (
           <Text
             className="px-4 py-6 text-center text-ui-fg-muted"
@@ -113,8 +140,13 @@ const SearchPanel = ({ onNavigate }: { onNavigate: () => void }) => {
   )
 }
 
-const Search = () => {
+const Search = ({ regions }: { regions?: HttpTypes.StoreRegion[] }) => {
   const { state: isOpen, open, close } = useToggleState()
+  // Prices in the current country's region currency, as on the store page.
+  const { countryCode } = useParams<{ countryCode?: string }>()
+  const currencyCode = regions?.find((r) =>
+    r.countries?.some((c) => c.iso_2 === countryCode)
+  )?.currency_code
 
   return (
     <>
@@ -135,7 +167,7 @@ const Search = () => {
           future={{ preserveSharedStateOnUnmount: true }}
         >
           <Configure hitsPerPage={HITS_PER_PAGE} />
-          <SearchPanel onNavigate={close} />
+          <SearchPanel onNavigate={close} currencyCode={currencyCode} />
         </InstantSearch>
       </SearchDrawer>
     </>
