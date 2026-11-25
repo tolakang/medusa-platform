@@ -71,7 +71,9 @@ export async function assertCartCanBePlaced(container: MedusaContainer, cartId: 
   const settings = await loadApprovalSettings(container, company.id);
   assertApprovalsGranted(
     requiredApprovalTypes(settings, cartTotal, !!buyer!.employee?.is_admin),
-    await loadCartApprovals(container, cartId)
+    await loadCartApprovals(container, cartId),
+    // Approvals cover the goods (shipping is chosen after approval).
+    Number(current?.item_total ?? 0)
   );
 
   // Employee spending limit and, on net terms, company credit limit.

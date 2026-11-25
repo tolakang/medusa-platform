@@ -18,6 +18,7 @@ export async function loadCart(container: MedusaContainer, cartId: string) {
       "id",
       "customer_id",
       "total",
+      "item_total",
       "items.id",
       "items.title",
       "items.quantity",
@@ -189,7 +190,7 @@ export async function loadCartApprovals(
 ) {
   const { data } = await queryOf(container).graph({
     entity: "approval",
-    fields: ["id", "type", "status"],
+    fields: ["id", "type", "status", "covered_total"],
     filters: { cart_id: cartId },
   });
   return data;

@@ -235,6 +235,24 @@ describe("assertApprovalsGranted", () => {
     ).not.toThrow();
   });
 
+  it("an approval covers only up to its total; null covers any", () => {
+    const approval = { type: "admin", status: "approved", covered_total: 100 };
+    expect(() => assertApprovalsGranted(["admin"], [approval], 100)).not.toThrow();
+    expect(() => assertApprovalsGranted(["admin"], [approval], 101)).toThrow(
+      "Ask for approval again"
+    );
+    expect(() =>
+      assertApprovalsGranted(
+        ["admin"],
+        [approval, { type: "admin", status: "approved", covered_total: 200 }],
+        150
+      )
+    ).not.toThrow();
+    expect(() =>
+      assertApprovalsGranted(["admin"], [{ type: "admin", status: "approved" }], 9999)
+    ).not.toThrow();
+  });
+
   it("a rejection ends the cart", () => {
     expect(() =>
       assertApprovalsGranted(["admin"], [{ type: "admin", status: "rejected" }])

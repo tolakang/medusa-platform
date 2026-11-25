@@ -165,7 +165,21 @@ export type B2bApprovalSettings = {
 export type B2bApproval = {
   type?: string | null;
   status?: string | null;
+  covered_total?: unknown;
 } | null;
+
+/**
+ * Whether an approval covers an order of this total: it was asked for at
+ * least this total, or it predates covered_total (null), or no total is
+ * given.
+ */
+export function approvalCovers(approval: B2bApproval, total?: number) {
+  const covered = approval?.covered_total;
+  if (total === undefined || covered === null || covered === undefined) {
+    return true;
+  }
+  return Number(covered) >= total;
+}
 
 /**
  * The approval types a cart needs: the types the company switched on, when
@@ -196,10 +210,15 @@ export function requiredApprovalTypes(
   return types;
 }
 
-/** Every required approval type must have an approved approval. */
+/**
+ * Every required approval type must have an approved approval that covers
+ * the total being placed (owner, 2026-11-25): an approval asked for a lower
+ * total doesn't count, and the buyer asks again.
+ */
 export function assertApprovalsGranted(
   required: string[],
-  approvals: B2bApproval[]
+  approvals: B2bApproval[],
+  total?: number
 ) {
   if (!required.length) {
     return;
@@ -209,10 +228,15 @@ export function assertApprovalsGranted(
     throw notAllowed("This order was rejected. Start a new cart.");
   }
   for (const type of required) {
-    const approved = live.some(
+    const ofType = live.filter(
       (approval) => approval!.type === type && approval!.status === "approved"
     );
-    if (!approved) {
+    if (ofType.length && !ofType.some((approval) => approvalCovers(approval, total))) {
+      throw notAllowed(
+        "This order's total went up after it was approved. Ask for approval again."
+      );
+    }
+    if (!ofType.length) {
       throw notAllowed(
         type === "admin"
           ? "This order needs your company admin's approval."

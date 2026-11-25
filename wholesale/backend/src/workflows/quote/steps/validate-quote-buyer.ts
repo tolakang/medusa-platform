@@ -53,7 +53,8 @@ export const validateQuoteBuyerStep = createStep(
     if (required.length) {
       assertApprovalsGranted(
         required,
-        quote.cart_id ? await loadCartApprovals(container, quote.cart_id) : []
+        quote.cart_id ? await loadCartApprovals(container, quote.cart_id) : [],
+        total
       );
     }
 

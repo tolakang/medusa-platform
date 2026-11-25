@@ -285,6 +285,55 @@ medusaIntegrationTestRunner({
         expect((await accept()).status).toEqual(200);
       });
 
+      it("an approval covers only the total it was asked for", async () => {
+        const company = await b2b.company();
+        await b2b.approvalSettings(company.id, { requires_admin_approval: true });
+        const buyer = await b2b.employee(company.id);
+        const admin = await b2b.employee(company.id, { is_admin: true });
+        const { data } = await b2b.cart(buyer.token, 1);
+        const cartId = data.cart.id;
+        const {
+          data: { quote },
+        } = await api.post("/store/quotes", { cart_id: cartId }, b2b.store(buyer.token));
+
+        // Approved at the quote's first total.
+        const first = await requestApproval(cartId, buyer.token);
+        expect(first.status).toEqual(200);
+        await decide(first.data.approvals[0].id, admin.token, "approved");
+        expect((await requestApproval(cartId, buyer.token)).data.message).toContain(
+          "already approved"
+        );
+
+        // The merchant raises the quote.
+        const {
+          data: [draft],
+        } = await getContainer()
+          .resolve("query")
+          .graph({
+            entity: "order",
+            fields: ["items.id"],
+            filters: { id: quote.draft_order_id },
+          });
+        await api.post(
+          `/admin/order-edits/${quote.draft_order_id}/items/item/${draft.items![0]!.id}`,
+          { quantity: 3 },
+          adminHeaders
+        );
+        await api.post(`/admin/quotes/${quote.id}/send`, {}, adminHeaders);
+
+        const accept = () =>
+          call(api.post(`/store/quotes/${quote.id}/accept`, {}, b2b.store(buyer.token)));
+        const refused = await accept();
+        expect(refused.status).toEqual(400);
+        expect(JSON.stringify(refused.data)).toContain("Ask for approval again");
+
+        const again = await requestApproval(cartId, buyer.token);
+        expect(again.status).toEqual(200);
+        expect((await accept()).status).toEqual(400);
+        await decide(again.data.approvals[0].id, admin.token, "approved");
+        expect((await accept()).status).toEqual(200);
+      });
+
       it("a cart gets one quote at a time (F-103)", async () => {
         const company = await b2b.company();
         const buyer = await b2b.employee(company.id);

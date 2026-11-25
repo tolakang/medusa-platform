@@ -3,6 +3,8 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk";
 import { APPROVAL_MODULE } from "../../../modules/approval";
 import {
+  approvalCovers,
+  B2bApproval,
   assertApprovedCompanyBuyer,
   requiredApprovalTypes,
 } from "../../../utils/b2b-cart-rules";
@@ -35,7 +37,14 @@ export const createApprovalStep = createStep(
     } = await query.graph(
       {
         entity: "cart",
-        fields: ["id", "customer_id", "total", "approvals.*", "approval_status.*"],
+        fields: [
+          "id",
+          "customer_id",
+          "total",
+          "item_total",
+          "approvals.*",
+          "approval_status.*",
+        ],
         filters: {
           id: approvalData[0].cart_id,
         },
@@ -52,9 +61,20 @@ export const createApprovalStep = createStep(
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Cart already has a pending approval");
     }
 
+    // The total an approval asked now covers: a quoted cart's quote total
+    // (the merchant may have changed it), else the cart's item total.
+    const quoted = await openQuoteTotalForCart(container, cart.id);
+    const coveredTotal = quoted ?? Number(cart.item_total ?? 0);
+
+    // An approved cart asks again only when its approval covers a lower
+    // total than now (owner, 2026-11-25).
+    const approved = ((cart.approvals ?? []) as B2bApproval[]).filter(
+      (approval) => approval?.status === "approved"
+    );
     if (
       (cart.approval_status?.status as unknown as ApprovalStatusType) ===
-      ApprovalStatusType.APPROVED
+        ApprovalStatusType.APPROVED &&
+      approved.every((approval) => approvalCovers(approval, coveredTotal))
     ) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, "Cart is already approved");
     }
@@ -73,9 +93,8 @@ export const createApprovalStep = createStep(
     const buyer = await loadBuyer(container, requester);
     const company = assertApprovedCompanyBuyer(buyer);
     const settings = await loadApprovalSettings(container, company.id);
-    // A quoted cart is approved for the quote's current total (the merchant
-    // may have changed it): the total quote acceptance checks.
-    const quoted = await openQuoteTotalForCart(container, cart.id);
+    // A quoted cart is approved for the quote's current total: the total
+    // quote acceptance checks.
     const types = requiredApprovalTypes(
       settings,
       quoted ?? Number(cart.total ?? 0),
@@ -91,6 +110,7 @@ export const createApprovalStep = createStep(
     const approvalsToCreate = types.flatMap((type) =>
       approvalData.map((data) => ({
         ...data,
+        covered_total: coveredTotal,
         type: type === "admin" ? ApprovalType.ADMIN : ApprovalType.SALES_MANAGER,
       }))
     ) as ModuleCreateApproval[];
@@ -112,6 +132,11 @@ export const createApprovalStep = createStep(
     );
   },
   async (approvalIds: string[], { container }) => {
+    // Nothing was created (the step refused): without this guard
+    // deleteApprovals(undefined) deleted the cart's earlier approvals.
+    if (!approvalIds?.length) {
+      return;
+    }
     const approvalModuleService =
       container.resolve<IApprovalModuleService>(APPROVAL_MODULE);
 
