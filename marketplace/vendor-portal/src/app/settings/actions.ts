@@ -17,7 +17,23 @@ export async function saveSettings(_: SettingsState, form: FormData): Promise<Se
   if (logo && !/^https:\/\/\S+$/.test(logo)) {
     return { error: "The logo must be a link that starts with https://." }
   }
-  const result = await backendFetch("/vendors/me", { token, method: "POST", body: { name, logo: logo || null } })
+  const text = (key: string) => String(form.get(key) ?? "").trim() || null
+  const phone = text("phone")
+  if (phone && !/^[0-9+\-() ]{6,30}$/.test(phone)) {
+    return { error: "Enter a phone number (digits, spaces, +, - and brackets)." }
+  }
+  const result = await backendFetch("/vendors/me", {
+    token,
+    method: "POST",
+    body: {
+      name,
+      logo: logo || null,
+      description: text("description"),
+      phone,
+      telegram: text("telegram")?.replace(/^@/, "") ?? null,
+      payout_account: text("payout_account"),
+    },
+  })
   if (!result.ok) {
     return { error: result.message }
   }

@@ -9,8 +9,26 @@ import { CATALOG_REVALIDATE_SECONDS } from "@lib/catalog-cache"
 
 export type VendorSummary = { handle: string; name: string }
 export type VendorShop = {
-  vendor: { id: string; handle: string; name: string; logo: string | null }
+  vendor: { id: string; handle: string; name: string; logo: string | null; description?: string | null }
   product_ids: string[]
+}
+
+export type VendorListItem = { id: string; handle: string; name: string; logo: string | null }
+
+/** Active vendors for the shop directory (GET /store/vendors). */
+export const listVendors = async (): Promise<VendorListItem[]> => {
+  const next = {
+    ...(await getCacheOptions("vendors")),
+    revalidate: CATALOG_REVALIDATE_SECONDS,
+  }
+  return sdk.client
+    .fetch<{ vendors: VendorListItem[] }>(`/store/vendors`, {
+      method: "GET",
+      next,
+      cache: "force-cache",
+    })
+    .then(({ vendors }) => vendors)
+    .catch(() => [])
 }
 
 /** An active vendor's shop page, or null when there is none. */

@@ -4,10 +4,10 @@
 export function money(amount: number | string | null | undefined, currency: string): string {
   const value = Number(amount ?? 0)
   try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-    }).format(value)
+    const code = currency.toUpperCase()
+    // Riel without decimals (owner 2026-11-25), as the backend rounds it.
+    const digits = code === "KHR" ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: code, ...digits }).format(value)
   } catch {
     return `${value.toFixed(2)} ${currency.toUpperCase()}`
   }
@@ -86,7 +86,7 @@ export function productBody(form: {
         // fulfilling takes it from the vendor's location (F-080).
         manage_inventory: track,
         options: { Default: "Default" },
-        prices: [{ amount: Math.round(price * 100) / 100, currency_code: currency }],
+        prices: [{ amount: currency === "khr" ? Math.round(price) : Math.round(price * 100) / 100, currency_code: currency }],
       },
     ],
     ...(track ? { additional_data: { stock_quantity: stock } } : {}),

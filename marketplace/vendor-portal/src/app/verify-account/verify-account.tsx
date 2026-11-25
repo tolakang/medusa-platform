@@ -32,7 +32,10 @@ export default function VerifyAccount() {
       <p className="mt-4">
         {state === "done"
           ? "Your email is confirmed. Sign in to see your shop; the marketplace reviews every new shop."
-          : "This link is invalid or has expired. Sign in to get a new one."}
+          : // A link works once, so a second click lands here too (bug
+            // 2026-11-25). Whether the email is confirmed isn't told to an
+            // anonymous visitor (it would reveal accounts), so both cases are named.
+            "This link was already used or has expired. If you already confirmed your email, just sign in. Otherwise sign in to get a new link."}
       </p>
       <Link href="/login" className="btn-primary mt-6 inline-block">
         Go to sign in

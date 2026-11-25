@@ -40,13 +40,13 @@ export default async function ProductsPage() {
       </Shell>
     );
   }
-  const { products } = await vendorGet<{ products: Product[] }>(
+  const { products, currencies } = await vendorGet<{ products: Product[]; currencies?: string[] }>(
     token,
     "/vendors/products",
   );
   return (
     <Shell vendor={vendor} active="/products">
-      <ProductForm />
+      <ProductForm currencies={currencies ?? []} />
       <section className="card p-4">
         <h2 className="mb-2 font-semibold">Your products</h2>
         {products.length ? (

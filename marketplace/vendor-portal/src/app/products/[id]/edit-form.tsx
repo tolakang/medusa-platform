@@ -6,8 +6,17 @@ import { deleteProduct, editProduct, type EditState } from "../actions"
 export function EditProductForm({
   product,
   approvalRequired,
+  currencies,
 }: {
-  product: { id: string; title: string; description: string | null; status: string }
+  product: {
+    id: string
+    title: string
+    description: string | null
+    status: string
+    price?: { amount: number; currency_code: string } | null
+    sku?: string | null
+  }
+  currencies: string[]
   // MARKETPLACE_REQUIRE_PRODUCT_APPROVAL: off, the vendor publishes its own edit.
   approvalRequired: boolean
 }) {
@@ -27,6 +36,31 @@ export function EditProductForm({
           <span className="text-sm font-medium">Description</span>
           <textarea className="field" name="description" rows={4} maxLength={5000} defaultValue={product.description ?? ""} />
         </label>
+        <div className="flex flex-wrap gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Price</span>
+            <input className="field w-32" name="price" inputMode="decimal" defaultValue={product.price?.amount ?? ""} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">Currency</span>
+            <select className="field" name="currency" defaultValue={product.price?.currency_code ?? currencies[0] ?? "usd"}>
+              {[...new Set([...(currencies.length ? currencies : ["usd"]), ...(product.price ? [product.price.currency_code] : [])])].map((c) => (
+                <option key={c} value={c} disabled={currencies.length > 0 && !currencies.includes(c)}>
+                  {c.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium">SKU (optional)</span>
+            <input className="field w-40" name="sku" maxLength={120} defaultValue={product.sku ?? ""} />
+          </label>
+        </div>
+        {product.status === "published" && approvalRequired && (
+          <p className="text-sm text-ui-fg-subtle">
+            This product is on sale. Saving a change takes it off sale until the marketplace reviews it again.
+          </p>
+        )}
         {state.error && (
           <p role="alert" className="rounded-lg bg-ui-tag-red-bg px-3 py-2 text-sm text-ui-tag-red-text">
             {state.error}
