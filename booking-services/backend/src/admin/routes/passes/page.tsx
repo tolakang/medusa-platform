@@ -90,8 +90,25 @@ const PassesPage = () => {
                   </Table.Cell>
                   <Table.Cell>{p.order_display_id != null ? `#${p.order_display_id}` : "—"}</Table.Cell>
                   <Table.Cell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {/* Extend by 30 days from the later of today and the end date. */}
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        disabled={change.isPending}
+                        onClick={() => {
+                          const from = Math.max(now, new Date(p.expires_at).getTime())
+                          change.mutate({
+                            id: p.id,
+                            body: { expires_at: new Date(from + 30 * 24 * 3600_000).toISOString() },
+                            done: "Pass extended by 30 days.",
+                          })
+                        }}
+                      >
+                        Extend 30 days
+                      </Button>
                     {!expired && (
-                      <div className="flex justify-end gap-2">
+                      <>
                         <Button
                           size="small"
                           variant="secondary"
@@ -103,8 +120,9 @@ const PassesPage = () => {
                         <Button size="small" variant="secondary" disabled={change.isPending} onClick={() => end(p)}>
                           End now
                         </Button>
-                      </div>
+                      </>
                     )}
+                    </div>
                   </Table.Cell>
                 </Table.Row>
               )
