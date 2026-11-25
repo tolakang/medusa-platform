@@ -10,6 +10,7 @@ export const ADMIN_PROVIDER_FIELDS = [
   "id",
   "role",
   "status",
+  "status_reason",
   "email",
   "name",
   "handle",

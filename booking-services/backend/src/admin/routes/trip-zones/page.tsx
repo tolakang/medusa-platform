@@ -157,7 +157,7 @@ const TripZonesPage = () => {
         <div className="px-6 py-4">
           <Heading level="h1">Trip zones</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            Areas for trips priced by zones (a product with Metadata booking_kind = C and trip_pricing = zones). Each
+            Areas for trips priced by area (moving or transport services set to charge by area, not by the hour). Each
             vehicle has a price and a length for a trip between two areas; it counts both ways.
           </Text>
         </div>

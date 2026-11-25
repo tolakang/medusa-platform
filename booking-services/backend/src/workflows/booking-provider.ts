@@ -285,6 +285,7 @@ export type UpdateProviderInput = {
   photo?: string | null
   area?: string | null
   status?: "active" | "suspended"
+  status_reason?: string | null
   commission_rate?: number | null
 }
 

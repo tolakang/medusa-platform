@@ -17,6 +17,7 @@ type Provider = {
   name: string
   handle: string
   commission_rate: number | null
+  status_reason?: string | null
   invite_code?: string
   resources?: { id: string; name: string; type: string }[]
 }
@@ -91,6 +92,8 @@ const ProvidersPage = () => {
   const [rate, setRate] = useState<{ id: string; value: string } | null>(null)
   const [invited, setInvited] = useState<Provider | null>(null)
   const [resetLink, setResetLink] = useState<{ id: string; link: string } | null>(null)
+  // Declining a pending partner asks why (kept with the provider).
+  const [declining, setDeclining] = useState<{ id: string; reason: string } | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: QUERY_KEY,
@@ -131,10 +134,19 @@ const ProvidersPage = () => {
 
   const prompt = usePrompt()
   const update = useMutation({
-    mutationFn: ({ id, ...body }: { id: string; status?: "active" | "suspended"; commission_rate?: number | null }) =>
+    mutationFn: ({
+      id,
+      ...body
+    }: {
+      id: string
+      status?: "active" | "suspended"
+      status_reason?: string
+      commission_rate?: number | null
+    }) =>
       sdk.client.fetch<{ provider: Provider }>(`/admin/booking/providers/${id}`, { method: "POST", body }),
     onSuccess: ({ provider }) => {
       setRate(null)
+      setDeclining(null)
       refresh()
       toast.success(`${provider.name} saved`)
     },
@@ -240,6 +252,11 @@ const ProvidersPage = () => {
                       {STATUS[p.status].label}
                     </Badge>
                     {p.invite_code && <span className="font-mono text-ui-fg-subtle">{p.invite_code}</span>}
+                    {p.status === "suspended" && p.status_reason && (
+                      <Text size="xsmall" className="max-w-[16rem] text-ui-fg-subtle">
+                        Why: {p.status_reason}
+                      </Text>
+                    )}
                     {resetLink?.id === p.id && (
                       <button
                         type="button"
@@ -319,14 +336,51 @@ const ProvidersPage = () => {
                             Set rate
                           </Button>
                         )}
-                        {p.status === "pending" && (
-                          <Button
-                            size="small"
-                            disabled={update.isPending}
-                            onClick={() => update.mutate({ id: p.id, status: "active" })}
+                        {p.status === "pending" && declining?.id !== p.id && (
+                          <>
+                            <Button
+                              size="small"
+                              disabled={update.isPending}
+                              onClick={() => update.mutate({ id: p.id, status: "active" })}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="secondary"
+                              disabled={update.isPending}
+                              onClick={() => setDeclining({ id: p.id, reason: "" })}
+                            >
+                              Decline
+                            </Button>
+                          </>
+                        )}
+                        {p.status === "pending" && declining?.id === p.id && (
+                          <form
+                            className="flex items-center gap-x-2"
+                            onSubmit={(e) => {
+                              e.preventDefault()
+                              if (declining.reason.trim()) {
+                                update.mutate({ id: p.id, status: "suspended", status_reason: declining.reason.trim() })
+                              }
+                            }}
                           >
-                            Approve
-                          </Button>
+                            <Input
+                              size="small"
+                              aria-label={`Why decline ${p.name}`}
+                              placeholder="Why? (kept on record)"
+                              maxLength={500}
+                              autoFocus
+                              value={declining.reason}
+                              onChange={(e) => setDeclining({ id: p.id, reason: e.target.value })}
+                            />
+                            <Button size="small" variant="danger" type="submit" disabled={update.isPending || !declining.reason.trim()}>
+                              Decline
+                            </Button>
+                            <Button size="small" variant="secondary" type="button" onClick={() => setDeclining(null)}>
+                              Back
+                            </Button>
+                          </form>
                         )}
                         {p.status === "active" && (
                           <Button

@@ -19,6 +19,10 @@ import {
 import { sdk } from "../../lib/sdk"
 import { errorText, statusLabel } from "../../lib/format"
 
+
+// "Asia/Phnom_Penh" → "Phnom Penh time": the zone in plain words.
+const zoneLabel = (zone: string) => `${(zone.split("/").pop() ?? zone).replace(/_/g, " ")} time`
+
 // Bookings (TASKS P3-11, BUILD_PLAN §9.3): a day or week calendar per
 // resource, in the resource's own time zone, with walk-in booking and
 // cancellation. Reads GET /admin/booking/resources and
@@ -96,7 +100,7 @@ const MoveForm = ({
       <div className="flex gap-2">
         <Input type="date" aria-label="New day" value={day} onChange={(e) => setDay(e.target.value)} />
         <Input type="time" aria-label="New start time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <Text size="xsmall" className="self-center text-ui-fg-subtle">{target.timezone}</Text>
+        <Text size="xsmall" className="self-center text-ui-fg-subtle">{zoneLabel(target.timezone)}</Text>
       </div>
       <div className="flex gap-2">
         <Button size="small" isLoading={move.isPending} onClick={() => move.mutate()}>Move</Button>
@@ -314,7 +318,7 @@ const BookingsPage = () => {
         <div>
           <Heading level="h1">Bookings</Heading>
           <Text className="text-ui-fg-subtle">
-            Times are in {resource?.timezone ?? "the resource's time zone"}.
+            Times are in {resource ? zoneLabel(resource.timezone) : "the calendar's time zone"}.
           </Text>
         </div>
         <div className="flex flex-wrap items-end gap-3">

@@ -183,7 +183,7 @@ const PartnerPayoutsPage = () => {
         </Table>
         {!payouts.isLoading && !payoutRows.length && (
           <Text size="small" className="text-ui-fg-subtle px-6 py-4">
-            No payouts yet. They are made on the payout day (BOOKING_PAYOUT_DAY) for the month before.
+            No payouts yet. They are made once a month, on the shop's payout day, for the month before.
           </Text>
         )}
       </Container>
