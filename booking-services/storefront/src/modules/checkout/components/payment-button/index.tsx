@@ -3,7 +3,7 @@
 import { isManual, isPayway, isStripeLike } from "@lib/constants"
 import { placeOrder, startPaywayPayment } from "@lib/data/cart"
 import { hasRequiredContact } from "@lib/util/contact"
-import { isServiceOnlyCart } from "@lib/util/booking"
+import { isServiceOnlyCart, noPaymentDue } from "@lib/util/booking"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
@@ -36,6 +36,11 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   const label = isServiceOnlyCart(cart) ? "Confirm booking" : "Place order"
 
   switch (true) {
+    // $0 (pass credits): Medusa completes it with no payment session.
+    case noPaymentDue(cart):
+      return (
+        <ManualTestPaymentButton notReady={notReady} label={label} data-testid={dataTestId} />
+      )
     case isStripeLike(paymentSession?.provider_id):
       return (
         <StripePaymentButton

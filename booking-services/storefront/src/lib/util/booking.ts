@@ -180,6 +180,14 @@ export function balanceWhere(place: BookingPlace | null): string {
   return place === "shop" || place === "venue" ? "at the venue" : "on the day"
 }
 
+// Nothing to pay (a booking on pass credits, a gift card covering it all):
+// Medusa completes a cart whose total is 0 without any payment session
+// (core-flows validateCartPaymentsStep `canSkipPayment`), so checkout skips
+// choosing a payment method.
+export function noPaymentDue(cart: { items?: unknown[] | null; total?: number | null } | null | undefined): boolean {
+  return (cart?.items?.length ?? 0) > 0 && cart?.total != null && Number(cart.total) === 0
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }

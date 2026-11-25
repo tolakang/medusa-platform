@@ -172,7 +172,10 @@ medusaIntegrationTestRunner({
         expect(added.status).toBe(200)
         const line = (await api.get(`/store/carts/${cart}`, sok)).data.cart.items[0]
         expect([line.unit_price, line.metadata.booking_pass_id]).toEqual([0, pass.id])
-        const done = await checkout(sok, cart)
+        // A $0 cart completes with no payment collection at all, as the
+        // storefront does (core-flows validateCartPaymentsStep skips payment
+        // when total <= 0 and credit_line_total >= 0).
+        const done = await call(api.post(`/store/carts/${cart}/complete`, {}, sok))
         expect([done.data.type, done.data.order.total]).toEqual(["order", 0])
         expect(await creditsLeft(sok, 4)).toBe(4)
         const bookingId = line.metadata.booking_id

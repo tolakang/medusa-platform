@@ -11,7 +11,12 @@ type PaymentDetailsProps = {
 }
 
 const PaymentDetails = ({ order }: PaymentDetailsProps) => {
-  const payment = order.payment_collections?.[0].payments?.[0]
+  const payment = order.payment_collections?.[0]?.payments?.[0]
+
+  // A $0 order (pass credits) has no payment: no empty "Payment" section.
+  if (!payment) {
+    return null
+  }
 
   return (
     <div>

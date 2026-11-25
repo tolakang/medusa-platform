@@ -16,7 +16,7 @@ import {
   clx,
 } from "@modules/common/components/ui"
 import { HttpTypes } from "@medusajs/types"
-import { isServiceOnlyCart } from "@lib/util/booking"
+import { isServiceOnlyCart, noPaymentDue } from "@lib/util/booking"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
@@ -60,14 +60,13 @@ const Payment = ({
     }
   }
 
-  const paidByGiftcard = !!(
-    (cart as unknown as Record<string, unknown>)?.gift_cards && ((cart as unknown as Record<string, unknown>)?.gift_cards as unknown[])?.length > 0 && cart?.total === 0
-  )
+  // $0 (pass credits, gift card): no payment method to choose.
+  const nothingToPay = noPaymentDue(cart)
 
   // Booked services only have no delivery step (P3-13).
   const paymentReady =
     (activeSession && (isServiceOnlyCart(cart) || (cart?.shipping_methods?.length ?? 0) !== 0)) ||
-    paidByGiftcard
+    nothingToPay
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -86,6 +85,9 @@ const Payment = ({
   }
 
   const handleSubmit = async () => {
+    if (nothingToPay) {
+      return router.push(pathname + "?" + createQueryString("step", "review"), { scroll: false })
+    }
     setIsLoading(true)
     try {
       const shouldInputPaymentDetails =
@@ -149,7 +151,7 @@ const Payment = ({
       </div>
       <div>
         <div className={isOpen ? "block" : "hidden"}>
-          {!paidByGiftcard && (availablePaymentMethods?.length ?? 0) > 0 && (
+          {!nothingToPay && (availablePaymentMethods?.length ?? 0) > 0 && (
             <>
               <RadioGroup
                 value={selectedPaymentMethod}
@@ -178,13 +180,13 @@ const Payment = ({
             </>
           )}
 
-          {!paidByGiftcard && !availablePaymentMethods?.length && (
+          {!nothingToPay && !availablePaymentMethods?.length && (
             <Text className="txt-medium text-ui-fg-subtle" data-testid="no-payment-methods">
               No payment method is set up for your country yet. Contact the shop to order.
             </Text>
           )}
 
-          {paidByGiftcard && (
+          {nothingToPay && (
             <div className="flex flex-col w-full xsmall:w-1/3">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Payment method
@@ -193,7 +195,7 @@ const Payment = ({
                 className="txt-medium text-ui-fg-subtle"
                 data-testid="payment-method-summary"
               >
-                Gift card
+                Nothing to pay
               </Text>
             </div>
           )}
@@ -210,7 +212,7 @@ const Payment = ({
             isLoading={isLoading}
             disabled={
               (isStripeLike(selectedPaymentMethod) && !paymentComplete) ||
-              (!selectedPaymentMethod && !paidByGiftcard)
+              (!selectedPaymentMethod && !nothingToPay)
             }
             data-testid="submit-payment-button"
           >
@@ -252,7 +254,7 @@ const Payment = ({
                 </div>
               </div>
             </div>
-          ) : paidByGiftcard ? (
+          ) : nothingToPay ? (
             <div className="flex flex-col w-full xsmall:w-1/3">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Payment method
@@ -261,7 +263,7 @@ const Payment = ({
                 className="txt-medium text-ui-fg-subtle"
                 data-testid="payment-method-summary"
               >
-                Gift card
+                Nothing to pay
               </Text>
             </div>
           ) : null}
