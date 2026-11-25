@@ -6,6 +6,7 @@ import { Suspense } from "react"
 import { getRegion } from "@lib/data/regions"
 import { getVendorShop } from "@lib/data/vendors"
 import { Heading, Text } from "@modules/common/components/ui"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import PaginatedProducts from "@modules/store/templates/paginated-products"
 
@@ -67,7 +68,12 @@ export default async function VendorPage(props: Props) {
           />
         </Suspense>
       ) : (
-        <Text className="text-ui-fg-subtle">No products yet.</Text>
+        <Text className="text-ui-fg-subtle">
+          This shop has no products yet.{" "}
+          <LocalizedClientLink href="/store" className="text-ui-fg-interactive hover:underline">
+            Browse all products
+          </LocalizedClientLink>
+        </Text>
       )}
     </div>
   )

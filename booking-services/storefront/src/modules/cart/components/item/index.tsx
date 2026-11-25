@@ -46,9 +46,17 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
       })
   }
 
-  // TODO: Update this to grab the actual max inventory
-  const maxQtyFromInventory = 10
-  const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
+  // Stock-managed variants with allow_backorder off are capped at the stock
+  // the store reports; everything else gets a sensible ceiling. The backend
+  // still refuses a quantity it cannot fill.
+  const MAX_CART_QUANTITY = 99
+  const stock = item.variant?.inventory_quantity
+  const maxQuantity = Math.max(
+    item.quantity,
+    item.variant?.manage_inventory && !item.variant?.allow_backorder && typeof stock === "number"
+      ? Math.min(stock, MAX_CART_QUANTITY)
+      : MAX_CART_QUANTITY
+  )
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
@@ -120,10 +128,9 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
               className="w-16 h-11 p-4"
               data-testid="product-select-button"
             >
-              {/* TODO: Update this with the v2 way of managing inventory */}
               {Array.from(
                 {
-                  length: Math.min(maxQuantity, 10),
+                  length: maxQuantity,
                 },
                 (_, i) => (
                   <option value={i + 1} key={i}>

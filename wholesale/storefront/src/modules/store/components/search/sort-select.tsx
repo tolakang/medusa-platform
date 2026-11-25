@@ -11,15 +11,15 @@ export const getSortItems = (currencyCode: string) => {
     { value: PRODUCT_INDEX_NAME, label: "Relevance" },
     {
       value: `${PRODUCT_INDEX_NAME}/sort/created_at:desc`,
-      label: "Latest Arrivals",
+      label: "Newest first",
     },
     {
       value: `${PRODUCT_INDEX_NAME}/sort/${minPrice}:asc`,
-      label: "Price: Low -> High",
+      label: "Price: low to high",
     },
     {
       value: `${PRODUCT_INDEX_NAME}/sort/${minPrice}:desc`,
-      label: "Price: High -> Low",
+      label: "Price: high to low",
     },
   ]
 }
