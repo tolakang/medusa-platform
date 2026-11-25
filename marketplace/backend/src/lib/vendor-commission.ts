@@ -22,7 +22,38 @@ export function commissionRateFor(
   return own === null || own === undefined ? defaultCommissionRate(env) : Number(own)
 }
 
-const cents = (value: BigNumberInput) => MathBN.convert(value, 2).toNumber()
+// Riel is used without decimals (owner 2026-11-25), though ISO 4217 and
+// Intl give KHR 2; the map wins over Intl.
+const DECIMALS: Record<string, number> = { khr: 0 }
+
+/**
+ * How many decimals a currency's amounts have: the map above, else Intl's
+ * (USD 2, JPY 0). Unknown or missing code: 2.
+ */
+export function currencyDecimals(currencyCode?: string | null) {
+  if (!currencyCode) {
+    return 2
+  }
+  const own = DECIMALS[currencyCode.toLowerCase()]
+  if (own !== undefined) {
+    return own
+  }
+  try {
+    return (
+      new Intl.NumberFormat("en", { style: "currency", currency: currencyCode.toUpperCase() })
+        .resolvedOptions().maximumFractionDigits ?? 2
+    )
+  } catch {
+    return 2
+  }
+}
+
+/** The amount rounded to the currency's minor units. */
+export const roundToCurrency = (value: BigNumberInput, currencyCode?: string | null) =>
+  MathBN.convert(value, currencyDecimals(currencyCode)).toNumber()
+
+const cents = (value: BigNumberInput, currencyCode?: string | null) =>
+  roundToCurrency(value, currencyCode)
 
 /**
  * What a commission is taken on: the child order's items after discounts,
@@ -31,19 +62,24 @@ const cents = (value: BigNumberInput) => MathBN.convert(value, 2).toNumber()
 export function commissionBase(order: {
   item_total?: BigNumberInput | null
   item_tax_total?: BigNumberInput | null
+  currency_code?: string | null
 }) {
   const base = MathBN.sub(order.item_total ?? 0, order.item_tax_total ?? 0)
-  return Math.max(0, cents(base))
+  return Math.max(0, cents(base, order.currency_code))
 }
 
-/** rate percent of the base, rounded to cents. */
-export function commissionAmount(base: number, rate: number) {
-  return base <= 0 || rate <= 0 ? 0 : cents(MathBN.div(MathBN.mult(base, rate), 100))
+/** rate percent of the base, rounded to the currency's minor units. */
+export function commissionAmount(base: number, rate: number, currencyCode?: string | null) {
+  return base <= 0 || rate <= 0 ? 0 : cents(MathBN.div(MathBN.mult(base, rate), 100), currencyCode)
 }
 
 /** What the vendor is owed for the order: its total minus the commission, never below 0. */
-export function vendorPayoutAmount(orderTotal: BigNumberInput, commission: number) {
-  return Math.max(0, cents(MathBN.sub(orderTotal, commission)))
+export function vendorPayoutAmount(
+  orderTotal: BigNumberInput,
+  commission: number,
+  currencyCode?: string | null
+) {
+  return Math.max(0, cents(MathBN.sub(orderTotal, commission), currencyCode))
 }
 
 /** Day of the month payouts are made: MARKETPLACE_PAYOUT_DAY, 1 to 28, else 1. */
@@ -82,6 +118,8 @@ export function groupPayouts(
   }[]
 ): PayoutLine[] {
   const lines = new Map<string, PayoutLine>()
+  // Summed exactly, rounded once per line (rounding each step drifts).
+  const sums = new Map<string, ReturnType<typeof MathBN.convert>>()
   for (const c of commissions) {
     const key = `${c.vendor_id}:${c.currency_code}`
     const line = lines.get(key) ?? {
@@ -90,7 +128,9 @@ export function groupPayouts(
       amount: 0,
       commission_ids: [],
     }
-    line.amount = cents(MathBN.add(line.amount, c.payout_amount))
+    const sum = MathBN.add(sums.get(key) ?? 0, c.payout_amount)
+    sums.set(key, sum)
+    line.amount = cents(sum, c.currency_code)
     line.commission_ids.push(c.id)
     lines.set(key, line)
   }

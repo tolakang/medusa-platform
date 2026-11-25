@@ -78,7 +78,8 @@ export async function editProduct(_: EditState, form: FormData): Promise<EditSta
   if (!title) {
     return { error: "Give the product a name." }
   }
-  const status = form.get("intent") === "propose" ? "proposed" : "draft"
+  const intent = form.get("intent")
+  const status = intent === "publish" ? "published" : intent === "propose" ? "proposed" : "draft"
   const result = await backendFetch(`/vendors/products/${id}`, {
     token,
     method: "POST",
@@ -88,7 +89,14 @@ export async function editProduct(_: EditState, form: FormData): Promise<EditSta
     return { error: result.message }
   }
   revalidatePath("/products")
-  return { info: status === "proposed" ? "Saved and sent for review." : "Saved as a draft." }
+  return {
+    info:
+      status === "published"
+        ? "Saved and published."
+        : status === "proposed"
+          ? "Saved and sent for review."
+          : "Saved as a draft.",
+  }
 }
 
 export async function deleteProduct(_: EditState, form: FormData): Promise<EditState> {

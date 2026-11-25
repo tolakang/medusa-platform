@@ -20,7 +20,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
   if (vendor.status !== "active") {
     return <Shell vendor={vendor} active="/products">{null}</Shell>
   }
-  const { products } = await vendorGet<{ products: Product[] }>(token, "/vendors/products")
+  const { products, approval_required } = await vendorGet<{ products: Product[]; approval_required?: boolean }>(
+    token,
+    "/vendors/products"
+  )
   const product = products.find((p) => p.id === id)
   if (!product) notFound()
   const note = typeof product.metadata?.rejection_note === "string" ? product.metadata.rejection_note : null
@@ -39,7 +42,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           “{product.title}” is on sale. Ask the marketplace to unpublish it if you need to change it.
         </p>
       ) : (
-        <EditProductForm product={product} />
+        <EditProductForm product={product} approvalRequired={approval_required !== false} />
       )}
     </Shell>
   )

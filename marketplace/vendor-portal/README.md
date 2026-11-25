@@ -4,7 +4,7 @@ Vendor portal for the marketplace category (BUILD_PLAN §9.6, TASKS P6-09): vend
 
 - **Sign-in and sign-up** (`/login`): a new vendor opens a shop here (register at `/auth/vendor/emailpass/register`, then `POST /vendors`, P6-03). The shop waits for the marketplace's approval; until then the pages show a notice and no data.
 - **Overview** (`/`): orders to fulfil and what's earned but not paid out yet.
-- **Products** (`/products`): the vendor's products with their status and **quantity in stock** (editable), and a form to add one (name, description, one price, SKU, "Track stock" and quantity; "send for review" or "keep as a draft"). The marketplace publishes it (P6-04, P6-07). Stock sits at the vendor's own location (P6-15, F-080); untick "Track stock" for made-to-order products.
+- **Products** (`/products`): the vendor's products with their status and **quantity in stock** (editable), and a form to add one (name, description, one price, SKU, "Track stock" and quantity; "send for review" or "keep as a draft"). The marketplace publishes it (P6-04, P6-07). Editing a product that isn't on sale saves it and sends it for review, or, when the marketplace doesn't require approval (`approval_required: false` from `GET /vendors/products`), publishes it ("Save and publish"). Stock sits at the vendor's own location (P6-15, F-080); untick "Track stock" for made-to-order products.
 - **Orders** (`/orders`): the vendor's own orders (its child order of each checkout, P6-05) with items, delivery address, its payout per order, and **Mark fulfilled** (`POST /vendors/me/orders/:id/fulfillments`, which takes the reserved stock; P6-10).
 - **Payouts** (`/payouts`): monthly payouts and what's not paid out yet (`/vendors/me/payouts`, P6-06).
 

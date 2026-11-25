@@ -58,7 +58,7 @@ const recordVendorCommissionsStep = createStep(
       .map((o) => {
         const base = commissionBase(o)
         const rate = commissionRateFor(o.vendor!)
-        const amount = commissionAmount(base, rate)
+        const amount = commissionAmount(base, rate, o.currency_code)
         return {
           vendor_id: o.vendor!.id,
           order_id: o.id,
@@ -66,7 +66,7 @@ const recordVendorCommissionsStep = createStep(
           base,
           rate,
           amount,
-          payout_amount: vendorPayoutAmount(o.total, amount),
+          payout_amount: vendorPayoutAmount(o.total, amount, o.currency_code),
           currency_code: o.currency_code,
         }
       })

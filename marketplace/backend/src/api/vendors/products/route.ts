@@ -95,7 +95,8 @@ const vendorProducts = async (req: AuthenticatedMedusaRequest, productIds?: stri
 // first, any status.
 export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const products = await withStock(req, await vendorProducts(req))
-  res.json({ products, count: products.length })
+  // approval_required: whether the vendor portal offers "publish" (F-075).
+  res.json({ products, count: products.length, approval_required: productApprovalRequired() })
 }
 
 // POST /vendors/products (TASKS P6-04): a vendor adds a product (body as the

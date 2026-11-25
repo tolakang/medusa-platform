@@ -5,8 +5,11 @@ import { deleteProduct, editProduct, type EditState } from "../actions"
 
 export function EditProductForm({
   product,
+  approvalRequired,
 }: {
   product: { id: string; title: string; description: string | null; status: string }
+  // MARKETPLACE_REQUIRE_PRODUCT_APPROVAL: off, the vendor publishes its own edit.
+  approvalRequired: boolean
 }) {
   const [state, action, saving] = useActionState<EditState, FormData>(editProduct, {})
   const [deleteState, deleteAction, deleting] = useActionState<EditState, FormData>(deleteProduct, {})
@@ -35,8 +38,14 @@ export function EditProductForm({
           </p>
         )}
         <div className="flex flex-wrap gap-2">
-          <button className="btn-primary" type="submit" name="intent" value="propose" disabled={saving}>
-            {saving ? "Saving…" : "Save and send for review"}
+          <button
+            className="btn-primary"
+            type="submit"
+            name="intent"
+            value={approvalRequired ? "propose" : "publish"}
+            disabled={saving}
+          >
+            {saving ? "Saving…" : approvalRequired ? "Save and send for review" : "Save and publish"}
           </button>
           <button className="btn-secondary" type="submit" name="intent" value="draft" disabled={saving}>
             Save as draft

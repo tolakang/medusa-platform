@@ -5,6 +5,7 @@ import type {
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
 import { deleteProductsWorkflow, updateProductsWorkflow } from "@medusajs/medusa/core-flows"
+import { productApprovalRequired, vendorProductStatus } from "../../../../lib/vendor-product-status"
 import { vendorIdOf } from "../../me/vendor-orders"
 
 // Edit or delete one of the vendor's own products that isn't on sale yet (gap
@@ -14,7 +15,7 @@ export const PostVendorProduct = z
   .object({
     title: z.string().trim().min(1).max(200).optional(),
     description: z.string().trim().max(5000).optional(),
-    status: z.enum(["draft", "proposed"]).optional(),
+    status: z.enum(["draft", "proposed", "published"]).optional(),
   })
   .strict()
   .refine((b) => Object.keys(b).length > 0, { message: "Send title, description or status." })
@@ -42,15 +43,19 @@ const ownProduct = async (req: AuthenticatedMedusaRequest) => {
 }
 
 // POST /vendors/products/:id: change the title, description or status (draft
-// or proposed). Sending it for review again clears the rejection note.
+// or proposed; published too when MARKETPLACE_REQUIRE_PRODUCT_APPROVAL is
+// off, as on create: vendorProductStatus). Sending it for review again, or
+// publishing it, clears the rejection note.
 export const POST = async (
   req: AuthenticatedMedusaRequest<z.infer<typeof PostVendorProduct>>,
   res: MedusaResponse
 ) => {
   const product = await ownProduct(req)
-  const { status, ...fields } = req.validatedBody
+  const { status: requested, ...fields } = req.validatedBody
+  const status =
+    requested === undefined ? undefined : vendorProductStatus(requested, productApprovalRequired())
   const metadata = { ...(product.metadata ?? {}) } as Record<string, unknown>
-  if (status === "proposed") {
+  if (status === "proposed" || status === "published") {
     delete metadata.rejection_note
   }
   await updateProductsWorkflow(req.scope).run({

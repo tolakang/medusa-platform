@@ -9,7 +9,7 @@ import {
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
 import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
-import { PAYOUTS_LOCK } from "../../lib/vendor-commission"
+import { PAYOUTS_LOCK, roundToCurrency } from "../../lib/vendor-commission"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import type MarketplaceModuleService from "../../modules/marketplace/service"
 import { CHILD_ORDERS_KEY, PARENT_ORDER_KEY } from "./create-vendor-orders"
@@ -129,7 +129,7 @@ const settleRefundReviewStep = createStep(
       if (amount === undefined || amount < 0 || MathBN.gte(amount, commission.payout_amount)) {
         throw new MedusaError(MedusaError.Types.INVALID_DATA, REDUCE_NEEDS_AMOUNT_MESSAGE)
       }
-      payoutAmount = MathBN.convert(amount, 2).toNumber()
+      payoutAmount = roundToCurrency(amount, commission.currency_code)
     }
     const updated = await marketplace.updateVendorCommissions({
       id: commission.id,
