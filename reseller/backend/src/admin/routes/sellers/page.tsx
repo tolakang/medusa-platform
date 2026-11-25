@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Users } from "@medusajs/icons"
-import { Badge, Button, Container, Heading, Input, Label, Table, Text, toast, usePrompt } from "@medusajs/ui"
+import { EllipsisHorizontal, Users } from "@medusajs/icons"
+import { Badge, Button, Container, DropdownMenu, Heading, IconButton, Input, Label, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -24,7 +24,10 @@ type Seller = {
   status: Status
   commission_rate: number | null
   created_at: string
-  invite_code: string
+  // Null once the seller accepted and set a password (the code is spent).
+  invite_code: string | null
+  accepted_at: string | null
+  payout_hold?: boolean
 }
 
 type Draft = { domain?: string; rate?: string }
@@ -64,12 +67,64 @@ const copy = (text: string, what: string) =>
   )
 
 const EMPTY_INVITE = { name: "", handle: "", email: "", domain: "", rate: "" }
+type InviteField = keyof typeof EMPTY_INVITE
+
+/** A shop address from the name: "Lina's Shop" → "linas-shop". */
+const handleFrom = (name: string) =>
+  name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/[\s-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+
+const HANDLE_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/
+
+/** What is wrong with each field of the invite form, in plain words. */
+const inviteErrors = (i: typeof EMPTY_INVITE) => {
+  const errors: Partial<Record<InviteField, string>> = {}
+  if (!i.name.trim()) errors.name = "Give the seller's shop a name."
+  if (!i.handle.trim()) errors.handle = "Give the shop an address."
+  else if (!HANDLE_RE.test(i.handle.trim())) errors.handle = "Use lowercase letters, digits and single hyphens, such as lina-shop."
+  if (!i.email.trim()) errors.email = "Enter the email the seller signs in with."
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(i.email.trim())) errors.email = "This doesn't look like an email address."
+  if (i.domain.trim() && !DOMAIN_RE.test(i.domain.trim().toLowerCase()))
+    errors.domain = "Use a host name such as shop.example.com, without https://."
+  if (rateValue(i.rate) === undefined) errors.rate = "Use a percent from 0 to 100, or leave it empty for the default."
+  return errors
+}
+
+/** Puts a server message under the field it is about. */
+const fieldOf = (message: string): InviteField | null => {
+  const m = message.toLowerCase()
+  if (m.includes("domain")) return "domain"
+  if (m.includes("handle") || m.includes("address") || m.includes("hyphen")) return "handle"
+  if (m.includes("email")) return "email"
+  if (m.includes("commission") || m.includes("rate")) return "rate"
+  if (m.includes("name")) return "name"
+  return null
+}
+
+function FieldError({ id, text }: { id: string; text?: string }) {
+  return text ? (
+    <Text id={id} size="xsmall" className="text-ui-fg-error" role="alert">
+      {text}
+    </Text>
+  ) : null
+}
 
 const SellersPage = () => {
   const queryClient = useQueryClient()
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [invite, setInvite] = useState(EMPTY_INVITE)
   const [invited, setInvited] = useState<{ name: string; code: string } | null>(null)
+  // Errors show once a field was left or the form was sent, not while typing.
+  const [touched, setTouched] = useState<Partial<Record<InviteField, boolean>>>({})
+  const [serverError, setServerError] = useState<{ field: InviteField | null; text: string } | null>(null)
+  const [handleEdited, setHandleEdited] = useState(false)
 
   // A page at a time (design critique, 2026-11-23); back to the first page
   // when the filter changes.
@@ -144,9 +199,34 @@ const SellersPage = () => {
       toast.success(`${seller.name} invited`)
       setInvited({ name: seller.name, code: invite_code })
       setInvite(EMPTY_INVITE)
+      setTouched({})
+      setHandleEdited(false)
+      setServerError(null)
       refresh()
     },
-    onError: (e) => toast.error(errorText(e)),
+    onError: (e) => {
+      const text = errorText(e)
+      setServerError({ field: fieldOf(text), text })
+    },
+  })
+  const errors = inviteErrors(invite)
+  const errorFor = (f: InviteField) =>
+    (touched[f] ? errors[f] : undefined) ?? (serverError?.field === f ? serverError.text : undefined)
+  const setField = (f: InviteField, value: string) => {
+    if (serverError?.field === f) setServerError(null)
+    setInvite((i) => {
+      const next = { ...i, [f]: value }
+      // The address follows the name until it is edited by hand.
+      if (f === "name" && !handleEdited) next.handle = handleFrom(value)
+      return next
+    })
+  }
+  const fieldProps = (f: InviteField) => ({
+    value: invite[f],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setField(f, e.target.value),
+    onBlur: () => setTouched((t) => ({ ...t, [f]: true })),
+    "aria-invalid": !!errorFor(f),
+    "aria-describedby": errorFor(f) ? `invite-${f}-error` : undefined,
   })
 
   // Newest first, as the server pages them (a sort here would only reorder one page).
@@ -167,10 +247,12 @@ const SellersPage = () => {
           </Text>
         </div>
         <form
-          className="grid grid-cols-1 items-end gap-2 md:grid-cols-6"
+          className="grid grid-cols-1 items-start gap-2 md:grid-cols-6"
+          noValidate
           onSubmit={(e) => {
             e.preventDefault()
-            create.mutate()
+            setTouched({ name: true, handle: true, email: true, domain: true, rate: true })
+            if (Object.keys(errors).length === 0) create.mutate()
           }}
         >
           <div className="flex flex-col gap-1">
@@ -179,9 +261,9 @@ const SellersPage = () => {
               id="invite-name"
               size="small"
               placeholder="Lina Shop"
-              value={invite.name}
-              onChange={(e) => setInvite((i) => ({ ...i, name: e.target.value }))}
+              {...fieldProps("name")}
             />
+            <FieldError id="invite-name-error" text={errorFor("name")} />
           </div>
           <div className="flex flex-col gap-1">
             <Label size="small" htmlFor="invite-handle">Shop address</Label>
@@ -189,9 +271,13 @@ const SellersPage = () => {
               id="invite-handle"
               size="small"
               placeholder="lina-shop"
-              value={invite.handle}
-              onChange={(e) => setInvite((i) => ({ ...i, handle: e.target.value }))}
+              {...fieldProps("handle")}
+              onChange={(e) => {
+                setHandleEdited(true)
+                setField("handle", e.target.value)
+              }}
             />
+            <FieldError id="invite-handle-error" text={errorFor("handle")} />
           </div>
           <div className="flex flex-col gap-1">
             <Label size="small" htmlFor="invite-email">Email (their sign-in)</Label>
@@ -200,9 +286,9 @@ const SellersPage = () => {
               size="small"
               type="email"
               placeholder="lina@example.com"
-              value={invite.email}
-              onChange={(e) => setInvite((i) => ({ ...i, email: e.target.value }))}
+              {...fieldProps("email")}
             />
+            <FieldError id="invite-email-error" text={errorFor("email")} />
           </div>
           <div className="flex flex-col gap-1">
             <Label size="small" htmlFor="invite-domain">Domain (optional)</Label>
@@ -210,9 +296,9 @@ const SellersPage = () => {
               id="invite-domain"
               size="small"
               placeholder="shop.example.com"
-              value={invite.domain}
-              onChange={(e) => setInvite((i) => ({ ...i, domain: e.target.value }))}
+              {...fieldProps("domain")}
             />
+            <FieldError id="invite-domain-error" text={errorFor("domain")} />
           </div>
           <div className="flex flex-col gap-1">
             <Label size="small" htmlFor="invite-rate">Commission % (optional)</Label>
@@ -224,19 +310,21 @@ const SellersPage = () => {
               max={100}
               step="0.1"
               placeholder="default"
-              value={invite.rate}
-              onChange={(e) => setInvite((i) => ({ ...i, rate: e.target.value }))}
+              {...fieldProps("rate")}
             />
+            <FieldError id="invite-rate-error" text={errorFor("rate")} />
           </div>
-          <Button
-            size="small"
-            type="submit"
-            disabled={!invite.name.trim() || !invite.handle.trim() || !invite.email.trim() || rateValue(invite.rate) === undefined}
-            isLoading={create.isPending}
-          >
-            Invite
-          </Button>
+          <div className="flex flex-col gap-1 md:pt-5">
+            <Button size="small" type="submit" isLoading={create.isPending}>
+              Invite
+            </Button>
+          </div>
         </form>
+        {serverError && !serverError.field && (
+          <Text size="small" className="text-ui-fg-error" role="alert">
+            {serverError.text}
+          </Text>
+        )}
         {invited && (
           <div className="flex flex-wrap items-center gap-2 rounded-md border border-ui-border-base bg-ui-bg-subtle px-3 py-2">
             <Text>
@@ -267,6 +355,7 @@ const SellersPage = () => {
         ) : !sellers.length ? (
           <Text className="text-ui-fg-subtle">No sellers yet.</Text>
         ) : (
+          <div className="overflow-x-auto">
           <Table>
             <Table.Header>
               <Table.Row>
@@ -295,12 +384,17 @@ const SellersPage = () => {
                       </div>
                     </Table.Cell>
                     <Table.Cell>
-                      <Badge size="2xsmall" color={STATUS_COLOR[s.status]}>{SELLER_STATUS_LABEL[s.status] ?? s.status}</Badge>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge size="2xsmall" color={STATUS_COLOR[s.status]}>{SELLER_STATUS_LABEL[s.status] ?? s.status}</Badge>
+                        {/* Until the seller sets a password with the invite code. */}
+                        {!s.accepted_at && <Badge size="2xsmall" color="blue">Invited</Badge>}
+                        {s.payout_hold && <Badge size="2xsmall" color="orange">Payouts held</Badge>}
+                      </div>
                     </Table.Cell>
                     <Table.Cell>
                       <Input
                         size="small"
-                        className="w-48"
+                        className="w-40"
                         placeholder="none"
                         aria-label={`Domain for ${s.name}`}
                         value={draft.domain ?? s.domain ?? ""}
@@ -337,56 +431,73 @@ const SellersPage = () => {
                     </Table.Cell>
                     <Table.Cell>
                       {/* Hidden in the table; Copy hands it over (design critique, 2026-11-23). */}
-                      <div className="flex items-center gap-x-2">
-                        <span className="font-mono">
-                          {s.invite_code.length > 4 ? `••••${s.invite_code.slice(-4)}` : "••••"}
-                        </span>
-                        <Button size="small" variant="transparent" onClick={() => copy(s.invite_code, "Invite code")}>
-                          Copy
-                        </Button>
-                      </div>
+                      {s.invite_code ? (
+                        <div className="flex items-center gap-x-2">
+                          <span className="font-mono">••••{s.invite_code.slice(-4)}</span>
+                          <Button size="small" variant="transparent" onClick={() => copy(s.invite_code!, "Invite code")}>
+                            Copy
+                          </Button>
+                        </div>
+                      ) : (
+                        <Text size="small" className="text-ui-fg-subtle">Used</Text>
+                      )}
                     </Table.Cell>
                     <Table.Cell className="text-right">
-                      {s.status !== "active" && (
-                        <Button
-                          size="small"
-                          disabled={!!busyId}
-                          isLoading={busy && update.variables?.body.status === "active"}
-                          onClick={() =>
-                            update.mutate({ id: s.id, body: { status: "active" }, done: `${s.name} ${s.status === "pending" ? "activated" : "reactivated"}` })
-                          }
-                        >
-                          {s.status === "pending" ? "Activate" : "Reactivate"}
-                        </Button>
-                      )}
-                      {s.status !== "suspended" && (
-                        <Button
-                          size="small"
-                          variant="danger"
-                          className="ml-2"
-                          disabled={!!busyId}
-                          isLoading={busy && update.variables?.body.status === "suspended"}
-                          onClick={() => suspend(s)}
-                        >
-                          Suspend
-                        </Button>
-                      )}
-                      <Button
-                        size="small"
-                        variant="secondary"
-                        className="ml-2"
-                        disabled={resetLink.isPending}
-                        isLoading={resetLink.isPending && resetLink.variables?.path.includes(s.id)}
-                        onClick={() => resetLink.mutate({ path: `/admin/sellers/${s.id}/reset-link`, who: s.name })}
-                      >
-                        Reset link
-                      </Button>
+                      {/* One menu, so the row fits narrow screens (design review, 2026-11-25). */}
+                      <DropdownMenu>
+                        <DropdownMenu.Trigger asChild>
+                          <IconButton
+                            size="small"
+                            variant="transparent"
+                            aria-label={`Actions for ${s.name}`}
+                            disabled={!!busyId || resetLink.isPending}
+                          >
+                            <EllipsisHorizontal />
+                          </IconButton>
+                        </DropdownMenu.Trigger>
+                        <DropdownMenu.Content align="end">
+                          {s.status !== "active" && (
+                            <DropdownMenu.Item
+                              onClick={() =>
+                                update.mutate({ id: s.id, body: { status: "active" }, done: `${s.name} ${s.status === "pending" ? "activated" : "reactivated"}` })
+                              }
+                            >
+                              {s.status === "pending" ? "Activate" : "Reactivate"}
+                            </DropdownMenu.Item>
+                          )}
+                          <DropdownMenu.Item
+                            onClick={() => resetLink.mutate({ path: `/admin/sellers/${s.id}/reset-link`, who: s.name })}
+                          >
+                            Copy password reset link
+                          </DropdownMenu.Item>
+                          <DropdownMenu.Item
+                            onClick={() =>
+                              update.mutate({
+                                id: s.id,
+                                body: { payout_hold: !s.payout_hold },
+                                done: s.payout_hold ? `${s.name}'s payouts released` : `${s.name}'s payouts held`,
+                              })
+                            }
+                          >
+                            {s.payout_hold ? "Release payouts" : "Hold payouts"}
+                          </DropdownMenu.Item>
+                          {s.status !== "suspended" && (
+                            <>
+                              <DropdownMenu.Separator />
+                              <DropdownMenu.Item className="text-ui-fg-error" onClick={() => suspend(s)}>
+                                Suspend
+                              </DropdownMenu.Item>
+                            </>
+                          )}
+                        </DropdownMenu.Content>
+                      </DropdownMenu>
                     </Table.Cell>
                   </Table.Row>
                 )
               })}
             </Table.Body>
           </Table>
+          </div>
         )}
           {(data?.count ?? 0) > PAGE_SIZE && (
             <Table.Pagination
