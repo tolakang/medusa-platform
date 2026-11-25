@@ -32,11 +32,24 @@ import { PostAdminVendor } from './admin/vendors/validators'
 import { PostAdminVendorPayoutPay } from './admin/vendor-payouts/validators'
 import { PostAdminVendorProductReview } from './admin/vendor-products/validators'
 import { PostAdminVendorCommissionSettle } from './admin/vendor-commissions/validators'
+import { requireOrderAccess } from '@medusa-platform/medusa-core/api/order-access'
 
 // The product index declares filterable `status` and `sales_channel_ids`, so
 // the route narrows it to published products in the key's sales channels.
 export default defineMiddlewares({
   routes: [
+    {
+      // Order details only for the customer who owns the order or the
+      // browser that placed it (signed x-order-access proof); 404 otherwise.
+      method: ['GET'],
+      matcher: '/store/orders/:id',
+      middlewares: [requireOrderAccess],
+    },
+    {
+      method: ['GET'],
+      matcher: '/store/orders/:id/telegram-link',
+      middlewares: [requireOrderAccess],
+    },
     {
       // Vendor portal routes (TASKS P6-03): VENDOR_CORS, then a signed-in
       // vendor admin of an active vendor on every /vendors route

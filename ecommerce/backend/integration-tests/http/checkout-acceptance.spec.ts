@@ -8,6 +8,15 @@ import jwt from "jsonwebtoken"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
 import { renderMessage } from "@medusa-platform/medusa-core/lib/telegram/templates"
+import { ORDER_ACCESS_HEADER, signOrderAccess } from "@medusa-platform/medusa-core/api/order-access"
+// GET /store/orders/:id/* needs the owner or the placing browser's signed
+// proof (packages/medusa-core/src/api/order-access.ts).
+process.env.ORDER_ACCESS_SECRET = "test_order_access_secret"
+const withOrderProof = (store: { headers: Record<string, string> }, orderId: string) => {
+  const exp = Math.floor(Date.now() / 1000) + 3600
+  const sig = signOrderAccess("test_order_access_secret", orderId, exp)
+  return { headers: { ...store.headers, [ORDER_ACCESS_HEADER]: `${exp}.${sig}` } }
+}
 
 // P1-07 acceptance test (plan §9.1): browse → cart → checkout → order visible
 // in admin, through the same store and admin APIs the storefront and the
@@ -179,7 +188,7 @@ medusaIntegrationTestRunner({
         // 9. Telegram updates (P1-17): the order page's button links the
         // customer's chat; the bot confirms, then reports shipping and delivery
         // when staff fulfil the order in the admin.
-        const { data: link } = await api.get(`/store/orders/${orderId}/telegram-link`, store)
+        const { data: link } = await api.get(`/store/orders/${orderId}/telegram-link`, withOrderProof(store, orderId))
         const chat = { id: 987654321, type: "private" }
         await api.post(
           "/telegram/webhook",
