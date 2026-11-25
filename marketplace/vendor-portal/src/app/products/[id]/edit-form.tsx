@@ -9,6 +9,7 @@ export function EditProductForm({
   product: { id: string; title: string; description: string | null; status: string }
 }) {
   const [state, action, saving] = useActionState<EditState, FormData>(editProduct, {})
+  const [deleteState, deleteAction, deleting] = useActionState<EditState, FormData>(deleteProduct, {})
   const [confirmDelete, setConfirmDelete] = useState(false)
   return (
     <section className="card flex flex-col gap-4 p-4">
@@ -42,7 +43,7 @@ export function EditProductForm({
           </button>
         </div>
       </form>
-      <form action={deleteProduct} className="flex flex-wrap items-center gap-2 border-t border-ui-border-base pt-4">
+      <form action={deleteAction} className="flex flex-wrap items-center gap-2 border-t border-ui-border-base pt-4">
         <input type="hidden" name="product_id" value={product.id} />
         {confirmDelete ? (
           <>
@@ -50,14 +51,19 @@ export function EditProductForm({
             <button className="btn-secondary" type="button" onClick={() => setConfirmDelete(false)}>
               Keep it
             </button>
-            <button className="btn-primary bg-ui-tag-red-text" type="submit">
-              Yes, delete
+            <button className="btn-primary bg-ui-tag-red-text" type="submit" disabled={deleting}>
+              {deleting ? "Deleting…" : "Yes, delete"}
             </button>
           </>
         ) : (
           <button className="py-2 text-sm text-ui-tag-red-text" type="button" onClick={() => setConfirmDelete(true)}>
             Delete product
           </button>
+        )}
+        {deleteState.error && (
+          <p role="alert" className="w-full rounded-lg bg-ui-tag-red-bg px-3 py-2 text-sm text-ui-tag-red-text">
+            {deleteState.error}
+          </p>
         )}
       </form>
     </section>

@@ -24,7 +24,17 @@ import { Scanner } from "./scanner"
 
 type Done = { order: ReceiptOrder; method: PaymentMethod; tendered: number | null; customer: Customer | null }
 
-export function Sell({ register, shift }: { register: Register; shift: Shift }) {
+export function Sell({
+  register,
+  shift,
+  active = true,
+}: {
+  register: Register
+  shift: Shift
+  // False while the till shows another screen over the sale (Close shift):
+  // the sale stays mounted so its cart survives, but takes no keys.
+  active?: boolean
+}) {
   const currency = shift.currency_code
   const [cart, setCart] = useState<CartLine[]>([])
   const [customer, setCustomer] = useState<Customer | null>(null)
@@ -132,7 +142,7 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
 
   // F9 opens payment from anywhere on the sale screen (design critique, 2026-11-23).
   useEffect(() => {
-    if (done || paying) return
+    if (done || paying || !active) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "F9" && canPay) {
         e.preventDefault()
@@ -141,7 +151,7 @@ export function Sell({ register, shift }: { register: Register; shift: Shift }) 
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [done, paying, canPay])
+  }, [done, paying, canPay, active])
 
   const newSale = () => {
     setCart([])

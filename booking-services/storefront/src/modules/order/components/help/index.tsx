@@ -11,11 +11,8 @@ const Help = ({ servicesOnly = false }: { servicesOnly?: boolean }) => {
       <div className="text-base-regular my-2">
         <ul className="gap-y-2 flex flex-col">
           <li>
-            <LocalizedClientLink href="/contact">Contact</LocalizedClientLink>
-          </li>
-          <li>
-            <LocalizedClientLink href="/contact">
-              {servicesOnly ? "Change or cancel a booking" : "Returns & Exchanges"}
+            <LocalizedClientLink href="/account/orders">
+              Your orders
             </LocalizedClientLink>
           </li>
         </ul>

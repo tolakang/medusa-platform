@@ -1,3 +1,4 @@
+import { formatDate } from "@lib/util/format-date"
 import type { MyPass } from "@lib/data/booking"
 import { Heading, Text } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -16,7 +17,7 @@ export default function PassList({ passes }: { passes: MyPass[] }) {
             <Text className="txt-medium-plus">{p.title}</Text>
             <Text className="txt-small text-ui-fg-subtle">
               {p.credits_left} of {p.credits_total} left · until{" "}
-              {new Date(p.expires_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              {formatDate(p.expires_at)}
             </Text>
           </div>
           {p.credits_left > 0 &&

@@ -21,16 +21,20 @@ export default async function OverviewPage() {
     sellerGet<{ orders: Order[] }>(token, "/sellers/me/orders", { limit: "5" }),
     sellerGet<{ products: { selected: boolean }[] }>(token, "/sellers/me/products"),
   ])
+  // Nothing yet in a status: zero in the shop's own currency (from any
+  // commission or order), not "$0.00" in a riel shop.
+  const shopCurrency =
+    Object.values(totals).flatMap((byCurrency) => Object.keys(byCurrency))[0] ?? orders[0]?.currency_code
   const sum = (status: string) =>
     Object.entries(totals[status] ?? {})
       .map(([currency, amount]) => money(amount, currency))
-      .join(" · ") || money(0, "usd")
+      .join(" · ") || (shopCurrency ? money(0, shopCurrency) : "0")
 
   return (
     <Shell seller={seller} active="/">
       <section className="grid gap-4 sm:grid-cols-3">
         {[
-          { label: "Waiting (this month)", value: sum("pending") },
+          { label: "Waiting for approval", value: sum("pending") },
           { label: "Due in the next payout", value: sum("approved") },
           { label: "Paid to you", value: sum("paid") },
         ].map((tile) => (

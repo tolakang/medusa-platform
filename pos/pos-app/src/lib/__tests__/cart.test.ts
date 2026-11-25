@@ -85,6 +85,8 @@ describe("cart (TASKS P2-10)", () => {
   it("suggests the exact amount and round notes above it", () => {
     assert.deepEqual(quickTender(12.5), [12.5, 13, 15, 20])
     assert.deepEqual(quickTender(20), [20, 50, 100])
+    assert.deepEqual(quickTender(20, "usd"), [20, 50, 100])
+    assert.deepEqual(quickTender(12300, "khr"), [12300, 12500, 13000, 14000])
   })
 
   it("formats money in the shift currency", () => {

@@ -110,7 +110,7 @@ export function Payment({
             />
           </label>
           <div className="grid grid-cols-4 gap-2">
-            {quickTender(total).map((a) => (
+            {quickTender(total, currency).map((a) => (
               <button key={a} type="button" className="btn-secondary px-2" onClick={() => setTendered(String(a))} disabled={busy}>
                 {formatMoney(a, currency)}
               </button>
