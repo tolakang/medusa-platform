@@ -42,7 +42,21 @@ medusaIntegrationTestRunner({
 
       // Two vendors: Dara at the default 10 %, Sok at its own 20 %. Both
       // child orders fulfilled unless `fulfilled: false`.
-      const twoVendorOrder = async ({ fulfilled = true } = {}) => {
+      // The admin captures the customer's payment (only captured orders are
+      // paid out to vendors; bug 2026-11-25, "pay later").
+      const capture = async (parentId: string) => {
+        const {
+          data: [parent],
+        } = await kit.query().graph({
+          entity: "order",
+          fields: ["payment_collections.payments.id"],
+          filters: { id: parentId },
+        })
+        const paymentId = parent.payment_collections![0]!.payments![0]!.id
+        await api.post(`/admin/payments/${paymentId}/capture`, {}, admin)
+      }
+
+      const twoVendorOrder = async ({ fulfilled = true, paid = true } = {}) => {
         const dara = await kit.signUpVendor(admin, "dara@vendor.test", "Dara Crafts")
         const sok = await kit.signUpVendor(admin, "sok@vendor.test", "Sok Goods")
         await api.post(`/admin/vendors/${sok.id}`, { commission_rate: 20 }, admin)
@@ -61,7 +75,19 @@ medusaIntegrationTestRunner({
           await fulfil(dara, childOf(dara.id))
           await fulfil(sok, childOf(sok.id))
         }
+        if (paid) {
+          await capture(res.data.order.id)
+        }
         return { dara, sok, res, childOf }
+      }
+
+      const eventually = async <T,>(read: () => Promise<T>, ok: (v: T) => boolean) => {
+        let value = await read()
+        for (let i = 0; i < 40 && !ok(value); i++) {
+          await new Promise((r) => setTimeout(r, 250))
+          value = await read()
+        }
+        return value
       }
 
       const nextMonth = () => {
@@ -152,6 +178,52 @@ medusaIntegrationTestRunner({
           input: { cutoff: nextMonth(), period: "2099-01" },
         })
         expect(later.result).toEqual([expect.objectContaining({ vendor_id: sok.id, count: 1 })])
+      })
+
+      it("doesn't pay out a fulfilled child whose customer hasn't paid yet (pay later)", async () => {
+        const { res } = await twoVendorOrder({ paid: false })
+        expect((await runPayouts()).result).toEqual([])
+        expect(
+          (await marketplace().listVendorCommissions({})).every((c) => c.status === "pending")
+        ).toBe(true)
+        await capture(res.data.order.id)
+        expect((await runPayouts()).result).toHaveLength(2)
+      })
+
+      it("cancelling the customer's order holds a fulfilled child's commission, never pays it", async () => {
+        const { dara, sok, res, childOf } = await twoVendorOrder({ fulfilled: false })
+        await fulfil(dara, childOf(dara.id))
+        await cancelOrderWorkflow(getContainer()).run({ input: { order_id: res.data.order.id } })
+
+        const settled = await eventually(
+          () => marketplace().listVendorCommissions({}),
+          (l) =>
+            l.find((c) => c.vendor_id === sok.id)?.status === "cancelled" &&
+            l.find((c) => c.vendor_id === dara.id)?.refund_review === "to_review"
+        )
+        expect(settled.find((c) => c.vendor_id === sok.id)!.status).toBe("cancelled")
+        expect(settled.find((c) => c.vendor_id === dara.id)).toEqual(
+          expect.objectContaining({ status: "pending", refund_review: "to_review" })
+        )
+        expect((await runPayouts()).result).toEqual([])
+        // The vendor doesn't see it as earned.
+        const mine = await call(api.get("/vendors/me/payouts", dara.auth))
+        expect(mine.data.not_yet_paid_out).toEqual([])
+        expect(mine.data.on_hold).toEqual([expect.objectContaining({ currency_code: "usd" })])
+      })
+
+      it("the payout job holds a cancelled customer order's commissions even without the event", async () => {
+        const { res } = await twoVendorOrder()
+        await cancelOrderWorkflow(getContainer()).run({ input: { order_id: res.data.order.id } })
+        const all = () => marketplace().listVendorCommissions({})
+        await eventually(all, (l) => l.every((c) => c.status === "cancelled" || c.refund_review === "to_review"))
+        // As if the cascade never ran.
+        const list = await all()
+        await marketplace().updateVendorCommissions(
+          list.map((c) => ({ id: c.id, status: "pending" as const, refund_review: "none" as const }))
+        )
+        expect((await runPayouts()).result).toEqual([])
+        expect((await all()).map((c) => c.refund_review)).toEqual(["to_review", "to_review"])
       })
 
       it("leaves commissions recorded after the cutoff for the next payout", async () => {
@@ -260,18 +332,8 @@ medusaIntegrationTestRunner({
           filters: { id: parentId },
         })
         const paymentId = parent.payment_collections![0]!.payments![0]!.id
-        await api.post(`/admin/payments/${paymentId}/capture`, {}, admin)
         await api.post(`/admin/payments/${paymentId}/refund`, { amount }, admin)
       }
-      const eventually = async <T,>(read: () => Promise<T>, ok: (v: T) => boolean) => {
-        let value = await read()
-        for (let i = 0; i < 40 && !ok(value); i++) {
-          await new Promise((r) => setTimeout(r, 250))
-          value = await read()
-        }
-        return value
-      }
-
       it("a refund on the customer's order holds and flags its vendor commissions (F-078)", async () => {
         const { res } = await twoVendorOrder()
         await refundParent(res.data.order.id, 5)

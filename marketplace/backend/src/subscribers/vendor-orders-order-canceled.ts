@@ -5,6 +5,7 @@ import {
   CHILD_ORDERS_KEY,
   PARENT_ORDER_KEY,
 } from "../workflows/marketplace/create-vendor-orders"
+import { flagCanceledParent } from "../workflows/marketplace/refund-review"
 
 // Cancelling a customer's (parent) order cancels its vendor child orders
 // (review 2, S2). The parent's stock reservations moved to the children at
@@ -17,6 +18,9 @@ import {
 // Children have no payment, so nothing is refunded twice. Errors on one
 // child don't stop the others; the subscriber fails at the end so the event
 // bus can retry (an already cancelled child is skipped).
+// A child that stays open (fulfilled, or its cancel failed) has its pending
+// commission held for the admin (refund_review `to_review`, as a refund,
+// F-078), so it is never paid automatically (bug 2026-11-25).
 export default async function vendorOrdersOrderCanceled({
   event: { data },
   container,
@@ -36,6 +40,7 @@ export default async function vendorOrdersOrderCanceled({
     filters: { id: childIds },
   })
   const failed: string[] = []
+  const kept: string[] = []
   for (const child of children) {
     if (child.status === "canceled") {
       continue
@@ -45,15 +50,18 @@ export default async function vendorOrdersOrderCanceled({
       logger.warn(
         `Order ${order.id} was cancelled, but its vendor order ${child.id} is already fulfilled: settle it with the vendor (return or cancel the fulfilment first).`
       )
+      kept.push(child.id)
       continue
     }
     try {
       await cancelOrderWorkflow(container).run({ input: { order_id: child.id } })
     } catch (error) {
       failed.push(child.id)
+      kept.push(child.id)
       logger.warn(`Vendor order ${child.id} not cancelled: ${(error as Error).message}`)
     }
   }
+  await flagCanceledParent(container, kept)
   if (failed.length) {
     throw new Error(`Vendor orders not cancelled: ${failed.join(", ")}.`)
   }
