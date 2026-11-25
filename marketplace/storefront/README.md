@@ -6,29 +6,20 @@ Customer storefront for the marketplace category (BUILD_PLAN §9.6). Standard: `
 - Package name `marketplace-storefront`; the Dockerfile, `.env.example` and comments name `marketplace/*`.
 - `.guard-baseline` is `776911e ecommerce/storefront` (this repo's first commit; in medusa-apps it was `159252e`): the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
-**P6-08:** checkout completes through the backend's `POST /store/carts/:id/complete-vendor` (`placeOrder` in `src/lib/data/cart.ts`), which also makes one order per vendor; product pages say "Sold by" with a link to the vendor's shop page `/[countryCode]/vendors/[handle]` (`src/lib/data/vendors.ts`). The ecommerce notes below apply unchanged.
+**P6-08:** checkout completes through the backend's `POST /store/carts/:id/complete-vendor` (`placeOrder` in `src/lib/data/cart.ts`), which also makes one order per vendor; product pages say "Sold by" with a link to the vendor's shop page `/[countryCode]/vendors/[handle]` (`src/lib/data/vendors.ts`).
 
----
-
-## From `ecommerce/storefront`
-
-Next.js customer storefront for the ecommerce category. Standard: `BUILD_PLAN.md` §7.2.
-
-**Starter:** `medusajs/dtc-starter` `apps/storefront` at commit **`f677db4`** (2026-10-09, Medusa 2.21.2; synced from `15ef93d`: the starter removed `generateStaticParams` from the product, collection and category pages, PR medusajs/dtc-starter#73; before that, from `e3a237c9b877`: only the 2.21.2 package bump). `engines.node` is `>=22.22.0`, as the starter root and Medusa 2.22 require. `engines.node` is `>=22.23.4` since Medusa 2.22.3 (TASKS V-01). **Next.js 16 sync (2026-11-06, TASKS V-04):** the starter's `6b95717` "migrate storefront to Next.js 16" is applied: `next` / `eslint-config-next` **16.4.5** (the starter is on 16.3.8; 16.4.5 carries the 2026-11-03 security fixes), ESLint flat config (`eslint.config.mjs`, `pnpm lint` = `eslint .`), `default.tsx` for the account `@dashboard` and `@login` slots, async `params` on the order-transfer pages, `revalidateTag(tag, { expire: 0 })`, tsconfig `moduleResolution: bundler` / `jsx: react-jsx`. `pnpm lint` reports existing starter-code issues (gift-card stubs, `any`, `@ts-ignore`); lint is not a gate. Starter changes applied (plan §7.2):
-1. Standalone pnpm package: `packageManager: pnpm@12.6.0`, own lockfile, settings-only `pnpm-workspace.yaml` (starter root `pnpm.overrides`; `unrs-resolver` build declined, as in the starter).
-2. Package renamed `@dtc/storefront` → `ecommerce-storefront`. A `typecheck` script was added, because the starter sets `typescript.ignoreBuildErrors`.
-3. `output: "standalone"` + `outputFileTracingRoot: __dirname` in `next.config.js`.
-4. Image host from `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` (was `MEDUSA_CLOUD_S3_*`).
-5. ~~`generateStaticParams` guarded~~: no longer needed. Since `f677db4` the starter has no `generateStaticParams`, so `next build` never calls the backend and pages render on request (BUILD_PLAN §7.2 change 5, Revision 7).
-6. `src/lib/config.ts`: server-side calls prefer the runtime `MEDUSA_BACKEND_URL` (private URL). Verified: a wrong runtime URL breaks SSR and the correct one serves it. `src/middleware.ts` still uses the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL`.
-7. `products/[handle]/page.tsx`: `export const dynamic = "force-dynamic"`. The starter's cookie helpers swallow Next's `DynamicServerError`, so pre-rendered or revalidating product pages returned 500 (`DYNAMIC_SERVER_USAGE`) in the Docker image. Reproduced locally and fixed; upstream report medusajs/nextjs-starter-medusa#439 (TASKS F-015).
+Still in force from the copy and the starter (plan §7.2):
+- Part of the root pnpm workspace: no own lockfile; `@medusajs/*` come from the root catalog (**2.22.6**, `"catalog:"`); pnpm from the root `packageManager`. Next.js **16.4.5**.
+- `output: "standalone"` in `next.config.js`; image host from `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME`.
+- `src/lib/config.ts`: server-side calls prefer the runtime `MEDUSA_BACKEND_URL` (private URL); `src/middleware.ts` uses the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL`.
+- `products/[handle]/page.tsx` is `force-dynamic` (TASKS F-015).
 
 ## Env
-- **Build-time** (Dokploy Build-time Arguments): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (required, or the build aborts), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`.
-- **Runtime:** `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `PORT=8000`.
+- **Build-time** (Dokploy Build-time Arguments, every `ARG` in the Dockerfile): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (required, or the build aborts), `NEXT_PUBLIC_SHOP_NAME` (header, footer, titles), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION` (`kh`), `NEXT_PUBLIC_STRIPE_KEY`, `NEXT_PUBLIC_CAPTCHA_PROVIDER`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`. From PR #95: `NEXT_PUBLIC_MANUAL_PAYMENT_LABEL` (the manual payment's name; default "Pay later (cash or bank transfer)") and `NEXT_PUBLIC_CONTACT_URL` (contact link in the order help; unset = none).
+- **Runtime:** `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `REVALIDATE_SECRET`, `SHOPPER_IP_SECRET`, `CLIENT_IP_HEADER`, `PORT=8000`.
 
 ## Deploy (Dokploy)
-Steps: `../DOKPLOY_STAGING.md` section 4 (Build Path `/`, Docker File `ecommerce/storefront/Dockerfile`, Context `ecommerce/storefront`, Watch Paths `ecommerce/storefront/**`). Use the publishable key whose sales channel holds the products; Medusa's own first-boot key sees none (TASKS F-017).
+Build Path `/`, Docker File `marketplace/storefront/Dockerfile`, Docker Context Path `.`, Watch Paths `marketplace/storefront/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, domain → port 8000. Order and CORS: `../README.md`. Use the publishable key whose sales channel holds the products; Medusa's own first-boot key sees none (TASKS F-017).
 
 ## Verify (DEV_FLOW §5)
 ```bash

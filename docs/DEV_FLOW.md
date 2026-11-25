@@ -31,7 +31,7 @@ For every Medusa API, import, hook, step, option, CLI flag or env var the task n
 
 ```
 REF <symbol or rule> — <source> — <quoted line or file:line>
-e.g. REF completeCartWorkflow.hooks.validate — docs/MEDUSA_SKILL.md §6 (verified 2.21.1)
+e.g. REF completeCartWorkflow.hooks.validate — docs/MEDUSA_SKILL.md §6 (verified 2.22.6)
 e.g. REF acquireLockStep — node_modules/@medusajs/core-flows/dist/locking/steps/acquire-lock.d.ts
 ```
 

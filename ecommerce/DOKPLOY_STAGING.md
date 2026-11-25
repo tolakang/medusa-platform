@@ -22,18 +22,28 @@ A step-by-step setup and operations guide for the Ecommerce category on Dokploy.
 **Never paste secret values** in chat, git or tickets: keys, passwords, connection URLs, tokens. When you share a log, filter it first: `grep -v -i "secret\|access-key\|api_key"`.
 
 
-> **Quick start:** to set up a new Ecommerce staging from zero on `medusa-platform`, follow [STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md) (Parts A–H); this runbook is the full reference behind it.
->
+## Fast path (new staging from zero)
+1. §0: give Dokploy access to the repo, pick two hostnames, generate the secrets.
+2. §1: project, Postgres, Redis.
+3. §2: backend (source, build, watch paths, variables, swarm settings), deploy, admin user, `seed.js`, copy the `pk_` key.
+4. §3: worker, after the backend is healthy.
+5. §4: storefront build args and runtime variables; deploy once the domains answer.
+6. §4.4 and §2.6: domains (move them from any older project first), redeploy the backend, deploy the storefront, run the checks in §4.6.
+7. §8: PayWay in the region, one paid order, alert and email; merge a small PR and see the backend redeploy by itself.
+8. §6, §7, §9: rollback test, backups, smoke test. Record results in `docs/TASKS.md`.
+
 > **Shared core (plan §4–§5):** Ecommerce is in the root pnpm workspace (SC-1): every app builds with Docker Context Path `.` (the repo root) and watches the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml` too. The steps below show these values. Production deploys from `release/ecommerce`, which only you move. Details: `README.md` → *Shared core and release branches*.
 ---
 
 ## 0. Before you start
 
 ### 0.1 You need
-- A Dokploy server, with the GitHub provider connected to `<github-owner>/medusa-platform` (Dokploy → **Git** → **GitHub App**).
+- A Dokploy server, with the GitHub provider connected to `<github-owner>/medusa-platform` (Dokploy → **Git** → **GitHub App**). If the repo isn't in the **Repository** dropdown: GitHub → **Settings → Applications → Installed GitHub Apps** → the Dokploy app → **Configure** → **Repository access** → add `medusa-platform` → **Save**.
+- A project name used by no other Dokploy project (e.g. `ecommerce-stg`).
 - Two hostnames, either:
   - your DNS: `api.staging.<your-domain>` and `shop.staging.<your-domain>`, each an **A record** to the Dokploy server's IP; or
   - Dokploy's **Generated** domains (HTTP only: then use `http://` in every URL below).
+- Reusing hostnames that ABA PayWay already whitelisted avoids a new whitelisting request. If they belong to an older project, remove them from its apps' **Domains** before adding them here, and stop (don't delete yet) those older apps: they are the way back.
 
 ### 0.2 Placeholders
 - `<api host>` = the backend's hostname, `<shop host>` = the storefront's.
@@ -196,6 +206,8 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
 5. **Check before saving:** `DATABASE_URL` comes from **`ecommerce-postgres`** and `REDIS_URL` from **`ecommerce-redis`**. A Redis URL in `DATABASE_URL` makes migrations hang for 60 s with `Knex: Timeout acquiring a connection`, and the domain shows Bad Gateway (seen on staging, F-012).
 
 ### 2.6 Domain
+Until your hostnames are ready (e.g. still on an older project), **Domains → Generate** gives a temporary domain for the admin and seeds. Don't deploy the storefront against it: the build bakes in `<api host>`, so deploy it once `<api host>` answers.
+
 **Domains** → **Add Domain**:
 
 | Field | Value |
@@ -264,17 +276,23 @@ Both paths are relative to the repo root (verified on staging 2026-09-25, F-011)
    ```
 
 ### 2.10 Data and publishable key
-1. **Staging demo data**: a region, a stock location, shipping and 4 products. It reuses the store, sales channel and publishable key Medusa created on first boot. In the same terminal:
-   ```bash
-   docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
-   ```
-2. **Real shop (Cambodia):** run the production seed instead, or in addition on staging:
+The seeds come from `packages/medusa-core/src/scripts` (the app's `src/scripts/*.ts` are one-line re-exports). Run them in this order, in the same terminal:
+1. **Cambodia shop (always):**
    ```bash
    docker-entrypoint.sh medusa exec ./src/scripts/seed.js
    ```
    - It creates the Cambodia region (USD checkout), store currencies USD (default) + KHR, a Cambodia tax region without a rate, a Phnom Penh stock location, and one flat "Phnom Penh Delivery" option (placeholder $1.50; change rates and add options in the admin).
-   - It adds no products and is safe to re-run.
+   - It adds no products and is safe to re-run. It reuses the store, sales channel and publishable key Medusa created on first boot.
    - Set the storefront's `NEXT_PUBLIC_DEFAULT_REGION=kh`.
+2. **Optional demo data:** a Europe region, a European Warehouse with delivery, and 4 products. It keeps the store's default currency (F-101).
+   ```bash
+   docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
+   ```
+3. **Optional, more demo products:** 50 products for paging and filters; needs step 2 first.
+   ```bash
+   docker-entrypoint.sh medusa exec ./src/scripts/seed-demo-products.js
+   ```
+4. **Currency check:** Admin → **Settings → Store**: USD is the default and KHR is listed. A database seeded before the F-101 fix may show EUR as the default and no KHR: set USD as the default and add KHR back.
 3. **Publishable key:**
    1. Log in at `https://<api host>/app` → **Settings** → **Publishable API Keys**.
    2. Copy the token (`pk_…`) of the one key there.
@@ -351,13 +369,19 @@ NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://<api host>
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=<pk_… from step 2.10>
 NEXT_PUBLIC_BASE_URL=https://<shop host>
 NEXT_PUBLIC_DEFAULT_REGION=kh
+NEXT_PUBLIC_SHOP_NAME=<shop name, or empty>
+NEXT_PUBLIC_MANUAL_PAYMENT_LABEL= # empty = "Pay later (cash or bank transfer)"
+NEXT_PUBLIC_CONTACT_URL=          # e.g. https://t.me/<shop>, or empty
 NEXT_PUBLIC_STRIPE_KEY=
 NEXT_PUBLIC_CAPTCHA_PROVIDER=     # P1-21: same as the backend's CAPTCHA_PROVIDER
 NEXT_PUBLIC_CAPTCHA_SITE_KEY=     # recaptcha: key ID; turnstile: site key
 S3_IMAGE_HOSTNAME=<host part of the backend's S3_FILE_URL>
 S3_IMAGE_PATHNAME=/**
 ```
-- `kh` is the Cambodia region from `seed.js` (step 2.10). A database with only the demo seed has no `kh`: use one of its countries (e.g. `dk`) until you run `seed.js`.
+- `kh` is the Cambodia region from `seed.js` (step 2.10).
+- `NEXT_PUBLIC_SHOP_NAME`: the shop's name in the header, footer and page titles; empty = "Online Shop".
+- `NEXT_PUBLIC_MANUAL_PAYMENT_LABEL`: how manual payment is named; default "Pay later (cash or bank transfer)".
+- `NEXT_PUBLIC_CONTACT_URL`: Telegram, `mailto:` or page link shown in order help; unset = none.
 - `NEXT_PUBLIC_STRIPE_KEY` stays empty: payments go through ABA PayWay (F-022).
 
 ### 4.3 Environment Variables (runtime)
@@ -368,6 +392,7 @@ MEDUSA_BACKEND_URL=https://<api host>
 REVALIDATE_SECRET=<same value as on the backend and worker>
 SHOPPER_IP_SECRET=<same value as on the backend>
 CLIENT_IP_HEADER=                 # only behind another proxy (Cloudflare: cf-connecting-ip)
+STOREFRONT_LOCALES=               # "true" only if the backend has the Translation module (F-051)
 ```
 - **Per-shopper limits** (P1-21): sign-in, sign-up and password emails run on the storefront's server, so the backend would see one IP for every shopper, and one bot could lock everyone out. With the same `SHOPPER_IP_SECRET` on the storefront and the backend, the storefront forwards each shopper's IP and the backend trusts it only with that secret.
 - **Backend URL:** the public API URL is fine for staging. The backend's internal hostname also works (starter change 6), but only use it once you have confirmed the exact name.
@@ -424,7 +449,7 @@ I then check:
 | `GET https://<api host>/health` | 200 |
 | `GET https://<api host>/app/` | 200 |
 | Store API with your publishable key | returns the products |
-| `https://<shop host>/` | redirects to the region (`/kh`, or `/dk` on demo data only) |
+| `https://<shop host>/` | redirects to the region (`/kh`) |
 | a product page | renders server-side |
 | CORS | storefront origin accepted by the API |
 
@@ -439,7 +464,7 @@ You click; I verify.
 3. Repeat with the worker, then the backend.
 
 ### 6.2 Watch paths
-I push a harmless commit that touches only `ecommerce/storefront/` (a comment). Only `ecommerce-storefront` should auto-deploy.
+I push a harmless commit that touches only `ecommerce/storefront/` (a comment). Only `ecommerce-storefront` should auto-deploy. On a new project, merging any small PR that touches the backend's watch paths must start a backend deployment by itself: that proves staging follows the repo.
 
 ### 6.3 Automatic rollback
 Dokploy's documented rollback without a registry is the Swarm health check.

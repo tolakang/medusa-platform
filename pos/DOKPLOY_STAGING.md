@@ -16,8 +16,16 @@ When you're done you have one Dokploy project, `pos-staging`, with **6 services*
 | `pos-pos-app` | till app (PWA) | `<till host>` → 3000 | 6 |
 
 
-> **Quick start:** to set up a new POS staging from zero on `medusa-platform`, follow [STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md) (Parts A–H); this runbook is the full reference behind it.
->
+## Fast path (new staging from zero)
+1. Step 0: repo access, three hostnames, six secrets.
+2. Step 1: project, Postgres, Redis.
+3. Step 2: backend, deploy, `/health`.
+4. Step 3: admin user, `seed.js` then `seed-initial-data.js`, store currency check, copy the `pk_` key.
+5. Step 4: worker.
+6. Steps 5 and 6: online shop and till; check the till reaches the backend.
+7. Step 7: stock, register, cashier, one till sale, close the shift.
+8. Steps 8 and 9: checks from here, each app redeployed alone; merge a small PR and see POS redeploy by itself. Record results in `docs/TASKS.md`.
+
 > **Shared core (plan §4–§5):** POS is in the root pnpm workspace (SC-1): every app builds with Docker Context Path `.` (the repo root) and also watches the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. The steps below show these values. Production deploys from `release/pos`, which only you move. Details: `README.md` → *Shared core and release branches*.
 ---
 
@@ -30,6 +38,9 @@ When you're done you have one Dokploy project, `pos-staging`, with **6 services*
    - `<till host>` = `pos.pos-staging.<your-domain>`: till app
 2. At your DNS provider, create an **A record** for each one, pointing to the Dokploy server's IP. That's the same IP the Ecommerce staging uses.
 3. **No DNS?** Use Dokploy's **Generated** domains instead. They are HTTP only, so write `http://` instead of `https://` everywhere below.
+4. **Reusing hostnames** of an older project (e.g. the old POS staging) is fine: use a **Generated** domain until all apps are saved, then remove the hostnames from the older apps' **Domains**, add them here, and **stop** (don't delete yet) the older apps: they are the way back until Step 7 passes. Don't deploy the shop or the till before their hostnames point here.
+5. **Repo access:** if `medusa-platform` isn't in the Dokploy **Repository** dropdown: GitHub → **Settings → Applications → Installed GitHub Apps** → the Dokploy app → **Configure** → **Repository access** → add `medusa-platform`.
+6. **Project name:** one no other Dokploy project uses (e.g. `pos-stg`).
 
 ### B. Secrets
 On your own computer, run this **six times**:
@@ -217,18 +228,18 @@ PAYWAY_RSA_PUBLIC_KEY=<the RSA public key from ABA>
 3. **Check:** it prints that the user was created.
 
 ### B. Staging data
-In the same terminal, run both seeds, **one after the other**:
+The seeds come from `packages/medusa-core/src/scripts` (the app's `src/scripts/*.ts` are one-line re-exports). In the same terminal, **one after the other**:
 ```bash
-docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
 docker-entrypoint.sh medusa exec ./src/scripts/seed.js
+docker-entrypoint.sh medusa exec ./src/scripts/seed-initial-data.js
 ```
-- The first adds the demo products and the European Warehouse.
-- The second adds the Cambodia region (USD), the **Phnom Penh** stock location in the default sales channel, and "Phnom Penh Delivery".
-- The POS tests use exactly this data.
+- `seed.js` (always): the Cambodia region, store currencies USD (default) + KHR, the **Phnom Penh** stock location in the default sales channel, and "Phnom Penh Delivery". Safe to re-run.
+- `seed-initial-data.js` (optional, but Step 7 uses its `SHIRT-L-BLACK`): a Europe region, the European Warehouse and 4 demo products. It keeps the store's default currency (F-101).
+- Optional, after `seed-initial-data.js`: `seed-demo-products.js` adds 50 more demo products.
 
-**Check:** both finish without an error. The second ends with a "Finished seeding" line.
+**Check:** both finish without an error.
 
-**Check the store currency:** Admin → **Settings** → **Store**. **Default currency** must be **USD** and **Default region** **Cambodia**. If not, click **Edit** and set them. The till opens each shift in the store's default currency, so with EUR every sale is in € (TASKS F-086).
+**Check the store currency:** Admin → **Settings** → **Store**. **Default currency** must be **USD**, KHR must be listed, and **Default region** **Cambodia**. If not, click **Edit** and set them. The till opens each shift in the store's default currency, so with EUR every sale is in € (TASKS F-086). A database seeded before the F-101 fix has EUR as the default and no KHR: set USD as the default and add KHR back.
 
 ### C. Publishable key (for the online shop)
 1. Open `https://<api host>/app` and log in with the admin from 3.A.
@@ -300,12 +311,20 @@ NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://<api host>
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=<pk_… from step 3.C>
 NEXT_PUBLIC_BASE_URL=https://<shop host>
 NEXT_PUBLIC_DEFAULT_REGION=kh
+NEXT_PUBLIC_SHOP_NAME=
+NEXT_PUBLIC_MANUAL_PAYMENT_LABEL=
+NEXT_PUBLIC_CONTACT_URL=
 NEXT_PUBLIC_STRIPE_KEY=
 NEXT_PUBLIC_CAPTCHA_PROVIDER=
 NEXT_PUBLIC_CAPTCHA_SITE_KEY=
 S3_IMAGE_HOSTNAME=
 S3_IMAGE_PATHNAME=/**
 ```
+- `NEXT_PUBLIC_SHOP_NAME`: the name in the header, footer and page titles; empty = "Online Shop".
+- `NEXT_PUBLIC_MANUAL_PAYMENT_LABEL`: how manual payment is named; default "Pay later (cash or bank transfer)".
+- `NEXT_PUBLIC_CONTACT_URL`: Telegram, `mailto:` or page link shown in order help; unset = none.
+- `NEXT_PUBLIC_CAPTCHA_*`: same provider as the backend's `CAPTCHA_PROVIDER`, or empty.
+
 If you set up S3, put the **host part** of `S3_FILE_URL` in `S3_IMAGE_HOSTNAME`. A typo in any of these shows up later only as a 500 on every page (F-016), so check them twice.
 
 ### C. Environment Variables (runtime)
@@ -316,6 +335,7 @@ MEDUSA_BACKEND_URL=https://<api host>
 REVALIDATE_SECRET=<D>
 SHOPPER_IP_SECRET=<E>
 CLIENT_IP_HEADER=
+STOREFRONT_LOCALES=
 ```
 → **Save**.
 
@@ -351,7 +371,7 @@ CLIENT_IP_HEADER=
 4. **Watch Paths:** `pos/pos-app/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`.
 
 ### B. Environment
-1. **Build Time Arguments:** none.
+1. **Build Time Arguments:** leave empty. The Dockerfile declares `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL`, but both are optional: the till's server uses the runtime `MEDUSA_BACKEND_URL` first (`src/lib/server/medusa.ts`). Values put only under Build Time Arguments are empty in the running container.
 2. **Environment Variables:**
    ```
    NODE_ENV=production
@@ -364,6 +384,11 @@ CLIENT_IP_HEADER=
    - `F` seals the cashier's sign-in cookie. Changing it later signs every till out.
    - The app talks to the backend only from its own server, so the browser never sees the token.
 3. **Save**.
+4. After the deploy (6.D), check in `pos-pos-app` → **Terminal** that the till reaches the backend:
+   ```bash
+   node -e "fetch(process.env.MEDUSA_BACKEND_URL+'/health').then(r=>r.text()).then(t=>console.log('OK',t)).catch(e=>console.log('ERR',e.cause?.code||e.message))"
+   ```
+   It must print `OK OK`. `ERR ERR_INVALID_URL` means `MEDUSA_BACKEND_URL` is missing from the running container (the till then answers "fetch failed" at sign-in): put it under **Environment Variables**, **Save**, **Redeploy**.
 
 ### C. Domain and Swarm settings
 1. **Domains** → **Add Domain**: `<till host>`, Path `/`, **Container Port `3000`**, HTTPS on, Let's Encrypt.
@@ -492,6 +517,8 @@ Order:
 
 **Reply with** one line per app, e.g. "storefront alone: others unchanged, all OK".
 
+**Auto-deploy:** the next merge that touches POS's watched files (e.g. a root `pnpm-workspace.yaml` change) must start the POS deployments by itself. That proves staging follows the repo.
+
 The automatic **rollback** (a failing health check rolls back to the old container) was proven once for the whole repo in P0-19. The POS apps use the same Swarm settings, so it isn't repeated here.
 
 **Alerts (pre-deploy audit E-A3).** Dokploy can message you when something goes wrong, so you hear about it before a customer does. Checked against Dokploy **v0.31.0** source (`handle-notifications.tsx`).
@@ -549,6 +576,7 @@ Known causes:
 | Shop shows no products | wrong publishable key, or the key has two sales channels (F-017) | step 3.C, then 5.B and Rebuild |
 | App stuck in "Starting" / never healthy | health check in one box, or `CMD` instead of `CMD-SHELL` (F-021) | redo the two boxes |
 | Worker redeploys on every push | its Watch Paths box is empty (F-019) | step 4.A.4 |
+| Till sign-in: "fetch failed" | `MEDUSA_BACKEND_URL` not in the till's runtime **Environment Variables** | step 6.B.4 |
 | Till: "Not enough stock at Phnom Penh" | step 7.A not done | give Phnom Penh stock |
 | Till: "This register has no stock location" | register created without `stock_location_id` | step 7.B.3 |
 | `curl` answers `401` | admin token missing or expired | step 7.B.1 again |

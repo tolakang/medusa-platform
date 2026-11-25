@@ -14,7 +14,9 @@ Provider portal for the booking-services category (BUILD_PLAN §9.3 "Providers",
 
 ## Env
 
-`.env.example`: runtime `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `COOKIE_SECRET` (required, 16+ characters), `SHOPPER_IP_SECRET`, `CLIENT_IP_HEADER`, `PORT=3000`.
+- **Runtime** (`.env.example`): `MEDUSA_BACKEND_URL` (internal Dokploy hostname; it wins over the build args), `COOKIE_SECRET` (this portal's own, required, 16+ characters: `openssl rand -hex 32`), `SHOPPER_IP_SECRET` (the backend's value), `CLIENT_IP_HEADER`, `PORT=3000`.
+- **Build-time** (optional, the Dockerfile's `ARG`s): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL`. The server calls use `MEDUSA_BACKEND_URL || NEXT_PUBLIC_MEDUSA_BACKEND_URL` (`src/lib/server/medusa.ts`), so leave them empty when the runtime value is set.
+- **On the backend and worker:** `PROVIDER_CORS` = this portal's origin (also added to `AUTH_CORS`), `PROVIDER_PORTAL_URL` = its public URL for email links (empty = the first `PROVIDER_CORS` origin).
 
 ## Deploy (Dokploy)
 

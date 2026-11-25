@@ -2,7 +2,7 @@
 
 Medusa **2.22.6** backend for the marketplace category (vendors sell their own products; BUILD_PLAN §9.6). One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §7.1. Medusa reference: `docs/MEDUSA_SKILL.md`.
 
-**Copied from `ecommerce/backend` at `main` `eaacbfa`** (TASKS Phase 6, owner 2026-11-12: "Full copy of Ecommerce"; F-072), tracked files only: PayWay, Resend, Telegram, Cambodia contact rules, anti-abuse, account emails, admin 2FA, wishlist and upload limits work the same here. Already on Medusa 2.22.6, so no version update was needed.
+**Copied from `ecommerce/backend` at `main` `eaacbfa`** (TASKS Phase 6, owner 2026-11-12: "Full copy of Ecommerce"; F-072), tracked files only: PayWay, Resend, Telegram, Cambodia contact rules, anti-abuse, account emails, admin 2FA, wishlist and upload limits work the same here.
 - Package `marketplace-backend`; the Dockerfile, entrypoint, `.env.example` and comments name `marketplace/*` (database `marketplace`, `marketplace-postgres`, `marketplace-redis`).
 - `.env.example` keeps the plan §9.6 settings from the old template: `MARKETPLACE_DEFAULT_COMMISSION_RATE`, `MARKETPLACE_REQUIRE_PRODUCT_APPROVAL`, `MARKETPLACE_PAYOUT_DAY`, `VENDOR_CORS` (read from P6-03 on).
 - Local stack: `../docker-compose.local.yml` (same host ports as the other categories; run one at a time).
@@ -11,20 +11,16 @@ The vendor features (P6-01 onwards) are added on top. **P6-01:** module `marketp
 
 ---
 
-## From `ecommerce/backend`
-
-Medusa **2.22.6** (since 2026-11-10, TASKS V-06; earlier 2.21.2 until 2026-11-06, then 2.22.3) backend for the ecommerce category. One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §7.1. Medusa reference: `docs/MEDUSA_SKILL.md`.
-
-**Starter:** `medusajs/dtc-starter` `apps/backend` at commit **`15ef93d`** (2026-10-02, Medusa 2.21.2; synced from `e3a237c9b877`: the starter's changes since were the 2.21.2 package bump, done with `scripts/update-medusa.sh`, and `engines.node` `>=22.22.0`). Changes from the starter:
-- pnpm standalone package: `packageManager`, settings-only `pnpm-workspace.yaml` (hoisting, `allowBuilds`, `tsconfig-paths` override).
-- Env-driven `medusa-config.ts`: Redis modules (caching + `@medusajs/caching-redis`, event bus, workflow engine, locking), S3, worker mode, admin, `DATABASE_SSL`.
-- `src/migration-scripts/initial-data-seed.ts` moved to `src/scripts/seed-initial-data.ts`. Migration scripts run automatically on every `db:migrate`, so the demo seed must not ship there. Run it by hand with `pnpm seed:initial`. Because it now runs after the first boot, it reuses the store, sales channel and publishable key Medusa created then (`createDefaultsWorkflow`) instead of creating a second channel and key (TASKS F-017; test `integration-tests/http/seed-initial-data.spec.ts`).
-- Scripts added: `typecheck`, `predeploy` (safe migrate flags), `seed:*`, `--passWithNoTests` on module and unit tests.
+Still in force from the Ecommerce copy and the starter (plan §7.1):
+- Part of the root pnpm workspace: no own lockfile; `@medusajs/*` come from the root catalog (**2.22.6**, `"catalog:"`); pnpm from the root `packageManager`. Shared code (PayWay, seeds, …) comes from `packages/medusa-core` in library mode.
+- Env-driven `medusa-config.ts`: Redis modules (caching, event bus, workflow engine, locking), S3, worker mode, admin, `DATABASE_SSL`.
+- The starter's demo seed lives in `src/scripts/seed-initial-data.ts` (not a migration script), run by hand; it reuses Medusa's first-boot store, sales channel and key (TASKS F-017) and keeps the store's default currency (F-101).
+- Scripts `typecheck`, `predeploy` (safe migrate flags), `seed:*`.
 
 ## Run locally
 ```bash
 docker compose -f ../docker-compose.local.yml up -d postgres redis   # docker = Kiri
-cp .env.example .env    # then set DATABASE_URL=postgres://medusa:medusa@localhost:55432/ecommerce etc.
+cp .env.example .env    # then set DATABASE_URL=postgres://medusa:medusa@localhost:55432/marketplace etc.
 pnpm install --frozen-lockfile
 pnpm medusa db:migrate --execute-safe-links --execute-safe-search
 pnpm dev                                    # http://localhost:9000/app
@@ -42,7 +38,7 @@ pnpm medusa user -e admin@example.com -p <password>
 # and PAYWAY_API_KEY are set; callback /hooks/payment/payway_payway; add it to the region in the admin.
 # Refunds (and cancelling a paid order) go through PayWay's Refund API with PAYWAY_RSA_PUBLIC_KEY.
 pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)
-pnpm seed:initial                           # optional demo data (EU regions, demo products, publishable key)
+pnpm seed:initial                           # optional demo data (EU region, demo products); keeps USD as default (F-101)
 ```
 
 ## Verify (DEV_FLOW §5)
@@ -53,4 +49,4 @@ docker build -f Dockerfile -t marketplace-backend:check ../..   # context: the r
 ```
 
 ## Deploy
-See `../README.md` (Dokploy). Env: `.env.example`. Keep `DATABASE_SSL=false` for the Dokploy internal Postgres.
+Dokploy (server and worker, same image): Build Path `/`, Docker File `marketplace/backend/Dockerfile`, Docker Context Path `.`, Watch Paths `marketplace/backend/**`, `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Optional build args (the Dockerfile's `ARG`s): `MEDUSA_BACKEND_URL` (empty when the admin is served by this app) and `UPLOAD_MAX_FILE_SIZE_CEILING_MB` (empty = 5; keep equal to the runtime value). Env: `.env.example`. Keep `DATABASE_SSL=false` for the Dokploy internal Postgres. Order of steps: `../README.md`.

@@ -7,8 +7,8 @@ Online shop for the POS category: customers buy online from the **same stock** t
 - Comments that pointed at `ecommerce/backend` now point at `pos/backend`.
 - `.guard-baseline` is `159252e ecommerce/storefront`: the starter's three type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
 
-The ecommerce notes below apply unchanged, including the Next.js 16 sync of 2026-11-06 (TASKS V-04). **Starter:** `medusajs/dtc-starter` `apps/storefront` at commit **`f677db4`** (2026-10-09, Medusa 2.21.2; synced from `15ef93d`: the starter removed `generateStaticParams` from the product, collection and category pages, PR medusajs/dtc-starter#73; before that, from `e3a237c9b877`: only the 2.21.2 package bump). `engines.node` is `>=22.22.0`, as the starter root and Medusa 2.22 require. Next.js is **15.5.27**, ahead of the starter's 15.5.24, for the 2026-09-30 security fixes (TASKS F-030). Starter changes applied (plan §7.2):
-1. Standalone pnpm package: `packageManager: pnpm@12.6.0`, own lockfile, settings-only `pnpm-workspace.yaml` (starter root `pnpm.overrides`; `unrs-resolver` build declined, as in the starter).
+The ecommerce notes below apply unchanged, including the Next.js 16 sync of 2026-11-06 (TASKS V-04). **Starter:** `medusajs/dtc-starter` `apps/storefront` at commit **`f677db4`** (2026-10-09, Medusa 2.21.2; synced from `15ef93d`: the starter removed `generateStaticParams` from the product, collection and category pages, PR medusajs/dtc-starter#73; before that, from `e3a237c9b877`: only the 2.21.2 package bump). `engines.node` is `>=22.23.4`; Next.js **16.4.5**, as in Ecommerce. Starter changes applied (plan §7.2):
+1. In the root pnpm workspace (since SC-1): settings and Medusa pins (catalog) in the root `pnpm-workspace.yaml`, own `pnpm-lock.yaml` (`sharedWorkspaceLockfile: false`), pnpm version = the root `package.json` `packageManager` (starter root `pnpm.overrides` carried over; `unrs-resolver` build declined, as in the starter).
 2. Package renamed `@dtc/storefront` → `pos-storefront`. A `typecheck` script was added, because the starter sets `typescript.ignoreBuildErrors`.
 3. `output: "standalone"` + `outputFileTracingRoot: __dirname` in `next.config.js`.
 4. Image host from `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` (was `MEDUSA_CLOUD_S3_*`).
@@ -23,17 +23,17 @@ The ecommerce notes below apply unchanged, including the Next.js 16 sync of 2026
 - The hidden "In store (POS)" shipping option never appears in this shop's checkout (P2-11).
 
 ## Env
-- **Build-time** (Dokploy Build-time Arguments): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (online channel; required, or the build aborts), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `NEXT_PUBLIC_CAPTCHA_PROVIDER`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`.
-- **Runtime:** `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `PORT=8000`, `REVALIDATE_SECRET`, `SHOPPER_IP_SECRET`, `CLIENT_IP_HEADER`. Details in `.env.example`.
+- **Build-time** (Dokploy Build-time Arguments; the Dockerfile's `ARG`s): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (online channel; required, or the build aborts), `NEXT_PUBLIC_SHOP_NAME` (header, footer, titles; empty = "Online Shop"), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION` (default `kh`), `NEXT_PUBLIC_STRIPE_KEY` (empty: payments go through PayWay), `NEXT_PUBLIC_CAPTCHA_PROVIDER` and `NEXT_PUBLIC_CAPTCHA_SITE_KEY` (match the backend's `CAPTCHA_PROVIDER`), `NEXT_PUBLIC_MANUAL_PAYMENT_LABEL` (how manual payment is named; default "Pay later (cash or bank transfer)"), `NEXT_PUBLIC_CONTACT_URL` (Telegram/mailto/page shown in order help; unset = none), `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`.
+- **Runtime:** `NODE_ENV=production`, `PORT=8000`, `MEDUSA_BACKEND_URL` (internal Dokploy hostname or the public API URL), `REVALIDATE_SECRET`, `SHOPPER_IP_SECRET`, `CLIENT_IP_HEADER`, `STOREFRONT_LOCALES`. Details in `.env.example`.
 
 ## Deploy (Dokploy)
-Service `pos-storefront` in the `pos` project (`../README.md`): Build Path `/`, Docker File `pos/storefront/Dockerfile`, Context `pos/storefront`, Watch Paths `pos/storefront/**`, domain port 8000. Full steps: `../DOKPLOY_STAGING.md` step 5. Set the backend's `STORE_CORS` and `AUTH_CORS` to this domain, and its `STOREFRONT_URL` and `REVALIDATE_SECRET` to match.
+Service `pos-storefront` in the `pos` project (`../README.md`): Build Path `/`, Docker File `pos/storefront/Dockerfile`, Docker Context Path `.` (the repo root), Watch Paths `pos/storefront/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, domain port 8000. Full steps: `../DOKPLOY_STAGING.md` step 5. Set the backend's `STORE_CORS` and `AUTH_CORS` to this domain, and its `STOREFRONT_URL` and `REVALIDATE_SECRET` to match.
 
 ## Verify (DEV_FLOW §5)
 ```bash
 pnpm install --frozen-lockfile
 NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder pnpm build   # must pass with the backend down
 pnpm typecheck
-docker build -f Dockerfile --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder -t pos-storefront:check ../..   # context: the repo root
+~/.kiri/bin/docker --context kiri build -f Dockerfile --build-arg NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_placeholder -t pos-storefront:check ../..   # context: the repo root
 ```
-The full local stack is in `../docker-compose.local.yml`.
+The full local stack: `~/.kiri/bin/docker --context kiri compose -f ../docker-compose.local.yml up -d` (categories share host ports: run one local stack at a time).

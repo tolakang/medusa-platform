@@ -4,15 +4,16 @@ Medusa **2.22.6** (since 2026-11-10, TASKS V-06; earlier 2.21.2, then 2.22.3) ba
 
 **Copied from `ecommerce/backend` at `main` `9105b07`** (TASKS Phase 2, owner 2026-10-15: POS reuses all of Ecommerce): PayWay, Resend, Telegram, Cambodia contact rules, anti-abuse, account emails, admin 2FA, wishlist and upload limits work the same here. POS features are added on top in P2-01 onwards; the ecommerce notes below apply unchanged. Done so far: module `pos` (`src/modules/pos`: `pos_register`, `pos_shift`, `pos_cashier`; P2-01, P2-03), links register → stock location / sales channel and shift → orders (`src/links/pos-*.ts`, P2-02), the invite-only `cashier` actor type with `POS_CORS` and cashier auth on every `/pos/*` route (`src/api/pos-auth.ts`, `src/workflows/pos-cashier.ts`, routes `/admin/pos/cashiers`, `/pos/cashiers/accept`, `/pos/cashiers/me`; P2-03, flow in `../README.md` → *Cashiers*), shift workflows `open-pos-shift` and `close-pos-shift` (`src/workflows/pos-shift.ts`, P2-04: one open shift per register, expected cash from payments whose session `metadata.pos_payment_method` is `cash`, variance = counted − expected), and the `pos-checkout` workflow (`src/workflows/pos-checkout.ts`, P2-05). `pos-checkout` creates a draft order in the register's sales channel with promo codes, converts it to an order, records the payment and links the order to the shift. Cash, card and QR all go through `pp_system_default`, tagged in the session's `metadata.pos_payment_method` (TASKS F-038). The routes are `/pos/*` for cashiers and `/admin/pos/*` for setup and reports (P2-06, listed in `../README.md` → *Shop setup and selling*); register setup goes through `src/workflows/pos-register.ts`. There is also the admin **Shift report** page (`src/admin/routes/pos-shifts/page.tsx`, P2-07). A register sale takes stock only from the register's location and is fulfilled there at once with that location's hidden "In store (POS)" shipping option (`src/workflows/pos-in-store.ts`, P2-11). `POST /pos/checkout` takes an optional `client_ref` (uuid): a repeat on the same shift returns the recorded sale with 200 instead of recording it again (`pos_client_ref` in the order metadata, checked under the shift lock; review 2, S7). One image, deployed twice (server + worker). Standard: `BUILD_PLAN.md` §7.1. Medusa reference: `docs/MEDUSA_SKILL.md`.
 
-**Starter:** `medusajs/dtc-starter` `apps/backend` at commit **`15ef93d`** (2026-10-02, Medusa 2.21.2; synced from `e3a237c9b877`: the starter's changes since were the 2.21.2 package bump, done with `scripts/update-medusa.sh`, and `engines.node` `>=22.22.0`). Changes from the starter:
-- pnpm standalone package: `packageManager`, settings-only `pnpm-workspace.yaml` (hoisting, `allowBuilds`, `tsconfig-paths` override).
+**Starter:** `medusajs/dtc-starter` `apps/backend` at commit **`15ef93d`** (2026-10-02, Medusa 2.21.2; synced from `e3a237c9b877`: the starter's changes since were the 2.21.2 package bump, done with `scripts/update-medusa.sh`, and `engines.node` `>=22.22.0`; now `>=22.23.4`). Changes from the starter:
+- In the root pnpm workspace (since SC-1): settings and Medusa pins (catalog, `"catalog:"`) in the root `pnpm-workspace.yaml`; the app keeps its own `pnpm-lock.yaml` (`sharedWorkspaceLockfile: false`); pnpm version = the root `package.json` `packageManager`. Shared code from `packages/medusa-core` (`workspace:*`).
 - Env-driven `medusa-config.ts`: Redis modules (caching + `@medusajs/caching-redis`, event bus, workflow engine, locking), S3, worker mode, admin, `DATABASE_SSL`.
-- `src/migration-scripts/initial-data-seed.ts` moved to `src/scripts/seed-initial-data.ts`. Migration scripts run automatically on every `db:migrate`, so the demo seed must not ship there. Run it by hand with `pnpm seed:initial`. Because it now runs after the first boot, it reuses the store, sales channel and publishable key Medusa created then (`createDefaultsWorkflow`) instead of creating a second channel and key (TASKS F-017; test `integration-tests/http/seed-initial-data.spec.ts`).
+- `src/migration-scripts/initial-data-seed.ts` moved out: migration scripts run on every `db:migrate`, so the demo seed must not ship there. The seeds now live in `packages/medusa-core/src/scripts`; `src/scripts/*.ts` are one-line re-exports. Run them by hand. Because it now runs after the first boot, it reuses the store, sales channel and publishable key Medusa created then (`createDefaultsWorkflow`) instead of creating a second channel and key (TASKS F-017; test `integration-tests/http/seed-initial-data.spec.ts`).
 - Scripts added: `typecheck`, `predeploy` (safe migrate flags), `seed:*`, `--passWithNoTests` on module and unit tests.
 
 ## Run locally
 ```bash
-docker compose -f ../docker-compose.local.yml up -d postgres redis   # docker = Kiri
+~/.kiri/bin/docker --context kiri compose -f ../docker-compose.local.yml up -d postgres redis
+# categories share host ports (55432, 56379, 9000, 8000; POS also 3000): run one local stack at a time
 cp .env.example .env    # then set DATABASE_URL=postgres://medusa:medusa@localhost:55432/pos etc.
 pnpm install --frozen-lockfile
 pnpm medusa db:migrate --execute-safe-links --execute-safe-search
@@ -30,15 +31,17 @@ pnpm medusa user -e admin@example.com -p <password>
 # Payments (TASKS P1-03): ABA PayWay provider pp_payway_payway (from the shared core: packages/medusa-core, providers/payway) when PAYWAY_MERCHANT_ID
 # and PAYWAY_API_KEY are set; callback /hooks/payment/payway_payway; add it to the region in the admin.
 # Refunds (and cancelling a paid order) go through PayWay's Refund API with PAYWAY_RSA_PUBLIC_KEY.
-pnpm seed                                   # real shop: Cambodia region (USD + KHR), tax region, Phnom Penh delivery (TASKS P1-02)
-pnpm seed:initial                           # optional demo data (EU regions, demo products, publishable key)
+pnpm seed                                   # always first: Cambodia region, USD default + KHR, tax region, Phnom Penh delivery (TASKS P1-02)
+pnpm seed:initial                           # optional: Europe region, 4 demo products; keeps the default currency (F-101)
+pnpm seed:demo-products                     # optional: 50 demo products; needs seed:initial first
+# Databases seeded before F-101 may have EUR as default and no KHR: Admin → Settings → Store, set USD, add KHR.
 ```
 
 ## Verify (DEV_FLOW §5)
 ```bash
 pnpm build && pnpm typecheck
 DB_HOST=localhost DB_PORT=55432 DB_USERNAME=medusa DB_PASSWORD=medusa pnpm test:integration:http
-docker build -f Dockerfile -t pos-backend:check ../..   # context: the repo root
+~/.kiri/bin/docker --context kiri build -f Dockerfile -t pos-backend:check ../..   # context: the repo root
 ```
 
 ## Deploy

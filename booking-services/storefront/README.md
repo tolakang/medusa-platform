@@ -2,28 +2,21 @@
 
 Customer storefront for the booking services category (BUILD_PLAN §9.3). Standard: `BUILD_PLAN.md` §7.2.
 
-**Copied from `ecommerce/storefront` at `main` `26c3d97`** (TASKS Phase 3, owner 2026-11-04: full copy of Ecommerce, on the latest Medusa; F-044). It talks to `booking-services/backend`, which has the same store routes, so PayWay checkout, the Cambodia address and phone rules, Telegram contact, CAPTCHA, wishlist, account emails and revalidation work the same here. Changes from the copy:
-- Package name `booking-services-storefront`; the Dockerfile, `.env.example` and comments name `booking-services/*`.
-- `@medusajs/*` packages moved to **2.22.2** with `scripts/update-medusa.sh booking-services 2.22.2`. Since 2026-11-06 on **2.22.3** (`scripts/update-medusa.sh all 2.22.3`, TASKS V-01) and Next.js **16.4.5** (the ecommerce README's Next.js 16 sync applies here too, TASKS V-04).
-- `.guard-baseline` is `159252e ecommerce/storefront`: the starter's type suppressions came with the copy, and `scripts/guard.sh` compares against that app at the starter import.
+**Copied from `ecommerce/storefront` at `main` `26c3d97`** (2026-11-04, TASKS F-044). It talks to `booking-services/backend`, so PayWay checkout, the Cambodia address and phone rules, Telegram contact, CAPTCHA, wishlist, account emails and revalidation work as in Ecommerce. On top: service pages by booking kind, the slot picker and Account → Bookings.
 
-Service pages, the slot picker and booking management come in P3-13. The ecommerce notes below apply unchanged.
-
-**Starter (of the Ecommerce source):** `medusajs/dtc-starter` `apps/storefront` at commit **`f677db4`** (2026-10-09, Medusa 2.21.2; synced from `15ef93d`: the starter removed `generateStaticParams` from the product, collection and category pages, PR medusajs/dtc-starter#73; before that, from `e3a237c9b877`: only the 2.21.2 package bump). `engines.node` is `>=22.22.0`, as the starter root and Medusa 2.22 require. Next.js is **15.5.27**, ahead of the starter's 15.5.24, for the 2026-09-30 security fixes (TASKS F-030). Starter changes applied (plan §7.2):
-1. Standalone pnpm package: `packageManager: pnpm@12.6.0`, own lockfile, settings-only `pnpm-workspace.yaml` (starter root `pnpm.overrides`; `unrs-resolver` build declined, as in the starter).
-2. Package renamed `@dtc/storefront` → `booking-services-storefront`. A `typecheck` script was added, because the starter sets `typescript.ignoreBuildErrors`.
-3. `output: "standalone"` + `outputFileTracingRoot: __dirname` in `next.config.js`.
-4. Image host from `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME` (was `MEDUSA_CLOUD_S3_*`).
-5. ~~`generateStaticParams` guarded~~: no longer needed. Since `f677db4` the starter has no `generateStaticParams`, so `next build` never calls the backend and pages render on request (BUILD_PLAN §7.2 change 5, Revision 7).
-6. `src/lib/config.ts`: server-side calls prefer the runtime `MEDUSA_BACKEND_URL` (private URL). Verified: a wrong runtime URL breaks SSR and the correct one serves it. `src/middleware.ts` still uses the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL`.
-7. `products/[handle]/page.tsx`: `export const dynamic = "force-dynamic"`. The starter's cookie helpers swallow Next's `DynamicServerError`, so pre-rendered or revalidating product pages returned 500 (`DYNAMIC_SERVER_USAGE`) in the Docker image. Reproduced locally and fixed; upstream report medusajs/nextjs-starter-medusa#439 (TASKS F-015).
+Still in force from the copy and the starter (plan §7.2):
+- Part of the root pnpm workspace: no own lockfile; `@medusajs/*` come from the root catalog (**2.22.6**, `"catalog:"`); pnpm from the root `packageManager`. Next.js **16.4.5**.
+- Package name `booking-services-storefront`; `.guard-baseline` is `776911e ecommerce/storefront`.
+- `output: "standalone"` in `next.config.js`; image host from `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME`.
+- `src/lib/config.ts`: server-side calls prefer the runtime `MEDUSA_BACKEND_URL` (private URL); `src/middleware.ts` uses the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL`.
+- `products/[handle]/page.tsx` is `force-dynamic` (TASKS F-015).
 
 ## Env
-- **Build-time** (Dokploy Build-time Arguments): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (required, or the build aborts), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`.
-- **Runtime:** `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `PORT=8000`.
+- **Build-time** (Dokploy Build-time Arguments, every `ARG` in the Dockerfile): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (required, or the build aborts), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION` (`kh`), `NEXT_PUBLIC_SHOP_NAME` (header, footer, titles; empty = "Book Online"), `NEXT_PUBLIC_STRIPE_KEY`, `NEXT_PUBLIC_CAPTCHA_PROVIDER`, `NEXT_PUBLIC_CAPTCHA_SITE_KEY`, `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`. From PR #95: `NEXT_PUBLIC_MANUAL_PAYMENT_LABEL` (the manual payment's name; default "Pay later (cash or bank transfer)") and `NEXT_PUBLIC_CONTACT_URL` (contact link in the order help; unset = none).
+- **Runtime:** `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `REVALIDATE_SECRET`, `SHOPPER_IP_SECRET`, `CLIENT_IP_HEADER`, `PORT=8000`.
 
 ## Deploy (Dokploy)
-Steps: `../DOKPLOY_STAGING.md` section 4 (Build Path `/`, Docker File `booking-services/storefront/Dockerfile`, Context `booking-services/storefront`, Watch Paths `booking-services/storefront/**`). Use the publishable key whose sales channel holds the products; Medusa's own first-boot key sees none (TASKS F-017).
+Steps: `../DOKPLOY_STAGING.md` Step 5. Build Path `/`, Docker File `booking-services/storefront/Dockerfile`, Docker Context Path `.`, Watch Paths `booking-services/storefront/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`. Use the publishable key whose sales channel holds the services (TASKS F-017).
 
 ## Verify (DEV_FLOW §5)
 ```bash
