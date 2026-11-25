@@ -10,7 +10,8 @@ import { inviteBody } from "../../lib/pos-setup"
 // (de)activate. Reads and writes /admin/pos/cashiers (P2-03, P2-06); owner
 // request 2026-11-13 so staging Step 7.B needs no curl.
 
-type Cashier = { id: string; name: string; email: string; is_active: boolean; invite_code: string }
+// invite_code is null once the cashier has set a password (it is spent).
+type Cashier = { id: string; name: string; email: string; is_active: boolean; password_set?: boolean; invite_code: string | null }
 
 const QUERY_KEY = ["pos-cashiers"]
 
@@ -112,12 +113,22 @@ const CashiersPage = () => {
               id="cashier-email"
               type="email"
               value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              onChange={(e) => {
+              setForm({ ...form, email: e.target.value })
+              invite.reset()
+            }}
             />
           </div>
           <Button type="submit" size="small" disabled={!body} isLoading={invite.isPending}>
             Invite
           </Button>
+          {/* Shown inline too: a refused invite (e.g. the email is already a
+              cashier) must not pass unnoticed if the toast is missed. */}
+          {invite.isError && (
+            <Text size="small" role="alert" className="text-ui-fg-error w-full">
+              {(invite.error as Error).message || "Couldn't invite this cashier."}
+            </Text>
+          )}
         </form>
       </Container>
 
@@ -149,14 +160,20 @@ const CashiersPage = () => {
                 </Table.Cell>
                 <Table.Cell>{c.email}</Table.Cell>
                 <Table.Cell>
-                  <div className="flex items-center gap-x-2">
-                    <span className="font-mono" title="Hidden; use Copy to hand it over">
-                      {maskCode(c.invite_code)}
-                    </span>
-                    <Button size="small" variant="transparent" onClick={() => copyCode(c.invite_code)}>
-                      Copy
-                    </Button>
-                  </div>
+                  {c.invite_code ? (
+                    <div className="flex items-center gap-x-2">
+                      <span className="font-mono" title="Hidden; use Copy to hand it over">
+                        {maskCode(c.invite_code)}
+                      </span>
+                      <Button size="small" variant="transparent" onClick={() => copyCode(c.invite_code!)}>
+                        Copy
+                      </Button>
+                    </div>
+                  ) : (
+                    <Text size="small" className="text-ui-fg-subtle">
+                      Password set
+                    </Text>
+                  )}
                 </Table.Cell>
                 <Table.Cell>
                   <Badge size="2xsmall" color={c.is_active ? "green" : "grey"}>

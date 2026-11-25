@@ -116,11 +116,14 @@ medusaIntegrationTestRunner({
         // The cashier picks the register and opens a shift.
         const { data: list } = await api.get("/pos/registers", cashier)
         expect(list.registers).toEqual([expect.objectContaining({ id: register.id, open_shift: null })])
+        expect(list.currency_code).toEqual("usd")
         const { data: opened } = await api.post("/pos/shifts/open", { register_id: register.id, opening_cash: 20 }, cashier)
         const shift = opened.shift
         expect(shift).toEqual(expect.objectContaining({ status: "open", opened_by: cashierId, currency_code: "usd" }))
         const { data: listOpen } = await api.get("/pos/registers", cashier)
         expect(listOpen.registers[0].open_shift.id).toEqual(shift.id)
+        // Who opened it, so another cashier sees the handover (F-105 #14).
+        expect(listOpen.registers[0].open_shift.opened_by_name).toEqual(expect.any(String))
 
         // The shop holds the shirts (a register sale takes stock only there, P2-11).
         const query2 = container.resolve(ContainerRegistrationKeys.QUERY)

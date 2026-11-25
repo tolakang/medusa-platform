@@ -4,7 +4,7 @@ import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, t
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
-import { registerBody, type RegisterForm } from "../../lib/pos-setup"
+import { registerBody, registerErrors, type RegisterForm } from "../../lib/pos-setup"
 
 // POS → Registers: add a register with its stock location and sales channel,
 // (de)activate it. Reads and writes /admin/pos/registers (P2-06); owner
@@ -27,6 +27,8 @@ const LIST_LIMIT = 100
 const RegistersPage = () => {
   const queryClient = useQueryClient()
   const [form, setForm] = useState<RegisterForm>(EMPTY)
+  // Inline messages show after the first Add, so an empty form doesn't fail silently.
+  const [tried, setTried] = useState(false)
   const prompt = usePrompt()
 
   const { data, isLoading, error } = useQuery({
@@ -49,6 +51,7 @@ const RegistersPage = () => {
       sdk.client.fetch<{ register: Register }>("/admin/pos/registers", { method: "POST", body }),
     onSuccess: (result) => {
       setForm(EMPTY)
+      setTried(false)
       refresh()
       toast.success(`Register ${result.register.name} added`)
     },
@@ -66,6 +69,13 @@ const RegistersPage = () => {
   })
 
   const body = registerBody(form)
+  const errors = tried ? registerErrors(form) : {}
+  const fieldError = (key: keyof RegisterForm) =>
+    errors[key] ? (
+      <Text size="xsmall" className="text-ui-fg-error" id={`register-${key}-error`}>
+        {errors[key]}
+      </Text>
+    ) : null
 
   return (
     <div className="flex flex-col gap-y-3">
@@ -77,9 +87,11 @@ const RegistersPage = () => {
           </Text>
         </div>
         <form
-          className="grid grid-cols-1 items-end gap-3 px-6 py-4 md:grid-cols-5"
+          noValidate
+          className="grid grid-cols-1 items-start gap-3 px-6 py-4 md:grid-cols-5"
           onSubmit={(e) => {
             e.preventDefault()
+            setTried(true)
             if (body) add.mutate(body)
           }}
         >
@@ -87,13 +99,25 @@ const RegistersPage = () => {
             <Label size="small" htmlFor="register-name">
               Name
             </Label>
-            <Input id="register-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Input
+              id="register-name"
+              aria-invalid={!!errors.name}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+            {fieldError("name")}
           </div>
           <div className="flex flex-col gap-y-1">
             <Label size="small" htmlFor="register-code">
               Code
             </Label>
-            <Input id="register-code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+            <Input
+              id="register-code"
+              aria-invalid={!!errors.code}
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value })}
+            />
+            {fieldError("code")}
           </div>
           <div className="flex flex-col gap-y-1">
             <Label size="small">Stock location</Label>
@@ -109,6 +133,7 @@ const RegistersPage = () => {
                 ))}
               </Select.Content>
             </Select>
+            {fieldError("stock_location_id")}
           </div>
           <div className="flex flex-col gap-y-1">
             <Label size="small">Sales channel</Label>
@@ -124,8 +149,9 @@ const RegistersPage = () => {
                 ))}
               </Select.Content>
             </Select>
+            {fieldError("sales_channel_id")}
           </div>
-          <Button type="submit" size="small" disabled={!body} isLoading={add.isPending}>
+          <Button type="submit" size="small" className="md:mt-6" isLoading={add.isPending}>
             Add register
           </Button>
         </form>

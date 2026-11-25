@@ -77,6 +77,15 @@ medusaIntegrationTestRunner({
         expect(wrong.data?.message).toContain("invite code")
         const { data: accepted } = await api.post("/pos/cashiers/accept", code(cashier), bearer(registration))
         expect(accepted.cashier.id).toEqual(cashier.id)
+        // Once the password is set the admin list no longer shows the code (F-105 #8).
+        const { data: list } = await api.get("/admin/pos/cashiers", await adminAuth())
+        expect(list.cashiers.find((c: { id: string }) => c.id === cashier.id)).toEqual(
+          expect.objectContaining({ password_set: true, invite_code: null })
+        )
+        // Inviting the same email again is refused with a message the admin page shows.
+        const dup = await fail(api.post("/admin/pos/cashiers", { name: "Again", email: cashier.email }, await adminAuth()))
+        expect(dup.data?.message).toContain("already exists")
+        expect(dup.status).toEqual(422)
 
         const token = await signIn("cashier.one@example.com")
         const { data: me } = await api.get("/pos/cashiers/me", bearer(token))
