@@ -11,7 +11,7 @@ import seed from "../../src/scripts/seed"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
-import { cancelBookingWorkflow } from "../../src/workflows/cancel-booking"
+import { cancelBookingWorkflow, planCancellation } from "../../src/workflows/cancel-booking"
 
 // TASKS P3-08 (BUILD_PLAN §9.3) and the P3-16 acceptance criterion:
 // cancellation inside the policy (BOOKING_CANCEL_HOURS, default 24) refunds;
@@ -168,6 +168,25 @@ medusaIntegrationTestRunner({
           ...(customerId ? { customer_id: customerId } : {}),
         })
       }
+
+      it("the cancel preview shows the same refund as the cancel, and changes nothing", async () => {
+        const { bookingId, paymentId, itemTotal } = await placed({ capture: true })
+        await booking().updateBookings({ id: bookingId, customer_id: "cus_preview" })
+
+        const early = await planCancellation(getContainer(), { booking_id: bookingId, customer_id: "cus_preview" })
+        expect(early.outcome).toEqual("refunded")
+        expect(early.refund?.amount).toEqual(itemTotal)
+        const [b] = await booking().listBookings({ id: bookingId })
+        expect(b.status).toEqual("confirmed")
+        expect(await refundsOf(paymentId)).toEqual([])
+
+        await startSoon(bookingId, "cus_preview")
+        const late = await planCancellation(getContainer(), { booking_id: bookingId, customer_id: "cus_preview" })
+        expect(late).toMatchObject({ outcome: "outside_policy", refund: null })
+        await expect(
+          planCancellation(getContainer(), { booking_id: bookingId, customer_id: "cus_other" })
+        ).rejects.toThrow("was not found")
+      })
 
       it("P3-16: a customer cancelling inside the window gets no refund", async () => {
         const { bookingId, paymentId } = await placed({ capture: true })
