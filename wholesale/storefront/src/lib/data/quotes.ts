@@ -18,7 +18,11 @@ import {
 import { track } from "@vercel/analytics/server"
 import { revalidateTag } from "next/cache"
 
-export const createQuote = async () => {
+// Polish 2026-11-25: an optional note is sent as the quote's first message
+// (POST /store/quotes/:id/messages, the route the quote page already uses).
+// The quote stands even if the note fails; the buyer can write it again on
+// the quote page.
+export const createQuote = async (note?: string) => {
   const headers = {
     ...(await getAuthHeaders()),
   }
@@ -42,6 +46,15 @@ export const createQuote = async () => {
       // twice. Accepting the quote makes the order.
       await removeCartId()
       revalidateTag(await getCacheTag("carts"), { expire: 0 })
+
+      const text = note?.trim()
+      if (text) {
+        try {
+          await createQuoteMessage(quote.quote.id, { text })
+        } catch {
+          // See above: the note is optional.
+        }
+      }
 
       return quote
     })

@@ -15,6 +15,7 @@ export const RequestQuoteConfirmation = ({
 }) => {
   const [requesting, setRequesting] = useState(false)
   const [open, setOpen] = useState(false)
+  const [note, setNote] = useState("")
   const { countryCode } = useParams()
   const router = useRouter()
 
@@ -22,7 +23,7 @@ export const RequestQuoteConfirmation = ({
     setRequesting(true)
 
     try {
-      const { quote } = await createQuote()
+      const { quote } = await createQuote(note)
 
       router.push(`/${countryCode}/account/quotes/details/${quote.id}`)
     } catch (error) {
@@ -53,6 +54,20 @@ export const RequestQuoteConfirmation = ({
               You are about to request a quote for the cart. If you confirm, the
               cart will be converted to a quote.
             </p>
+            <label className="flex flex-col gap-y-1 text-small-regular">
+              <span>Note for the sales team (optional)</span>
+              <textarea
+                name="quote-note"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={2000}
+                rows={4}
+                placeholder="Delivery dates, target prices, questions..."
+                className="rounded-md border border-neutral-200 p-2 text-base-regular focus:outline-none focus:ring-2 focus:ring-neutral-300"
+                data-testid="quote-note-input"
+                disabled={requesting}
+              />
+            </label>
           </div>
 
           <div className="mt-[25px] flex justify-end gap-x-2">
