@@ -268,13 +268,18 @@ medusaIntegrationTestRunner({
         ).toEqual(200);
 
         // Approval requests of company A are not in B's list, and a plain
-        // employee has no list.
+        // employee sees only their own requests (polish 2026-11-25; it was
+        // a 403).
         const second = await b2b.cart(aBuyer.token, 1);
         await post(`/store/carts/${second.data.cart.id}/approvals`, {}, aBuyer.token);
         const bList = await get("/store/approvals", bAdmin.token);
         expect(bList.status).toEqual(200);
         expect(bList.data.carts_with_approvals).toEqual([]);
-        expect((await get("/store/approvals", aBuyer.token)).status).toEqual(403);
+        const own = await get("/store/approvals", aBuyer.token);
+        expect(own.status).toEqual(200);
+        expect(
+          own.data.carts_with_approvals.map((cart: { id: string }) => cart.id)
+        ).toEqual([second.data.cart.id]);
       });
     });
   },

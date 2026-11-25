@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/util/format-date"
 import { listInvoices } from "@/lib/data/invoices"
 import { convertToLocale } from "@/lib/util/money"
 import LocalizedClientLink from "@/modules/common/components/localized-client-link"
@@ -16,15 +17,7 @@ const TERMS: Record<string, string> = {
   net_60: "Net 60",
 }
 
-const date = (value: string | null) =>
-  value
-    ? new Date(value).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        timeZone: "UTC",
-      })
-    : "-"
+const date = (value: string | null) => formatDate(value)
 
 export default async function Invoices() {
   const invoices = await listInvoices()

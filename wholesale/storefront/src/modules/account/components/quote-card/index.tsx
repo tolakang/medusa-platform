@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/util/format-date"
 import QuoteStatusBadge from "@/app/[countryCode]/(main)/account/@dashboard/quotes/components/quote-status-badge"
 import { convertToLocale } from "@/lib/util/money"
 import LocalizedClientLink from "@/modules/common/components/localized-client-link"
@@ -66,7 +67,7 @@ const QuoteCard = ({ quote }: QuoteCardProps) => {
 
         <div className="flex pr-2 text-small-regular items-center">
           <CalendarMini className="inline-block mr-1" />
-          {createdAt.getDate()}-{createdAt.getMonth() + 1}-{createdAt.getFullYear()}
+          {formatDate(createdAt)}
         </div>
 
         <div className="flex text-small-regular items-center">

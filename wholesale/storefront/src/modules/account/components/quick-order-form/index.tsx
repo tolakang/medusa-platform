@@ -1,6 +1,7 @@
 "use client"
 
 import { addBySku, QuickOrderResult } from "@/lib/data/quick-order"
+import { convertToLocale } from "@/lib/util/money"
 import { parseQuickOrder } from "@/lib/util/parse-quick-order"
 import Button from "@/modules/common/components/button"
 import LocalizedClientLink from "@/modules/common/components/localized-client-link"
@@ -108,6 +109,23 @@ const QuickOrderForm = () => {
             Go to cart
           </LocalizedClientLink>
         </Text>
+      )}
+
+      {!!result?.hints?.length && (
+        <div className="text-sm text-neutral-950" data-testid="quick-order-hints">
+          <ul className="list-disc pl-5">
+            {result.hints.map((hint) => (
+              <li key={hint.sku}>
+                <span className="font-mono">{hint.sku}</span>: save{" "}
+                {convertToLocale({
+                  amount: hint.saving_per_unit,
+                  currency_code: hint.currency_code,
+                })}{" "}
+                each at {hint.min_quantity}+
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {!!result?.not_found.length && (

@@ -238,6 +238,35 @@ medusaIntegrationTestRunner({
         expect(updated.items[0].unit_price).toEqual(share(base, 0.75));
         expect(updated.items[0].quantity).toEqual(10);
       });
+
+      it("price tiers: the buyer's group breaks, matching the cart (polish 2026-11-25)", async () => {
+        const gold = await buyerOf("Gold", "gold-tiers@buyer.test");
+        const { data } = await api.get(
+          `/store/products?region_id=${regionId}&fields=variants.id&limit=1&order=handle`,
+          storeHeaders(b2bKey, gold.token)
+        );
+        const variantId = data.products[0].variants[0].id;
+        const base = await unitPrice();
+
+        const tiers = async (token?: string) =>
+          (
+            await api.get(
+              `/store/price-tiers?region_id=${regionId}&variant_id=${variantId}`,
+              storeHeaders(b2bKey, token)
+            )
+          ).data.price_tiers[0];
+
+        const goldTiers = await tiers(gold.token);
+        expect(goldTiers.variant_id).toEqual(variantId);
+        expect(goldTiers.tiers).toEqual([
+          { min_quantity: 1, max_quantity: 9, amount: share(base, 0.8) },
+          { min_quantity: 10, max_quantity: null, amount: share(base, 0.75) },
+        ]);
+        // A guest: the base price only.
+        expect((await tiers()).tiers).toEqual([
+          { min_quantity: 1, max_quantity: null, amount: base },
+        ]);
+      });
     });
   },
 });

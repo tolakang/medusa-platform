@@ -13,12 +13,14 @@ export const GET = async (
 ) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
   // P4-07: company admins see their own company's approval requests.
+  // Polish 2026-11-25: any other employee sees only the requests for their
+  // own carts (read only; deciding stays admin-only in [id]/route.ts).
   const member = await requireCompanyMember(
     req.scope,
-    req.auth_context.actor_id,
-    { admin: true }
+    req.auth_context.actor_id
   );
   const companyId = member.employee.company.id;
+  const isAdmin = !!member.employee.is_admin;
 
   const {
     data: [company],
@@ -31,6 +33,10 @@ export const GET = async (
       "carts.company.*",
       "carts.items.*",
       "carts.completed_at",
+      "carts.customer.id",
+      "carts.customer.first_name",
+      "carts.customer.last_name",
+      "carts.customer.email",
     ],
     filters: { id: companyId },
   });
@@ -41,9 +47,19 @@ export const GET = async (
 
   const { status } = req.validatedQuery || {};
 
-  const cartIds = company.carts
-    .filter((cart) => cart !== undefined && cart !== null)
-    .map((cart) => cart.id);
+  const visibleCarts = company.carts.filter(
+    (cart) =>
+      cart !== undefined &&
+      cart !== null &&
+      (isAdmin || cart.customer_id === req.auth_context.actor_id)
+  );
+
+  const cartIds = visibleCarts
+    .map((cart) => cart!.id);
+
+  if (!cartIds.length) {
+    return res.json({ carts_with_approvals: [], count: 0 });
+  }
 
   let approvalStatusFilters: any = {
     cart_id: cartIds,
@@ -75,7 +91,7 @@ export const GET = async (
     },
   });
 
-  const cartsWithAdminApprovals = company.carts
+  const cartsWithAdminApprovals = visibleCarts
     .map((cart) => {
       const cartApprovals = approvals.filter(
         (approval) => approval.cart_id === cart?.id

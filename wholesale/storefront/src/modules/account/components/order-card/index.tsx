@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/util/format-date"
 import { convertToLocale } from "@/lib/util/money"
 import LocalizedClientLink from "@/modules/common/components/localized-client-link"
 import CalendarIcon from "@/modules/common/icons/calendar"
@@ -68,11 +69,7 @@ const OrderCard = ({ order }: OrderCardProps) => {
             data-testid="order-created-at"
           >
             <CalendarIcon className="inline-block mr-1" />
-            {createdAt.toLocaleDateString("en-GB", {
-              year: "numeric",
-              month: "numeric",
-              day: "numeric",
-            })}
+            {formatDate(createdAt)}
           </div>
 
           <div className="flex items-center text-small-regular">

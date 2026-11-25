@@ -118,7 +118,6 @@ const BillingAddressForm = ({ cart }: { cart: B2BCart | null }) => {
             autoComplete="address-level1"
             value={formData["billing_address.province"]}
             onChange={handleChange}
-            required
             data-testid="billing-province-input"
           />
           <CountrySelect

@@ -1,4 +1,6 @@
+import compareAddresses from "@/lib/util/compare-addresses"
 import AddressSelect from "@/modules/checkout/components/address-select"
+import CheckboxWithLabel from "@/modules/common/components/checkbox"
 import CountrySelect from "@/modules/checkout/components/country-select"
 import Input from "@/modules/common/components/input"
 import { B2BCart, B2BCustomer } from "@/types"
@@ -70,8 +72,37 @@ const ShippingAddressForm = ({
   useEffect(() => {
     if (cart && cart.shipping_address) {
       setFormAddress(cart?.shipping_address)
+      return
     }
+    // Polish 2026-11-25: a cart with no address yet starts from the
+    // company's address (the buyer can still pick a saved one or edit).
+    const company = cart?.company
+    if (company?.address) {
+      const country = company.country?.toLowerCase() ?? ""
+      setFormAddress({
+        first_name: customer?.first_name ?? "",
+        last_name: customer?.last_name ?? "",
+        phone: customer?.phone ?? company.phone ?? "",
+        company: company.name ?? "",
+        address_1: company.address ?? "",
+        city: company.city ?? "",
+        postal_code: company.zip ?? "",
+        province: company.state ?? "",
+        // Only a country this region ships to; otherwise the buyer picks.
+        country_code: countriesInRegion?.includes(country) ? country : "",
+      } as HttpTypes.StoreCartAddress)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart])
+
+  // "Billing same as shipping" starts on only when that loses nothing: no
+  // billing address yet, or one equal to the shipping address. On submit
+  // the billing address is set to the shipping address (setShippingAddress).
+  const [sameAsBilling, setSameAsBilling] = useState(
+    !cart?.billing_address?.address_1 ||
+      (!!cart?.shipping_address &&
+        compareAddresses(cart.shipping_address, cart.billing_address))
+  )
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -169,6 +200,7 @@ const ShippingAddressForm = ({
             required
             data-testid="shipping-city-input"
           />
+          {/* Province is optional for shipping and billing alike. */}
           <Input
             label="Province"
             name="shipping_address.province"
@@ -188,6 +220,19 @@ const ShippingAddressForm = ({
             data-testid="shipping-country-select"
           />
         </div>
+      </div>
+      <div className="mt-4">
+        <CheckboxWithLabel
+          label="Billing address same as shipping address"
+          checked={sameAsBilling}
+          onChange={() => setSameAsBilling((v) => !v)}
+          data-testid="shipping-same-as-billing-checkbox"
+        />
+        <input
+          type="hidden"
+          name="same_as_billing"
+          value={sameAsBilling ? "on" : "off"}
+        />
       </div>
     </>
   )

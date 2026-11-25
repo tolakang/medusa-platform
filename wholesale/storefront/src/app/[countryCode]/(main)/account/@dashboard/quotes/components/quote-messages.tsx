@@ -1,4 +1,5 @@
 "use client"
+import { formatDateTime } from "@/lib/util/format-date"
 
 import { createQuoteMessage } from "@/lib/data/quotes"
 import { StoreCreateQuoteMessage, StoreQuoteResponse } from "@/types/quote"
@@ -88,15 +89,9 @@ const QuoteMessages = ({
               </span>
               {(message as { created_at?: string }).created_at && (
                 <span className="ml-2 font-normal text-ui-fg-muted">
-                  {new Date(
-                    (message as { created_at?: string }).created_at!
-                  ).toLocaleString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatDateTime(
+                    (message as { created_at?: string }).created_at
+                  )}
                 </span>
               )}
             </div>

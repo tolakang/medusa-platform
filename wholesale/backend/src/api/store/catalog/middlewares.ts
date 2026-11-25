@@ -71,7 +71,13 @@ const buyersOnlyForProducts = (
 };
 
 export const storeCatalogMiddlewares: MiddlewareRoute[] = [
-  ...["/store/products*", "/store/product-variants*", "/store/search*"].map(
+  ...[
+    "/store/products*",
+    "/store/product-variants*",
+    "/store/search*",
+    // Polish 2026-11-25: quantity price breaks are prices too.
+    "/store/price-tiers*",
+  ].map(
     (matcher) => ({
       method: "ALL" as const,
       matcher,
