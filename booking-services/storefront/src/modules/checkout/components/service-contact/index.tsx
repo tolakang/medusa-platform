@@ -1,6 +1,7 @@
 "use client"
 
 import { setServiceContact } from "@lib/data/booking"
+import { itemsPlace, noDeliveryNote } from "@lib/util/booking"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Input, Label, Text, clx } from "@modules/common/components/ui"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
@@ -56,7 +57,7 @@ export default function ServiceContact({ cart }: { cart: HttpTypes.StoreCart }) 
           </div>
           <div className="small:col-span-2 flex flex-col gap-y-2">
             <Text className="txt-small text-ui-fg-subtle">
-              No delivery: you come to us at the booked time. We email your confirmation and a reminder the day before.
+              {noDeliveryNote(itemsPlace(cart.items))}
             </Text>
             <SubmitButton className="mt-2" data-testid="submit-contact-button">
               Continue to payment

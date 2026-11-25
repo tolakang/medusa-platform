@@ -22,7 +22,36 @@ import {
   localDate,
   orderedServices,
   serviceChoiceLabel,
+  bookingPlace,
+  itemsPlace,
+  noDeliveryNote,
+  balanceWhere,
 } from "../booking.ts"
+
+describe("wording by booking kind", () => {
+  const p = (booking_kind?: string, extra = false) => ({ product: { metadata: { booking_kind, ...(extra ? { booking_extra: true } : {}) } } })
+
+  it("names where each kind happens", () => {
+    assert.equal(bookingPlace({ metadata: { booking_kind: "A" } }), "shop")
+    assert.equal(bookingPlace({ metadata: {} }), "shop")
+    assert.equal(bookingPlace({ metadata: { booking_kind: "B" } }), "customer")
+    assert.equal(bookingPlace({ metadata: { booking_kind: "C" } }), "customer")
+    assert.equal(bookingPlace({ metadata: { booking_kind: "F" } }), "venue")
+  })
+
+  it("ignores extras and gives null for mixed carts", () => {
+    assert.equal(itemsPlace([p("C"), p(undefined, true)]), "customer")
+    assert.equal(itemsPlace([p("A"), p("C")]), null)
+  })
+
+  it("says we come to you for trips and visits, you come to us in the shop", () => {
+    assert.match(noDeliveryNote("customer"), /we come to you/)
+    assert.match(noDeliveryNote("shop"), /you come to us/)
+    assert.doesNotMatch(noDeliveryNote(null), /come to us/)
+    assert.equal(balanceWhere("customer"), "on the day")
+    assert.equal(balanceWhere("shop"), "at the venue")
+  })
+})
 
 // TASKS P3-13: the storefront's booking helpers.
 const PP = "Asia/Phnom_Penh"

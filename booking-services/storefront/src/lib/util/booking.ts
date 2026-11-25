@@ -129,6 +129,57 @@ export function depositSplit(
   return { now, later: Math.round((total - now) * 100) / 100, plan }
 }
 
+// Where the booking happens, by kind (plan §9.3; product metadata.booking_kind):
+// A appointments and G tables are at the shop, F events at the venue,
+// B visits and C trips (moving, transfers) come to the customer, D departures
+// leave from the departure point and E rentals are collected.
+export type BookingPlace = "shop" | "customer" | "venue" | "departure" | "rental"
+type KindItem = { product?: { metadata?: Meta } | null; variant?: { product?: { metadata?: Meta } | null } | null }
+
+export function bookingPlace(product: { metadata?: Meta } | null | undefined): BookingPlace {
+  switch (product?.metadata?.booking_kind) {
+    case "B":
+    case "C":
+      return "customer"
+    case "D":
+      return "departure"
+    case "E":
+      return "rental"
+    case "F":
+      return "venue"
+    default:
+      return "shop"
+  }
+}
+
+/** The one place every booking in these items shares, or null when they differ. */
+export function itemsPlace(items: KindItem[] | null | undefined): BookingPlace | null {
+  const places = new Set(
+    (items ?? [])
+      .filter((i) => !isExtraProduct(i.product ?? i.variant?.product))
+      .map((i) => bookingPlace(i.product ?? i.variant?.product))
+  )
+  return places.size === 1 ? Array.from(places)[0] : null
+}
+
+/** The checkout note under the contact form: no delivery, and what happens instead. */
+export function noDeliveryNote(place: BookingPlace | null): string {
+  const how: Record<BookingPlace, string> = {
+    shop: "you come to us at the booked time",
+    customer: "we come to you at the booked time",
+    venue: "come to the venue at the booked time",
+    departure: "be at the departure point a few minutes before it leaves",
+    rental: "collect and return your rental at the booked times",
+  }
+  const text = place ? how[place] : "each booking takes place at its booked time and place"
+  return `No delivery: ${text}. We email your confirmation and a reminder the day before.`
+}
+
+/** Where a deposit's balance is paid (TASKS P3-26). */
+export function balanceWhere(place: BookingPlace | null): string {
+  return place === "shop" || place === "venue" ? "at the venue" : "on the day"
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }

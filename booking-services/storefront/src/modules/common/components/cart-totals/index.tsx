@@ -1,6 +1,6 @@
 "use client"
 
-import { depositSplit, isServiceOnlyCart } from "@lib/util/booking"
+import { balanceWhere, depositSplit, isServiceOnlyCart, itemsPlace } from "@lib/util/booking"
 import { convertToLocale } from "@lib/util/money"
 import React from "react"
 
@@ -93,7 +93,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             <span>{convertToLocale({ amount: split.now, currency_code })}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>{balancePaid ? "Balance paid" : split.plan ? "Later payments (plan)" : "Balance at the venue"}</span>
+            <span>{balancePaid ? "Balance paid" : split.plan ? "Later payments (plan)" : `Balance ${balanceWhere(itemsPlace((totals as { items?: never[] }).items))}`}</span>
             <span>{convertToLocale({ amount: split.later, currency_code })}</span>
           </div>
         </div>
