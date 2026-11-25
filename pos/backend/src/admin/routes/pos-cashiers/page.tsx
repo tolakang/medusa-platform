@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Users } from "@medusajs/icons"
-import { Badge, Button, Container, Heading, Input, Label, Table, Text, toast } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Label, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -14,11 +14,21 @@ type Cashier = { id: string; name: string; email: string; is_active: boolean; in
 
 const QUERY_KEY = ["pos-cashiers"]
 
+// Invite codes stay hidden in the table; Copy hands one over (design
+// critique, 2026-11-23).
+const maskCode = (code: string) => (code.length > 4 ? `••••${code.slice(-4)}` : "••••")
+const copyCode = (code: string) =>
+  navigator.clipboard.writeText(code).then(
+    () => toast.success("Invite code copied"),
+    () => toast.error("Couldn't copy. Try again.")
+  )
+
 const CashiersPage = () => {
   const queryClient = useQueryClient()
   const [form, setForm] = useState({ name: "", email: "" })
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null)
 
+  const prompt = usePrompt()
   const { data, isLoading, error } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: () => sdk.client.fetch<{ cashiers: Cashier[] }>("/admin/pos/cashiers"),
@@ -139,7 +149,14 @@ const CashiersPage = () => {
                 </Table.Cell>
                 <Table.Cell>{c.email}</Table.Cell>
                 <Table.Cell>
-                  <span className="font-mono">{c.invite_code}</span>
+                  <div className="flex items-center gap-x-2">
+                    <span className="font-mono" title="Hidden; use Copy to hand it over">
+                      {maskCode(c.invite_code)}
+                    </span>
+                    <Button size="small" variant="transparent" onClick={() => copyCode(c.invite_code)}>
+                      Copy
+                    </Button>
+                  </div>
                 </Table.Cell>
                 <Table.Cell>
                   <Badge size="2xsmall" color={c.is_active ? "green" : "grey"}>
@@ -171,7 +188,20 @@ const CashiersPage = () => {
                           size="small"
                           variant="secondary"
                           disabled={update.isPending}
-                          onClick={() => update.mutate({ id: c.id, is_active: !c.is_active })}
+                          onClick={async () => {
+                            if (
+                              c.is_active &&
+                              !(await prompt({
+                                title: `Deactivate ${c.name}?`,
+                                description: "They can no longer sign in to the POS app. You can activate them again later.",
+                                confirmText: "Deactivate",
+                                cancelText: "Keep active",
+                              }))
+                            ) {
+                              return
+                            }
+                            update.mutate({ id: c.id, is_active: !c.is_active })
+                          }}
                         >
                           {c.is_active ? "Deactivate" : "Activate"}
                         </Button>

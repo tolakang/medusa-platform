@@ -63,7 +63,12 @@ export default async function OverviewPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-ui-fg-subtle">No orders yet.</p>
+          <p className="text-sm text-ui-fg-subtle">
+            No orders yet.{" "}
+            <Link className="text-ui-fg-interactive hover:underline" href="/products">
+              Add or check your products
+            </Link>
+          </p>
         )}
       </section>
     </Shell>

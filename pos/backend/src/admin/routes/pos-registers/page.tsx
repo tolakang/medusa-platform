@@ -1,6 +1,6 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { CreditCard } from "@medusajs/icons"
-import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast } from "@medusajs/ui"
+import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
@@ -27,6 +27,7 @@ const LIST_LIMIT = 100
 const RegistersPage = () => {
   const queryClient = useQueryClient()
   const [form, setForm] = useState<RegisterForm>(EMPTY)
+  const prompt = usePrompt()
 
   const { data, isLoading, error } = useQuery({
     queryKey: QUERY_KEY,
@@ -162,7 +163,20 @@ const RegistersPage = () => {
                       size="small"
                       variant="secondary"
                       disabled={toggle.isPending}
-                      onClick={() => toggle.mutate({ id: r.id, is_active: !r.is_active })}
+                      onClick={async () => {
+                        if (
+                          r.is_active &&
+                          !(await prompt({
+                            title: `Deactivate ${r.name}?`,
+                            description: "Cashiers can no longer open a shift on this register. You can activate it again later.",
+                            confirmText: "Deactivate",
+                            cancelText: "Keep active",
+                          }))
+                        ) {
+                          return
+                        }
+                        toggle.mutate({ id: r.id, is_active: !r.is_active })
+                      }}
                     >
                       {r.is_active ? "Deactivate" : "Activate"}
                     </Button>

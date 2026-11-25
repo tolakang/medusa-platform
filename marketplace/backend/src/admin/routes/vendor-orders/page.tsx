@@ -35,6 +35,18 @@ const VendorOrdersPage = () => {
         query: { limit: PAGE_SIZE, offset: page * PAGE_SIZE },
       }),
   })
+  // The parent orders' numbers, so the link says which order it opens
+  // (design critique, 2026-11-23). Medusa's own admin order list, by id.
+  const parentIds = [
+    ...new Set((data?.orders ?? []).map((o) => o.parent_order_id).filter((id): id is string => !!id)),
+  ]
+  const { data: parents } = useQuery({
+    queryKey: ["marketplace-vendor-orders-parents", parentIds],
+    queryFn: () =>
+      sdk.admin.order.list({ id: parentIds, fields: "id,display_id", limit: parentIds.length }),
+    enabled: parentIds.length > 0,
+  })
+  const parentNumber = new Map((parents?.orders ?? []).map((p) => [p.id, p.display_id]))
 
   return (
     <Container className="flex flex-col gap-y-4">
@@ -48,7 +60,13 @@ const VendorOrdersPage = () => {
       {isLoading ? (
         <Text>Loading…</Text>
       ) : !data?.orders.length ? (
-        <Text className="text-ui-fg-subtle">No vendor orders yet.</Text>
+        <Text className="text-ui-fg-subtle">
+          No vendor orders yet. They appear here when a customer checks out with products from your{" "}
+          <a href={adminLink("/vendors")} className="text-ui-fg-interactive hover:underline">
+            vendors
+          </a>
+          .
+        </Text>
       ) : (
         <Table>
           <Table.Header>
@@ -57,7 +75,7 @@ const VendorOrdersPage = () => {
               <Table.HeaderCell>Vendor</Table.HeaderCell>
               <Table.HeaderCell>Total</Table.HeaderCell>
               <Table.HeaderCell>Status</Table.HeaderCell>
-              <Table.HeaderCell>Parent</Table.HeaderCell>
+              <Table.HeaderCell>Customer order</Table.HeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -78,7 +96,9 @@ const VendorOrdersPage = () => {
                 <Table.Cell>
                   {o.parent_order_id && (
                     <a href={adminLink(`/orders/${o.parent_order_id}`)} className="text-ui-fg-interactive hover:underline">
-                      Parent
+                      {parentNumber.has(o.parent_order_id)
+                        ? `#${parentNumber.get(o.parent_order_id)}`
+                        : "Customer order"}
                     </a>
                   )}
                 </Table.Cell>

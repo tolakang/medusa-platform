@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Pager, Shell } from "@/components/shell"
-import { COMMISSION_STATUSES, commissionStatus, day, money, pageFrom } from "@/lib/format"
+import { COMMISSION_STATUSES, commissionLabel, commissionStatus, day, money, pageFrom } from "@/lib/format"
 import { requireSeller, sellerGet } from "@/lib/server/seller"
 
 type Commission = {
@@ -16,12 +16,6 @@ type Commission = {
 }
 
 const LIMIT = 20
-const LABELS: Record<string, string> = {
-  pending: "Waiting",
-  approved: "Due",
-  paid: "Paid",
-  cancelled: "Cancelled",
-}
 
 // TASKS P5-08: what you earned per order. Pending → approved on the payout
 // day → paid when the shop has paid you (P5-05).
@@ -52,7 +46,7 @@ export default async function CommissionsPage({
         </Link>
         {COMMISSION_STATUSES.map((s) => (
           <Link key={s} className={status === s ? "btn-primary" : "btn-secondary"} href={`/commissions?status=${s}`}>
-            {LABELS[s]}
+            {commissionLabel(s)}
             {totals[s] &&
               ` · ${Object.entries(totals[s]).map(([c, a]) => money(a, c)).join(" · ")}`}
           </Link>
@@ -80,7 +74,7 @@ export default async function CommissionsPage({
                   <td>{money(c.order_total, c.currency_code)}</td>
                   <td>{c.rate} %</td>
                   <td>{money(c.amount, c.currency_code)}</td>
-                  <td>{LABELS[c.status] ?? c.status}</td>
+                  <td>{commissionLabel(c.status)}</td>
                   <td>{day(c.paid_at)}</td>
                 </tr>
               ))}

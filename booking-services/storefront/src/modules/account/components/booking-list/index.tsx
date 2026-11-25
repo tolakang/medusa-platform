@@ -115,7 +115,22 @@ function WriteReview({ booking, onDone }: { booking: MyBooking; onDone: (notice:
   const [pending, start] = useTransition()
   return (
     <div className="flex w-full flex-col gap-y-2" data-testid="booking-review-form">
-      <div className="flex gap-x-1" role="radiogroup" aria-label="Rating">
+      {/* Radio-group keys (design critique, 2026-11-23): one tab stop, arrows move and pick. */}
+      <div
+        className="flex gap-x-1"
+        role="radiogroup"
+        aria-label="Rating"
+        onKeyDown={(e) => {
+          const step =
+            e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0
+          const next =
+            e.key === "Home" ? 1 : e.key === "End" ? 5 : step ? Math.min(5, Math.max(1, (rating || 0) + step)) : 0
+          if (!next) return
+          e.preventDefault()
+          setRating(next)
+          e.currentTarget.querySelectorAll<HTMLButtonElement>("[role=radio]")[next - 1]?.focus()
+        }}
+      >
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -123,6 +138,7 @@ function WriteReview({ booking, onDone }: { booking: MyBooking; onDone: (notice:
             role="radio"
             aria-checked={rating === n}
             aria-label={`${n} star${n > 1 ? "s" : ""}`}
+            tabIndex={rating === n || (!rating && n === 1) ? 0 : -1}
             className={clx("text-2xl leading-none", n <= rating ? "text-ui-fg-base" : "text-ui-fg-muted")}
             onClick={() => setRating(n)}
           >
