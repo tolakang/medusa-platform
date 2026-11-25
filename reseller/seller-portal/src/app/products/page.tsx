@@ -2,7 +2,7 @@ import { Shell } from "@/components/shell"
 import { requireSeller, sellerGet } from "@/lib/server/seller"
 import { ProductForm } from "./product-form"
 
-type Product = { id: string; title: string; handle: string; thumbnail: string | null; selected: boolean }
+type Product = { id: string; title: string; handle: string; thumbnail: string | null; price?: { amount: number; currency_code: string } | null; selected: boolean }
 
 // TASKS P5-08: choose which of the shop's products appear in your shop.
 export default async function ProductsPage() {

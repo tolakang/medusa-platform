@@ -1,9 +1,10 @@
 "use client"
 
 import { useActionState, useState } from "react"
+import { money } from "@/lib/format"
 import { saveProducts, type SaveState } from "./actions"
 
-type Product = { id: string; title: string; handle: string; thumbnail: string | null; selected: boolean }
+type Product = { id: string; title: string; handle: string; thumbnail: string | null; price?: { amount: number; currency_code: string } | null; selected: boolean }
 
 // TASKS P5-08: tick the products to show in your shop, then save.
 export function ProductForm({ products }: { products: Product[] }) {
@@ -17,7 +18,19 @@ export function ProductForm({ products }: { products: Product[] }) {
   const [query, setQuery] = useState("")
   const q = query.trim().toLowerCase()
   const matches = (p: Product) => !q || p.title.toLowerCase().includes(q) || p.handle.toLowerCase().includes(q)
-  const shown = products.filter(matches).length
+  const visible = products.filter(matches)
+  const shown = visible.length
+  const allVisiblePicked = shown > 0 && visible.every((p) => picked.has(p.id))
+  // Ticks or unticks every product the search shows (role test 2026-11-25).
+  const toggleVisible = (on: boolean) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      for (const p of visible) {
+        if (on) next.add(p.id)
+        else next.delete(p.id)
+      }
+      return next
+    })
   const toggle = (id: string, on: boolean) =>
     setPicked((prev) => {
       const next = new Set(prev)
@@ -45,6 +58,17 @@ export function ProductForm({ products }: { products: Product[] }) {
           />
         </label>
       )}
+      {shown > 0 && (
+        <label className="flex items-center gap-3 border-b border-ui-border-base pb-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={allVisiblePicked}
+            onChange={(e) => toggleVisible(e.target.checked)}
+          />
+          {q ? `Select all ${shown} shown` : `Select all ${shown}`}
+        </label>
+      )}
       {q && shown === 0 && <p className="text-sm text-ui-fg-subtle">No products match “{query.trim()}”.</p>}
       <ul className="flex flex-col divide-y divide-ui-border-base">
         {products.map((product) => (
@@ -69,6 +93,9 @@ export function ProductForm({ products }: { products: Product[] }) {
               {product.title}
               <span className="block text-xs text-ui-fg-subtle">{product.handle}</span>
             </label>
+            <span className="text-sm tabular-nums">
+              {product.price ? `${product.price.amount > 0 ? "from " : ""}${money(product.price.amount, product.price.currency_code)}` : "—"}
+            </span>
           </li>
         ))}
       </ul>

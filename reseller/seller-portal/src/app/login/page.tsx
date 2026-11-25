@@ -11,6 +11,9 @@ export default function LoginPage() {
   // Controlled: React resets an uncontrolled form after each action, which
   // emptied the email after a wrong password.
   const [email, setEmail] = useState("")
+  // The same for the invite code (role test 2026-11-25): an error kept the
+  // email but emptied the code. Passwords are typed again on purpose.
+  const [inviteCode, setInviteCode] = useState("")
   const [loginState, loginAction, loggingIn] = useActionState<AuthState, FormData>(login, {})
   const [setupState, setupAction, settingUp] = useActionState<AuthState, FormData>(setupAccount, {})
   const state = mode === "login" ? loginState : setupState
@@ -65,6 +68,8 @@ export default function LoginPage() {
                 placeholder="XXXXX-XXXXX"
                 maxLength={40}
                 required
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value)}
               />
             </label>
           )}
