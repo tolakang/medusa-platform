@@ -1,6 +1,7 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { createDefaultsWorkflow } from "@medusajs/medusa/core-flows"
+import { PASSWORD_CHANGED_TEMPLATE } from "@medusa-platform/medusa-core/lib/auth-email"
 import { SELLER_SUSPENDED_MESSAGE } from "../../src/api/seller-auth"
 
 jest.setTimeout(120 * 1000)
@@ -275,6 +276,19 @@ medusaIntegrationTestRunner({
           )
         )
         expect(changed.status).toEqual(200)
+        // The "not you?" link opens the seller portal, not the storefront.
+        const query = getContainer().resolve(ContainerRegistrationKeys.QUERY)
+        let sent: { data?: { url?: string } } | undefined
+        for (let i = 0; i < 40 && !sent; i++) {
+          const { data } = await query.graph({
+            entity: "notification",
+            fields: ["data"],
+            filters: { to: "sok@seller.test", template: PASSWORD_CHANGED_TEMPLATE },
+          })
+          sent = data[0] as unknown as typeof sent
+          if (!sent) await new Promise((r) => setTimeout(r, 250))
+        }
+        expect(sent?.data?.url).toEqual("https://portal.seller.test/forgot-password")
         const signIn = await call(
           api.post("/auth/seller/emailpass", { email: "sok@seller.test", password: "new-seller-pass-2" })
         )

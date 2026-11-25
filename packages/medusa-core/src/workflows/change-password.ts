@@ -20,7 +20,16 @@ import { sendAuthEmailWorkflow } from "./send-auth-email"
 // 3. set the new one with `updateProvider`.
 // No compensation: a changed password can't be put back (the old hash is gone).
 
-type Input = { auth_identity_id: string; current_password: string; new_password: string }
+// forgot_url: where the "not you?" link in the confirmation email leads. Left
+// out, it is the storefront's /forgot-password page (customers); an app whose
+// other actors sign in elsewhere passes its own (reseller: sellers -> the
+// seller portal).
+type Input = {
+  auth_identity_id: string
+  current_password: string
+  new_password: string
+  forgot_url?: string | null
+}
 
 export const WRONG_CURRENT_PASSWORD = "The current password is incorrect."
 
@@ -58,7 +67,10 @@ const changePasswordStep = createStep(
       )
     }
     const config = container.resolve(ContainerRegistrationKeys.CONFIG_MODULE)
-    return new StepResponse({ email, forgot_url: storefrontLink(config, "forgot-password", {}) })
+    return new StepResponse({
+      email,
+      forgot_url: input.forgot_url ?? storefrontLink(config, "forgot-password", {}),
+    })
   }
 )
 
