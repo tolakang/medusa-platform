@@ -77,7 +77,11 @@ export default async function initial_data_seed({
   await updateStoresWorkflow(container).run({
     input: {
       selector: { id: store.id },
-      update: { supported_currencies: supported },
+      // Not Medusa's first-boot "Medusa Store": SHOP_NAME, else a neutral name.
+      update: {
+        name: process.env.SHOP_NAME?.trim() || "Online Shop",
+        supported_currencies: supported,
+      },
     },
   });
 
