@@ -1,4 +1,3 @@
-import { JsonViewSection } from "@medusajs/dashboard/components";
 import { CheckCircleSolid } from "@medusajs/icons";
 import {
   Button,
@@ -180,7 +179,6 @@ const QuoteDetails = () => {
 
           <QuoteMessages quote={quote} preview={preview!} />
 
-          <JsonViewSection data={quote} />
         </div>
 
         <div className="mt-2 flex w-full max-w-[100%] flex-col gap-y-3 xl:mt-0 xl:max-w-[400px]">

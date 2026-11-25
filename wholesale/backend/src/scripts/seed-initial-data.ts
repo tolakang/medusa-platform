@@ -236,18 +236,19 @@ export default async function initial_data_seed({
           description: "Ship in 24 hours.",
           code: "express",
         },
+        // Express costs more than Standard (role test 2026-11-25).
         prices: [
           {
             currency_code: "usd",
-            amount: 10,
+            amount: 25,
           },
           {
             currency_code: "eur",
-            amount: 10,
+            amount: 25,
           },
           {
             region_id: region.id,
-            amount: 10,
+            amount: 25,
           },
         ],
         rules: [
