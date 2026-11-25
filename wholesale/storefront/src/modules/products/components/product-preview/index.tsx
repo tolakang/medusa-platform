@@ -23,6 +23,11 @@ export default async function ProductPreview({
     product,
   })
 
+  // A variant that doesn't track stock (or takes backorders) is always
+  // available: it showed a red "0 left" (role test 2026-11-25).
+  const untracked = (product.variants ?? []).some(
+    (variant) => variant?.manage_inventory === false || !!variant?.allow_backorder
+  )
   const inventoryQuantity = product.variants?.reduce((acc, variant) => {
     return acc + (variant?.inventory_quantity || 0)
   }, 0)
@@ -43,7 +48,12 @@ export default async function ProductPreview({
           />
         </div>
         <div className="flex flex-col txt-compact-medium">
-          <Text className="text-neutral-600 text-xs">BRAND</Text>
+          {/* The collection, if any (was a "BRAND" placeholder). */}
+          {product.collection?.title && (
+            <Text className="text-neutral-600 text-xs">
+              {product.collection.title}
+            </Text>
+          )}
           <Text className="text-ui-fg-base" data-testid="product-title">
             {product.title}
           </Text>
@@ -56,18 +66,24 @@ export default async function ProductPreview({
           <div className="flex flex-row gap-1 items-center">
             <span
               className={clx({
-                "text-green-500": inventoryQuantity && inventoryQuantity > 50,
+                "text-green-500":
+                  untracked || (inventoryQuantity && inventoryQuantity > 50),
                 "text-orange-500":
+                  !untracked &&
                   inventoryQuantity &&
                   inventoryQuantity <= 50 &&
                   inventoryQuantity > 0,
-                "text-red-500": inventoryQuantity === 0,
+                "text-red-500": !untracked && inventoryQuantity === 0,
               })}
             >
               •
             </span>
             <Text className="text-neutral-600 text-xs">
-              {inventoryQuantity} left
+              {untracked
+                ? "In stock"
+                : inventoryQuantity
+                ? `${inventoryQuantity} left`
+                : "Out of stock"}
             </Text>
           </div>
           <PreviewAddToCart product={product} region={region} />

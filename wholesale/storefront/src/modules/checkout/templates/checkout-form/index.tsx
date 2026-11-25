@@ -1,4 +1,5 @@
 import { paymentMethodsForTerms } from "@/lib/constants"
+import { cartAwaitsApproval } from "@/lib/util/cart-approval"
 import { listCartShippingMethods } from "@/lib/data/fulfillment"
 import { listCartPaymentMethods } from "@/lib/data/payment"
 import ApprovalStatusBanner from "@/modules/cart/components/approval-status-banner"
@@ -27,9 +28,7 @@ export default async function CheckoutForm({
 
   const shippingMethods = await listCartShippingMethods(cart.id)
   const paymentMethods = await listCartPaymentMethods(cart.region?.id ?? "")
-  const requiresApproval =
-    cart.company?.approval_settings?.requires_admin_approval ||
-    cart.company?.approval_settings?.requires_sales_manager_approval
+  const awaitsApproval = cartAwaitsApproval(cart, customer)
 
   if (!shippingMethods || !paymentMethods) {
     return null
@@ -65,9 +64,7 @@ export default async function CheckoutForm({
 
         <ContactDetails cart={cart} customer={customer} />
 
-        {(customer?.employee?.is_admin &&
-          cart.approval_status?.status === ApprovalStatusType.APPROVED) ||
-        !requiresApproval ? (
+        {!awaitsApproval ? (
           <Payment
             cart={cart}
             availablePaymentMethods={paymentMethodsForTerms(

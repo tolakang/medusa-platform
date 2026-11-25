@@ -77,11 +77,28 @@ const QuoteMessages = ({
             })}
           >
             <div className="font-medium font-sans txt-compact-small text-ui-fg-subtle ">
-              {!!message.admin &&
-                `${message.admin.first_name} ${message.admin.last_name}`}
-
-              {!!message.customer &&
-                `${message.customer.first_name} ${message.customer.last_name}`}
+              <span>
+                {message.admin_id
+                  ? [message.admin?.first_name, message.admin?.last_name]
+                      .filter(Boolean)
+                      .join(" ") || "Store"
+                  : [message.customer?.first_name, message.customer?.last_name]
+                      .filter(Boolean)
+                      .join(" ") || "You"}
+              </span>
+              {(message as { created_at?: string }).created_at && (
+                <span className="ml-2 font-normal text-ui-fg-muted">
+                  {new Date(
+                    (message as { created_at?: string }).created_at!
+                  ).toLocaleString("en-GB", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
             </div>
 
             {!!message.item_id && (

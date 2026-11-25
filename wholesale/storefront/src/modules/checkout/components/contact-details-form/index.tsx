@@ -99,8 +99,8 @@ const ContactDetailsForm = ({
           className="small:col-span-2"
         />
         <label className="text-xs italic text-neutral-500">
-          The note will only appear on the invoice and order confirmation and
-          will not be read by the merchant.
+          The note appears on the invoice and order confirmation, and the
+          merchant sees it with your order.
         </label>
       </div>
     </div>

@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import { fetchQuote, fetchQuotePreview } from "@/lib/data/quotes"
 import { notFound } from "next/navigation"
 import QuoteDetails from "../../components/quote-details"
+
+export const metadata: Metadata = {
+  title: "Quote",
+}
 
 type Props = {
   params: Promise<{ id: string; countryCode: string }>

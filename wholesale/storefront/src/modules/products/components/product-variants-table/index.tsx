@@ -151,7 +151,7 @@ const ProductVariantsTable = ({
                       </Table.Cell>
                     )
                   })}
-                  <Table.Cell className="px-4 border-x">
+                  <Table.Cell className="px-4 border-x whitespace-nowrap">
                     {variantPrice?.calculated_price}
                   </Table.Cell>
                   <Table.Cell className="px-4 border-x">

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { retrieveCompany } from "@/lib/data/companies"
 import { retrieveCustomer } from "@/lib/data/customer"
 import { listRegions } from "@/lib/data/regions"
@@ -7,6 +8,10 @@ import EmployeesCard from "@/modules/account/components/employees-card"
 import InviteEmployeeCard from "@/modules/account/components/invite-employee-card"
 import { Heading } from "@medusajs/ui"
 import { notFound } from "next/navigation"
+
+export const metadata: Metadata = {
+  title: "Company",
+}
 
 export default async function Company() {
   const customer = await retrieveCustomer()

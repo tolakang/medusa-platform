@@ -1,6 +1,11 @@
+import type { Metadata } from "next"
 import { fetchQuotes } from "@/lib/data/quotes"
 import { Heading } from "@medusajs/ui"
 import QuotesOverview from "./components/quotes-overview"
+
+export const metadata: Metadata = {
+  title: "Quotes",
+}
 
 export default async function Quotes() {
   const { quotes } = await fetchQuotes()

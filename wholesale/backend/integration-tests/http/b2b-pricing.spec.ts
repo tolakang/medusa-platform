@@ -86,7 +86,7 @@ medusaIntegrationTestRunner({
           { group_id: groups[group] },
           adminHeaders
         );
-        return buyer;
+        return { ...buyer, companyId: company.id as string };
       };
 
       const share = (amount: number, part: number) =>
@@ -170,6 +170,43 @@ medusaIntegrationTestRunner({
         expect(base).toBeGreaterThan(0);
         expect(await unitPrice(gold.token)).toEqual(share(base, 0.8));
         expect(await unitPrice(silver.token)).toEqual(share(base, 0.9));
+      });
+
+      it("moving a company to a better tier reprices its open carts (role test 2026-11-25)", async () => {
+        const buyer = await buyerOf("Silver", "mover@buyer.test");
+        const { data } = await api.get(
+          `/store/products?region_id=${regionId}&fields=variants.id&limit=1&order=handle`,
+          storeHeaders(b2bKey, buyer.token)
+        );
+        const {
+          data: { cart },
+        } = await api.post(
+          "/store/carts",
+          {
+            region_id: regionId,
+            items: [{ variant_id: data.products[0].variants[0].id, quantity: 1 }],
+          },
+          storeHeaders(b2bKey, buyer.token)
+        );
+        const base = await unitPrice();
+        expect(cart.items[0].unit_price).toEqual(share(base, 0.9));
+
+        await api.delete(
+          `/admin/companies/${buyer.companyId}/customer-group/${groups.Silver}`,
+          adminHeaders
+        );
+        const moved = await api.post(
+          `/admin/companies/${buyer.companyId}/customer-group`,
+          { group_id: groups.Gold },
+          adminHeaders
+        );
+        // The answer is the company, not {}.
+        expect(moved.data.company.id).toEqual(buyer.companyId);
+
+        const {
+          data: { cart: repriced },
+        } = await api.get(`/store/carts/${cart.id}`, storeHeaders(b2bKey, buyer.token));
+        expect(repriced.items[0].unit_price).toEqual(share(base, 0.8));
       });
 
       it("quantity tiers: from 10 units a Gold buyer pays the volume price in the cart", async () => {

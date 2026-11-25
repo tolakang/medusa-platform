@@ -16,6 +16,7 @@ export type B2bCompany = {
   status?: `${ModuleCompanyStatus}` | null;
   payment_terms?: `${ModuleCompanyPaymentTerms}` | null;
   credit_limit?: number | null;
+  currency_code?: string | null;
   spending_limit_reset_frequency?: `${ModuleCompanySpendingLimitResetFrequency}` | null;
 };
 
@@ -143,9 +144,11 @@ export function assertCreditLimit(
     return;
   }
   if (outstanding + cartTotal > company.credit_limit) {
-    throw notAllowed(
-      "This order would take your company over its credit limit."
-    );
+    const left = Math.max(0, company.credit_limit - outstanding);
+    const amount = company.currency_code
+      ? `${left.toFixed(2)} ${company.currency_code.toUpperCase()}`
+      : left.toFixed(2);
+    throw notAllowed(`Over the company credit limit (${amount} left).`);
   }
 }
 
@@ -244,6 +247,26 @@ export function assertApprovalsGranted(
       );
     }
   }
+}
+
+/**
+ * A granted company-admin approval that covers the total overrides the
+ * employee's spending limit: the admin approved spending that much (role
+ * test, 2026-11-25). Otherwise an approved, locked cart over the limit could
+ * never check out.
+ */
+export function adminApprovalCoversTotal(
+  approvals: B2bApproval[],
+  total: number
+) {
+  return approvals.some(
+    (approval) =>
+      approval?.type === "admin" &&
+      approval.status === "approved" &&
+      approval.covered_total !== null &&
+      approval.covered_total !== undefined &&
+      approvalCovers(approval, total)
+  );
 }
 
 /**

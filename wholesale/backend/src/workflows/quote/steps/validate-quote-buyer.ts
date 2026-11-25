@@ -2,6 +2,7 @@ import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/util
 import { quoteTotal } from "../../../utils/quote-total";
 import { createStep } from "@medusajs/framework/workflows-sdk";
 import {
+  adminApprovalCoversTotal,
   assertApprovalsGranted,
   assertApprovedCompanyBuyer,
   requiredApprovalTypes,
@@ -50,14 +51,15 @@ export const validateQuoteBuyerStep = createStep(
 
     const settings = await loadApprovalSettings(container, company.id);
     const required = requiredApprovalTypes(settings, total, !!buyer!.employee?.is_admin);
+    const approvals = quote.cart_id
+      ? await loadCartApprovals(container, quote.cart_id)
+      : [];
     if (required.length) {
-      assertApprovalsGranted(
-        required,
-        quote.cart_id ? await loadCartApprovals(container, quote.cart_id) : [],
-        total
-      );
+      assertApprovalsGranted(required, approvals, total);
     }
 
-    await assertBuyerCanSpend(container, buyer!, company, total);
+    await assertBuyerCanSpend(container, buyer!, company, total, {
+      spendingLimitApproved: adminApprovalCoversTotal(approvals, total),
+    });
   }
 );

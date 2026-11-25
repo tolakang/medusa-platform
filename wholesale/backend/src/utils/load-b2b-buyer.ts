@@ -51,6 +51,7 @@ export async function loadBuyer(
       "employee.company.status",
       "employee.company.payment_terms",
       "employee.company.credit_limit",
+      "employee.company.currency_code",
       "employee.company.spending_limit_reset_frequency",
     ],
     filters: { id: customerId },

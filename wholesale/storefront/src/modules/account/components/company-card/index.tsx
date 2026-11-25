@@ -165,7 +165,7 @@ const CompanyCard = ({
               }
             >
               {countriesInRegions.map((country, index) => (
-                <option key={index} value={country.id}>
+                <option key={index} value={country.iso_2}>
                   {country.name}
                 </option>
               ))}
@@ -239,8 +239,15 @@ const CompanyCard = ({
           <div className="flex flex-col gap-y-2">
             <Text className="font-medium text-neutral-950">Address</Text>
             <Text className=" text-neutral-500">
-              {company.address}, {company.city}, {company.state}, {company.zip},{" "}
-              {company.country?.toUpperCase()}
+              {[
+                company.address,
+                company.city,
+                company.state,
+                company.zip,
+                company.country?.toUpperCase(),
+              ]
+                .filter((part) => !!part && String(part).trim())
+                .join(", ") || "-"}
             </Text>
           </div>
           <div className="flex flex-col gap-y-2">

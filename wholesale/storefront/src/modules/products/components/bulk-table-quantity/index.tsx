@@ -15,10 +15,19 @@ const BulkTableQuantity = ({
 }: BulkTableQuantityProps) => {
   const [quantity, setQuantity] = useState("0")
   const [shiftPressed, setShiftPressed] = useState(false)
+  const [invalid, setInvalid] = useState(false)
 
+  // Whole numbers of 0 or more only: a typed minus or other character is
+  // refused with a message instead of being dropped silently.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuantity(e.target.value)
-    onChange(variantId, Number(e.target.value))
+    const raw = e.target.value.trim()
+    if (raw !== "" && !/^\d+$/.test(raw)) {
+      setInvalid(true)
+      return
+    }
+    setInvalid(false)
+    setQuantity(raw)
+    onChange(variantId, Number(raw || 0))
   }
 
   const handleAdd = () => {
@@ -68,6 +77,7 @@ const BulkTableQuantity = ({
   }, [])
 
   return (
+    <div className="flex flex-col items-center w-full">
     <div className="flex flex-row justify-between gap-2 w-full">
       <IconButton
         type="button"
@@ -81,12 +91,13 @@ const BulkTableQuantity = ({
       <Input
         name={`quantity[${variantId}]`}
         aria-label={label}
-        min={0}
         value={quantity}
         onChange={(e) => handleChange(e)}
         onKeyDown={handleKeyDown}
-        type="number"
-        className="max-w-10 text-center items-center justify-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        type="text"
+        inputMode="numeric"
+        aria-invalid={invalid}
+        className="w-14 min-w-14 text-center items-center justify-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <IconButton
         type="button"
@@ -97,6 +108,12 @@ const BulkTableQuantity = ({
       >
         <PlusMini />
       </IconButton>
+    </div>
+      {invalid && (
+        <span role="alert" className="text-[0.65rem] text-rose-600">
+          Enter 0 or more
+        </span>
+      )}
     </div>
   )
 }

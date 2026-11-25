@@ -3,6 +3,7 @@ import {
   MedusaResponse,
 } from "@medusajs/framework";
 import { removeCompanyFromCustomerGroupWorkflow } from "../../../../../../workflows/company/workflows/remove-company-from-customer-group";
+import { refreshCompanyCarts } from "../../../../../../utils/refresh-company-carts";
 import { AdminRemoveCompanyFromCustomerGroupType } from "../../../validators";
 
 export const DELETE = async (
@@ -15,6 +16,7 @@ export const DELETE = async (
     input: { company_id: id, group_id: customerGroupId },
     container: req.scope,
   });
+  await refreshCompanyCarts(req.scope, id);
 
   res.status(200).send();
 };

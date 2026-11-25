@@ -6,7 +6,8 @@ import { getPaymentErrorMessage } from "@/lib/util/payment-error"
 import ErrorMessage from "@/modules/checkout/components/error-message"
 import Button from "@/modules/common/components/button"
 import Spinner from "@/modules/common/icons/spinner"
-import { B2BCart } from "@/types"
+import { cartAwaitsApproval, requiredApprovalTypes } from "@/lib/util/cart-approval"
+import { B2BCart, B2BCustomer } from "@/types"
 import { ApprovalStatusType } from "@/types/approval"
 import { Container, Text, toast } from "@medusajs/ui"
 import { OnApproveActions, OnApproveData } from "@paypal/paypal-js"
@@ -17,6 +18,7 @@ import AdyenPaymentButton from "./adyen-payment-button"
 
 type PaymentButtonProps = {
   cart: B2BCart
+  customer?: B2BCustomer | null
   "data-testid": string
 }
 
@@ -34,6 +36,7 @@ const completeCart = async (cart: B2BCart) => {
 
 const PaymentButton: React.FC<PaymentButtonProps> = ({
   cart,
+  customer,
   "data-testid": dataTestId,
 }) => {
   const notReady =
@@ -43,13 +46,6 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     !cart.email ||
     (cart.shipping_methods?.length ?? 0) < 1
 
-  const { requires_admin_approval, requires_sales_manager_approval } =
-    cart.company?.approval_settings || {}
-
-  const requiresApproval =
-    requires_admin_approval || requires_sales_manager_approval
-
-  const cartApprovalStatus = cart?.approval_status?.status
 
   // TODO: Add this once gift cards are implemented
   // const paidByGiftcard =
@@ -59,8 +55,12 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   //   return <GiftCardPaymentButton />
   // }
 
-  if (requiresApproval && cartApprovalStatus !== ApprovalStatusType.APPROVED) {
-    return <RequestApprovalButton cart={cart} notReady={notReady} />
+  // A company admin's own cart skips the company-admin approval, and carts
+  // under the threshold need none (same rule as the backend).
+  if (cartAwaitsApproval(cart, customer)) {
+    return (
+      <RequestApprovalButton cart={cart} customer={customer} notReady={notReady} />
+    )
   }
 
   const paymentSession = cart.payment_collection?.payment_sessions?.[0]
@@ -176,15 +176,19 @@ const PaywayPaymentButton = ({
 
 const RequestApprovalButton = ({
   cart,
+  customer,
   notReady,
 }: {
   cart: B2BCart
+  customer?: B2BCustomer | null
   notReady: boolean
 }) => {
   const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  const { requires_admin_approval, requires_sales_manager_approval } =
-    cart.company?.approval_settings || {}
+  const types = requiredApprovalTypes(cart, customer)
+  const requires_admin_approval = types.includes("admin")
+  const requires_sales_manager_approval = types.includes("sales_manager")
 
   const cartApprovalStatus = cart?.approval_status?.status
 
@@ -193,10 +197,15 @@ const RequestApprovalButton = ({
 
   const createApproval = async () => {
     setSubmitting(true)
+    setErrorMessage(null)
 
-    await createCartApproval(cart.id, cart.customer!.id).catch((err) => {
-      toast.error(err.message)
-    })
+    // The action returns refusals (credit limit, already approved): a thrown
+    // server-action message never reaches the browser.
+    const result = await createCartApproval(cart.id, cart.customer!.id)
+    if (result && "error" in result) {
+      setErrorMessage(result.error)
+      toast.error(result.error)
+    }
 
     setSubmitting(false)
   }
@@ -219,6 +228,10 @@ const RequestApprovalButton = ({
         >
           {isPendingAdminApproval ? "Approval Requested" : "Request Approval"}
         </Button>
+        <ErrorMessage
+          error={errorMessage}
+          data-testid="request-approval-error-message"
+        />
       </Container>
     </>
   )

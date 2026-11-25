@@ -74,10 +74,10 @@ export const StoreJoinCompany = z
 export type StoreUpdateEmployeeType = z.infer<typeof StoreUpdateEmployee>;
 export const StoreUpdateEmployee = z
   .object({
-    spending_limit: z.number().optional(),
+    spending_limit: z.number().nonnegative().optional(),
     raw_spending_limit: z
       .object({
-        value: z.number().optional(),
+        value: z.number().nonnegative().optional(),
         precision: z.number().optional(),
       })
       .optional(),

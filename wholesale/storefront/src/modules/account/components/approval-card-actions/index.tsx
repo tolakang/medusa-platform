@@ -41,8 +41,10 @@ const ApprovalCardActions = ({
     if (!pendingAdminApproval) return
 
     const confirmed = await dialog({
-      title: "Are you sure you want to approve this cart?",
-      description: "This action cannot be undone.",
+      title: "Approve this cart?",
+      description: "The buyer can then place the order. This can't be undone.",
+      variant: "confirmation",
+      confirmText: "Approve",
     })
 
     if (!confirmed) return
@@ -51,9 +53,13 @@ const ApprovalCardActions = ({
     // A refused decision (already decided, gone) used to leave the button
     // spinning with no message.
     try {
-      await updateApproval(pendingAdminApproval.id, ApprovalStatusType.APPROVED)
-    } catch (e) {
-      toast.error((e as Error).message || "Couldn't save the decision. Reload and try again.")
+      const result = await updateApproval(
+        pendingAdminApproval.id,
+        ApprovalStatusType.APPROVED
+      )
+      if ("error" in result) {
+        toast.error(result.error)
+      }
     } finally {
       setApproving(false)
     }
@@ -63,8 +69,9 @@ const ApprovalCardActions = ({
     if (!pendingAdminApproval) return
 
     const confirmed = await dialog({
-      title: "Are you sure you want to reject this cart?",
-      description: "This action cannot be undone.",
+      title: "Reject this cart?",
+      description: "The buyer will need to start a new cart. This can't be undone.",
+      confirmText: "Reject",
     })
 
     if (!confirmed) return
@@ -73,9 +80,13 @@ const ApprovalCardActions = ({
     // A refused decision (already decided, gone) used to leave the button
     // spinning with no message.
     try {
-      await updateApproval(pendingAdminApproval.id, ApprovalStatusType.REJECTED)
-    } catch (e) {
-      toast.error((e as Error).message || "Couldn't save the decision. Reload and try again.")
+      const result = await updateApproval(
+        pendingAdminApproval.id,
+        ApprovalStatusType.REJECTED
+      )
+      if ("error" in result) {
+        toast.error(result.error)
+      }
     } finally {
       setRejecting(false)
     }
