@@ -11,6 +11,14 @@ import { refreshCartItemsWorkflow } from "@medusajs/medusa/core-flows";
 // Not repriced: completed carts; carts waiting for or holding an approval,
 // whose approved total must not move; carts with a quote, whose prices are
 // the merchant's offer in the quote's draft order (the merchant edits it).
+type EmployeeRow = { customer?: { id?: string | null } | null } | null;
+type CartRow = {
+  id: string;
+  completed_at?: string | Date | null;
+  approvals?: ({ id: string } | null)[] | null;
+};
+type QuoteRow = { id: string; cart_id?: string | null };
+
 export async function refreshCompanyCarts(
   container: MedusaContainer,
   companyId: string
@@ -23,7 +31,8 @@ export async function refreshCompanyCarts(
     fields: ["id", "employees.customer.id"],
     filters: { id: companyId },
   });
-  const customerIds = ((company?.employees ?? []) as any[])
+  const employees: EmployeeRow[] = company?.employees ?? [];
+  const customerIds = employees
     .map((employee) => employee?.customer?.id)
     .filter(Boolean) as string[];
   if (!customerIds.length) {
@@ -35,7 +44,7 @@ export async function refreshCompanyCarts(
     fields: ["id", "completed_at", "approvals.id"],
     filters: { customer_id: customerIds },
   });
-  const candidates = (carts as any[]).filter(
+  const candidates = (carts as CartRow[]).filter(
     (cart) => !cart.completed_at && !(cart.approvals ?? []).filter(Boolean).length
   );
   if (!candidates.length) {
@@ -47,7 +56,7 @@ export async function refreshCompanyCarts(
     fields: ["id", "cart_id"],
     filters: { cart_id: candidates.map((cart) => cart.id) },
   });
-  const quoted = new Set((quotes as any[]).map((quote) => quote.cart_id));
+  const quoted = new Set((quotes as QuoteRow[]).map((quote) => quote.cart_id));
   const open = candidates.filter((cart) => !quoted.has(cart.id));
   for (const cart of open) {
     await refreshCartItemsWorkflow(container).run({
