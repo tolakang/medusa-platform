@@ -355,6 +355,26 @@ export function isQuoteOnly(product: HttpTypes.StoreProduct): boolean {
   return (product.metadata as Record<string, unknown> | null)?.quote_only === true
 }
 
+// A pass (TASKS P3-29): a product with metadata.pass_credits, bought with
+// "Add to cart" and spent later when booking.
+export function isPassProduct(product: { metadata?: Meta } | null | undefined): boolean {
+  return Number(product?.metadata?.pass_credits) > 0
+}
+
+// Whether the product page shows a booking picker rather than the plain
+// "Add to cart" (product-actions-wrapper). Decided from the product the page
+// already has, so the loading state never shows the plain one first.
+export function usesBookingPicker(product: HttpTypes.StoreProduct): boolean {
+  return (
+    isExtraProduct(product) ||
+    isPackageProduct(product) ||
+    isQuoteOnly(product) ||
+    isEventProduct(product) ||
+    rentalUnit(product) !== null ||
+    isServiceProduct(product)
+  )
+}
+
 // Event package (TASKS P3-30, kind H): pieces booked together on one date.
 export function isPackageProduct(product: HttpTypes.StoreProduct): boolean {
   const items = (product.metadata as Record<string, unknown> | null)?.package_items

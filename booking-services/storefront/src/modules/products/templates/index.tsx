@@ -2,7 +2,7 @@ import React, { Suspense } from "react"
 
 import ImageGallery from "@modules/products/components/image-gallery"
 import ProductActions from "@modules/products/components/product-actions"
-import { isServiceProduct } from "@lib/util/booking"
+import { isServiceProduct, usesBookingPicker } from "@lib/util/booking"
 import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
 import ProductTabs from "@modules/products/components/product-tabs"
 import RelatedProducts from "@modules/products/components/related-products"
@@ -48,10 +48,12 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <ProductOnboardingCta />
           <Suspense
             fallback={
-              // A service gets the slot picker, never "Add to cart" (P3-13),
-              // not even while it loads.
-              isServiceProduct(product) ? (
-                <p className="txt-small text-ui-fg-subtle">Loading times…</p>
+              // A service, ticket, rental, package or quote gets its own picker,
+              // never "Add to cart" (P3-13), not even while it loads.
+              usesBookingPicker(product) ? (
+                <p className="txt-small text-ui-fg-subtle min-h-[12rem]" role="status">
+                  {isServiceProduct(product) ? "Loading times…" : "Loading…"}
+                </p>
               ) : (
                 <ProductActions
                   disabled={true}

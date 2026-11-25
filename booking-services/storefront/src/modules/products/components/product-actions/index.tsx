@@ -1,6 +1,7 @@
 "use client"
 
 import { addToCart } from "@lib/data/cart"
+import { isPassProduct } from "@lib/util/booking"
 import { useIntersection } from "@lib/hooks/use-in-view"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -121,6 +122,9 @@ export default function ProductActions({
 
   const actionsRef = useRef<HTMLDivElement>(null)
 
+  // A pass says what it is on the button and in the confirmation (P3-29).
+  const pass = isPassProduct(product)
+
   // "Added to your cart" for a few seconds after a successful add.
   const [added, setAdded] = useState(false)
   useEffect(() => {
@@ -206,6 +210,8 @@ export default function ProductActions({
               : "Choose an option"
             : !inStock || !isValidVariant
             ? "Out of stock"
+            : pass
+            ? "Buy pass"
             : "Add to cart"}
         </Button>
         {/* Confirms the add; the mini-cart is hidden on phones. */}
@@ -216,7 +222,9 @@ export default function ProductActions({
         >
           {added ? (
             <>
-              Added to your cart.{" "}
+              {pass
+                ? "Pass added to your cart. Its credits are yours once you check out. "
+                : "Added to your cart. "}
               <LocalizedClientLink href="/cart" className="underline">
                 View cart
               </LocalizedClientLink>
