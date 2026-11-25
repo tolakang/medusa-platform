@@ -50,6 +50,7 @@ export type ModuleCreateApproval = {
   cart_id: string;
   type: ApprovalType;
   created_by: string;
+  covered_total?: number | null;
 };
 
 export type ModuleUpdateApproval = {

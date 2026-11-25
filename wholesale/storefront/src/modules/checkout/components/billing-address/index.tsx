@@ -89,7 +89,10 @@ const BillingAddress = ({ cart }: { cart: B2BCart | null }) => {
           </div>
           {cart?.shipping_address?.address_1 && (
             <CheckboxWithLabel
-              disabled={cartApprovalStatus === ApprovalStatusType.PENDING}
+              disabled={
+                cartApprovalStatus === ApprovalStatusType.PENDING ||
+                cartApprovalStatus === ApprovalStatusType.APPROVED
+              }
               label="Same as shipping address"
               name="same_as_billing"
               checked={sameAsBilling}

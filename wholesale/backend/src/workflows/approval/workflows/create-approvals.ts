@@ -31,8 +31,9 @@ export const createApprovalsWorkflow = createWorkflow(
       }));
     });
 
-    const approvalStatusLinkData = transform(approvalStatusResult, (status) => {
-      const statuses = Array.isArray(status) ? status : [status];
+    // Only a new status gets linked: the cart-status link is one-to-one.
+    const approvalStatusLinkData = transform(approvalStatusResult, (result) => {
+      const statuses = result.created ? [result.status] : [];
       return statuses.map((status) => ({
         [Modules.CART]: {
           cart_id: status.cart_id,

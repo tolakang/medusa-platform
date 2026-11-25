@@ -107,6 +107,18 @@ medusaIntegrationTestRunner({
         expect(afterApproval.status).toEqual(400);
         expect(afterApproval.data.message).toContain("approved");
 
+        // The approved cart itself is locked too (address, region, email).
+        const update = await call(
+          api.post(
+            `/store/carts/${cartId}`,
+            { email: "other@b2b.test" },
+            b2b.store(buyer.token)
+          )
+        );
+        expect(update.status).toEqual(400);
+        expect(update.data.message).toContain("approved");
+
+        // Shipping method and payment still go through.
         expect((await b2b.checkout(cartId, buyer.token)).order).not.toBeNull();
       });
 
@@ -194,6 +206,150 @@ medusaIntegrationTestRunner({
         await api.post(`/admin/companies/${company.id}`, { status: "suspended" }, adminHeaders);
         const third = await call(b2b.cart(colleague.token, 1));
         expect(third.status).toEqual(400);
+      });
+
+      it("accepting a quote needs the company approvals checkout needs", async () => {
+        const company = await b2b.company();
+        await b2b.approvalSettings(company.id, { requires_admin_approval: true });
+        const buyer = await b2b.employee(company.id);
+        const admin = await b2b.employee(company.id, { is_admin: true });
+
+        const { data } = await b2b.cart(buyer.token, 1);
+        const cartId = data.cart.id;
+        const {
+          data: { quote },
+        } = await api.post("/store/quotes", { cart_id: cartId }, b2b.store(buyer.token));
+        await api.post(`/admin/quotes/${quote.id}/send`, {}, adminHeaders);
+
+        const accept = () =>
+          call(api.post(`/store/quotes/${quote.id}/accept`, {}, b2b.store(buyer.token)));
+
+        const refused = await accept();
+        expect(refused.status).toEqual(400);
+        expect(JSON.stringify(refused.data)).toContain("company admin's approval");
+
+        const asked = await requestApproval(cartId, buyer.token);
+        expect(asked.status).toEqual(200);
+        expect((await accept()).status).toEqual(400);
+        await decide(asked.data.approvals[0].id, admin.token, "approved");
+        expect((await accept()).status).toEqual(200);
+      });
+
+      it("a quote the merchant raised above the threshold can be approved, then accepted", async () => {
+        const company = await b2b.company();
+        const buyer = await b2b.employee(company.id);
+        const admin = await b2b.employee(company.id, { is_admin: true });
+        const { data } = await b2b.cart(buyer.token, 1);
+        const cartId = data.cart.id;
+        await b2b.approvalSettings(company.id, {
+          requires_admin_approval: true,
+          approval_threshold: data.cart.total * 2,
+        });
+
+        const {
+          data: { quote },
+        } = await api.post("/store/quotes", { cart_id: cartId }, b2b.store(buyer.token));
+        // Below the threshold: nothing to approve yet.
+        expect((await requestApproval(cartId, buyer.token)).data.message).toContain(
+          "doesn't need approval"
+        );
+
+        // The merchant raises the quantity to 3 (above the threshold).
+        const {
+          data: [draft],
+        } = await getContainer()
+          .resolve("query")
+          .graph({
+            entity: "order",
+            fields: ["items.id"],
+            filters: { id: quote.draft_order_id },
+          });
+        const raised = await call(
+          api.post(
+            `/admin/order-edits/${quote.draft_order_id}/items/item/${draft.items![0]!.id}`,
+            { quantity: 3 },
+            adminHeaders
+          )
+        );
+        expect(raised.status).toEqual(200);
+        await api.post(`/admin/quotes/${quote.id}/send`, {}, adminHeaders);
+
+        const accept = () =>
+          call(api.post(`/store/quotes/${quote.id}/accept`, {}, b2b.store(buyer.token)));
+        expect(JSON.stringify((await accept()).data)).toContain("company admin's approval");
+
+        const asked = await requestApproval(cartId, buyer.token);
+        expect(asked.status).toEqual(200);
+        expect(asked.data.approvals[0].type).toEqual("admin");
+        await decide(asked.data.approvals[0].id, admin.token, "approved");
+        expect((await accept()).status).toEqual(200);
+      });
+
+      it("an approval covers only the total it was asked for", async () => {
+        const company = await b2b.company();
+        await b2b.approvalSettings(company.id, { requires_admin_approval: true });
+        const buyer = await b2b.employee(company.id);
+        const admin = await b2b.employee(company.id, { is_admin: true });
+        const { data } = await b2b.cart(buyer.token, 1);
+        const cartId = data.cart.id;
+        const {
+          data: { quote },
+        } = await api.post("/store/quotes", { cart_id: cartId }, b2b.store(buyer.token));
+
+        // Approved at the quote's first total.
+        const first = await requestApproval(cartId, buyer.token);
+        expect(first.status).toEqual(200);
+        await decide(first.data.approvals[0].id, admin.token, "approved");
+        expect((await requestApproval(cartId, buyer.token)).data.message).toContain(
+          "already approved"
+        );
+
+        // The merchant raises the quote.
+        const {
+          data: [draft],
+        } = await getContainer()
+          .resolve("query")
+          .graph({
+            entity: "order",
+            fields: ["items.id"],
+            filters: { id: quote.draft_order_id },
+          });
+        await api.post(
+          `/admin/order-edits/${quote.draft_order_id}/items/item/${draft.items![0]!.id}`,
+          { quantity: 3 },
+          adminHeaders
+        );
+        await api.post(`/admin/quotes/${quote.id}/send`, {}, adminHeaders);
+
+        const accept = () =>
+          call(api.post(`/store/quotes/${quote.id}/accept`, {}, b2b.store(buyer.token)));
+        const refused = await accept();
+        expect(refused.status).toEqual(400);
+        expect(JSON.stringify(refused.data)).toContain("Ask for approval again");
+
+        const again = await requestApproval(cartId, buyer.token);
+        expect(again.status).toEqual(200);
+        expect((await accept()).status).toEqual(400);
+        await decide(again.data.approvals[0].id, admin.token, "approved");
+        expect((await accept()).status).toEqual(200);
+      });
+
+      it("a cart gets one quote at a time (F-103)", async () => {
+        const company = await b2b.company();
+        const buyer = await b2b.employee(company.id);
+        const { data } = await b2b.cart(buyer.token, 1);
+        const ask = () =>
+          call(api.post("/store/quotes", { cart_id: data.cart.id }, b2b.store(buyer.token)));
+
+        const first = await ask();
+        expect(first.status).toEqual(200);
+        const again = await ask();
+        expect(again.status).toEqual(400);
+        expect(again.data.message).toContain("already has a quote");
+
+        // A rejected quote frees the cart.
+        await api.post(`/admin/quotes/${first.data.quote.id}/reject`, {}, adminHeaders);
+        expect((await ask()).status).toEqual(200);
       });
     });
   },

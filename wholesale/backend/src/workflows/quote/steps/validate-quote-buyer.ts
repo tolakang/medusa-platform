@@ -1,15 +1,26 @@
-import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
+import { quoteTotal } from "../../../utils/quote-total";
 import { createStep } from "@medusajs/framework/workflows-sdk";
-import { assertApprovedCompanyBuyer } from "../../../utils/b2b-cart-rules";
+import {
+  assertApprovalsGranted,
+  assertApprovedCompanyBuyer,
+  requiredApprovalTypes,
+} from "../../../utils/b2b-cart-rules";
 import { assertBuyerCanSpend } from "../../../utils/b2b-spend-checks";
-import { loadBuyer } from "../../../utils/load-b2b-buyer";
+import {
+  loadApprovalSettings,
+  loadBuyer,
+  loadCartApprovals,
+} from "../../../utils/load-b2b-buyer";
 
 /**
  * P4-05 (owner, 2026-11-10): accepting a quote turns its draft order into an
  * order without a cart, so the checkout rules run here: the quote is the
  * buyer's own, their company is approved, and the quoted total (with the
  * merchant's pending edits, `previewOrderChange`) fits the spending and
- * credit limits.
+ * credit limits. Accepting also needs the company approvals checkout needs
+ * for that total (owner, 2026-11-25), asked for and granted on the quote's
+ * cart.
  */
 export const validateQuoteBuyerStep = createStep(
   "validate-quote-buyer",
@@ -22,7 +33,7 @@ export const validateQuoteBuyerStep = createStep(
       data: [quote],
     } = await query.graph({
       entity: "quote",
-      fields: ["id", "customer_id", "draft_order_id"],
+      fields: ["id", "customer_id", "draft_order_id", "cart_id"],
       filters: { id: input.quote_id },
     });
     if (!quote || quote.customer_id !== input.customer_id) {
@@ -35,9 +46,18 @@ export const validateQuoteBuyerStep = createStep(
     const buyer = await loadBuyer(container, input.customer_id);
     const company = assertApprovedCompanyBuyer(buyer);
 
-    const preview = await container
-      .resolve(Modules.ORDER)
-      .previewOrderChange(quote.draft_order_id);
-    await assertBuyerCanSpend(container, buyer!, company, Number(preview.total ?? 0));
+    const total = await quoteTotal(container, quote.draft_order_id);
+
+    const settings = await loadApprovalSettings(container, company.id);
+    const required = requiredApprovalTypes(settings, total, !!buyer!.employee?.is_admin);
+    if (required.length) {
+      assertApprovalsGranted(
+        required,
+        quote.cart_id ? await loadCartApprovals(container, quote.cart_id) : [],
+        total
+      );
+    }
+
+    await assertBuyerCanSpend(container, buyer!, company, total);
   }
 );

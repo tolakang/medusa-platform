@@ -70,7 +70,8 @@ const ShippingAddress = ({
 
           {!isOpen &&
             cart?.shipping_address &&
-            cartApprovalStatus !== ApprovalStatusType.PENDING && (
+            cartApprovalStatus !== ApprovalStatusType.PENDING &&
+            cartApprovalStatus !== ApprovalStatusType.APPROVED && (
               <Text>
                 <button
                   onClick={handleEdit}

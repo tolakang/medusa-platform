@@ -61,6 +61,24 @@ export const POST = async (
   }
   assertApprovedCompanyBuyer(await loadBuyer(req.scope, customerId));
 
+  // F-103: one live quote per cart; only a rejected quote frees the cart.
+  const { data: existing } = await query.graph({
+    entity: "quote",
+    fields: ["id", "status"],
+    filters: { cart_id: cart.id },
+  });
+  if (
+    existing.some(
+      (quote) =>
+        quote.status !== "customer_rejected" && quote.status !== "merchant_rejected"
+    )
+  ) {
+    throw new MedusaError(
+      MedusaError.Types.NOT_ALLOWED,
+      "This cart already has a quote. Start a new cart for another quote."
+    );
+  }
+
   const {
     result: { quote: createdQuote },
   } = await createRequestForQuoteWorkflow(req.scope).run({
