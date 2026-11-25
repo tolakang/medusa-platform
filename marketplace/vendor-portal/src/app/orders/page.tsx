@@ -146,7 +146,21 @@ export default async function OrdersPage({
         })
       ) : (
         <p className="card p-4 text-sm text-ui-fg-subtle">
-          {open ? "Nothing to fulfil. You're all caught up." : "No orders yet."}
+          {open ? (
+            <>
+              Nothing to fulfil. You&apos;re all caught up.{" "}
+              <Link className="text-ui-fg-interactive hover:underline" href="/orders">
+                See all orders
+              </Link>
+            </>
+          ) : (
+            <>
+              No orders yet. Orders appear here when customers buy your approved products.{" "}
+              <Link className="text-ui-fg-interactive hover:underline" href="/products">
+                Manage your products
+              </Link>
+            </>
+          )}
         </p>
       )}
     </Shell>
