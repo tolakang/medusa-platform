@@ -1,4 +1,5 @@
 import { retrieveCart } from "@/lib/data/cart"
+import { formatDate } from "@/lib/util/format-date"
 import { convertToLocale } from "@/lib/util/money"
 import ApprovalCardActions from "@/modules/account/components/approval-card-actions"
 import CalendarIcon from "@/modules/common/icons/calendar"
@@ -29,8 +30,21 @@ export default async function ApprovalCard({
 
   const numberOfLines = cart.items?.length ?? 0
 
+  // Polish 2026-11-25: who asked, and what is in the cart, so the admin
+  // decides without opening the buyer's cart.
+  const requester = cartWithApprovals.customer
+  const requesterName =
+    [requester?.first_name, requester?.last_name].filter(Boolean).join(" ") ||
+    requester?.email ||
+    cart.email ||
+    "Unknown buyer"
+  const lines = cartWithApprovals.items?.length
+    ? cartWithApprovals.items
+    : cart.items ?? []
+
   return (
-    <Container className="bg-white flex small:flex-row flex-col p-4 rounded-md small:justify-between small:items-center gap-y-2 items-start">
+    <Container className="bg-white flex flex-col p-4 rounded-md gap-y-2">
+    <div className="flex small:flex-row flex-col small:justify-between small:items-center gap-y-2 items-start">
       <div className="flex gap-x-4 items-center pl-3">
         <div className="flex min-w-10">
           {cart.items?.slice(0, 3).map((i, index) => {
@@ -75,11 +89,7 @@ export default async function ApprovalCard({
           data-testid="order-created-at"
         >
           <CalendarIcon className="inline-block mr-1" />
-          {createdAt.toLocaleDateString("en-GB", {
-            year: "numeric",
-            month: "numeric",
-            day: "numeric",
-          })}
+          {formatDate(createdAt)}
         </div>
 
         <div className="flex items-center text-small-regular">
@@ -92,20 +102,12 @@ export default async function ApprovalCard({
             <Text className="flex items-center gap-x-1 text-xs text-grey-500">
               <CheckMini className="inline-block" />
               Order completed at{" "}
-              {updatedAt.toLocaleDateString("en-GB", {
-                year: "numeric",
-                month: "numeric",
-                day: "numeric",
-              })}
+              {formatDate(updatedAt)}
             </Text>
           ) : (
             <Text className="flex items-center gap-x-1 text-xs text-grey-500">
               Approved at{" "}
-              {updatedAt.toLocaleDateString("en-GB", {
-                year: "numeric",
-                month: "numeric",
-                day: "numeric",
-              })}
+              {formatDate(updatedAt)}
               <CheckMini className="inline-block" />
             </Text>
           )
@@ -117,11 +119,7 @@ export default async function ApprovalCard({
             <XMarkMini className="inline-block mr-1" />
             <span data-testid="order-display-id">
               Rejected at{" "}
-              {updatedAt.toLocaleDateString("en-GB", {
-                year: "numeric",
-                month: "numeric",
-                day: "numeric",
-              })}
+              {formatDate(updatedAt)}
             </span>
           </div>
         )}
@@ -144,6 +142,40 @@ export default async function ApprovalCard({
           )}
         </div>
       </div>
+    </div>
+      <Text className="text-small-regular text-ui-fg-subtle pl-3">
+        Requested by{" "}
+        <span className="text-ui-fg-base" data-testid="approval-requester">
+          {requesterName}
+        </span>
+        {requester?.email && requesterName !== requester.email
+          ? ` (${requester.email})`
+          : ""}
+      </Text>
+      {lines.length > 0 && (
+        <details className="pl-3 text-small-regular" data-testid="approval-items">
+          <summary className="cursor-pointer text-ui-fg-interactive">
+            Show items
+          </summary>
+          <ul className="mt-2 flex flex-col gap-y-1">
+            {lines.map((item) => (
+              <li key={item.id} className="flex justify-between gap-x-4">
+                <span>
+                  {item.product_title ?? item.title}
+                  {item.variant_title ? ` · ${item.variant_title}` : ""}
+                </span>
+                <span className="text-ui-fg-subtle whitespace-nowrap">
+                  {item.quantity} ×{" "}
+                  {convertToLocale({
+                    amount: item.unit_price ?? 0,
+                    currency_code: cart.currency_code,
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </Container>
   )
 }

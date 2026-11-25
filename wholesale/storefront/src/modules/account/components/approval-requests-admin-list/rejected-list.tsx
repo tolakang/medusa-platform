@@ -6,8 +6,10 @@ import { Text } from "@medusajs/ui"
 
 export default async function RejectedApprovalRequestsAdminList({
   searchParams,
+  isAdmin = true,
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
+  isAdmin?: boolean
 }) {
   const pageParam = `rejectedPage`
   const currentPage = Number(searchParams[pageParam]) || 1
@@ -29,7 +31,7 @@ export default async function RejectedApprovalRequestsAdminList({
             <ApprovalCard
               key={cartWithApprovals.id}
               cartWithApprovals={cartWithApprovals}
-              type="admin"
+              type={isAdmin ? "admin" : "customer"}
             />
           ))}
         </div>

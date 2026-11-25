@@ -106,7 +106,7 @@ const AccountNav = ({
                     <ChevronDown className="transform -rotate-90" />
                   </LocalizedClientLink>
                 </li>
-                {customer?.employee?.is_admin && (
+                {customer?.employee && (
                   <li>
                     <LocalizedClientLink
                       href="/account/approvals"
@@ -227,7 +227,7 @@ const AccountNav = ({
                 Orders
               </AccountNavLink>
             </li>
-            {customer?.employee?.is_admin && (
+            {customer?.employee && (
               <li>
                 <AccountNavLink
                   href="/account/approvals"

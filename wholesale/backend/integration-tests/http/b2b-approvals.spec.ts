@@ -93,6 +93,22 @@ medusaIntegrationTestRunner({
           ).status
         ).toEqual(400);
 
+        // The list names the requester. The buyer sees their own request,
+        // a colleague sees none, and neither can decide (polish 2026-11-25).
+        const list = (token: string) =>
+          call(api.get(`/store/approvals?status=pending`, b2b.store(token)));
+        const adminList = await list(admin.token);
+        expect(adminList.status).toEqual(200);
+        expect(adminList.data.carts_with_approvals.map((c: any) => c.id)).toEqual([cartId]);
+        expect(adminList.data.carts_with_approvals[0].customer.email).toBeTruthy();
+        expect(adminList.data.carts_with_approvals[0].items.length).toEqual(1);
+        const buyerList = await list(buyer.token);
+        expect(buyerList.data.carts_with_approvals.map((c: any) => c.id)).toEqual([cartId]);
+        const colleagueList = await list(colleague.token);
+        expect(colleagueList.status).toEqual(200);
+        expect(colleagueList.data.carts_with_approvals).toEqual([]);
+        expect((await decide(approval.id, buyer.token, "approved")).status).not.toEqual(200);
+
         expect((await decide(approval.id, admin.token, "approved")).status).toEqual(200);
         // A decided approval can't be decided again.
         expect((await decide(approval.id, admin.token, "rejected")).status).toEqual(400);
