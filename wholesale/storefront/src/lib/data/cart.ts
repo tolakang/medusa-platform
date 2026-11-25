@@ -596,26 +596,34 @@ export async function updateRegion(countryCode: string, currentPath: string) {
   redirect(`/${countryCode}${currentPath}`)
 }
 
-export async function createCartApproval(cartId: string, createdBy: string) {
+// Returns `{ error }` instead of throwing: a server action's thrown message
+// is hidden in production ("Minified React error #441"), role test
+// 2026-11-25.
+export async function createCartApproval(
+  cartId: string,
+  createdBy: string
+): Promise<{ error: string } | { approval: StoreApprovalResponse["approval"] }> {
   const headers = {
     "Content-Type": "application/json",
     ...(await getAuthHeaders()),
   }
 
-  const { approval } = await sdk.client
-    .fetch<StoreApprovalResponse>(`/store/carts/${cartId}/approvals`, {
-      method: "POST",
-      headers,
-      credentials: "include",
-    })
-    .catch((err) => {
-      if (err.response?.json) {
-        return err.response.json().then((body: any) => {
-          throw new Error(body.message || err.message)
-        })
+  let approval: StoreApprovalResponse["approval"]
+  try {
+    ;({ approval } = await sdk.client.fetch<StoreApprovalResponse>(
+      `/store/carts/${cartId}/approvals`,
+      {
+        method: "POST",
+        headers,
+        credentials: "include",
       }
-      throw err
-    })
+    ))
+  } catch (e) {
+    return {
+      error:
+        (e as Error)?.message || "Couldn't ask for approval. Try again.",
+    }
+  }
 
   const cartCacheTag = await getCacheTag("carts")
   revalidateTag(cartCacheTag, { expire: 0 })
@@ -623,5 +631,5 @@ export async function createCartApproval(cartId: string, createdBy: string) {
   const approvalsCacheTag = await getCacheTag("approvals")
   revalidateTag(approvalsCacheTag, { expire: 0 })
 
-  return approval
+  return { approval }
 }

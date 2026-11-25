@@ -20,10 +20,12 @@ export async function assertBuyerCanSpend(
   container: MedusaContainer,
   buyer: B2bBuyer,
   company: B2bCompany,
-  total: number
+  total: number,
+  options: { spendingLimitApproved?: boolean } = {}
 ) {
   // The starter read only the limit, so past orders never counted (F-056).
-  if (buyer.employee?.spending_limit) {
+  // A company admin's approval covering the total overrides the limit.
+  if (buyer.employee?.spending_limit && !options.spendingLimitApproved) {
     const orders = spendOrders(
       await loadCustomerOrders(container, buyer.customer_id)
     );

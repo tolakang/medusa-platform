@@ -6,7 +6,6 @@ import {
   getCacheOptions,
   getCacheTag,
 } from "@/lib/data/cookies"
-import { getCartApprovalStatus } from "@/lib/util/get-cart-approval-status"
 import { FilterType } from "@/types"
 import {
   ApprovalStatusType,
@@ -14,8 +13,6 @@ import {
   StoreApprovalsResponse,
 } from "@/types/approval"
 import { revalidateTag } from "next/cache"
-import { redirect } from "next/navigation"
-import { retrieveCart } from "./cart"
 
 type ListApprovalsParams = {
   status?: FilterType
@@ -61,43 +58,42 @@ export const listApprovals = async ({
 }
 
 
+// Server actions return refusals as `{ error }`: a thrown message is hidden
+// from the browser in production ("Minified React error"), role test
+// 2026-11-25.
 export const updateApproval = async (
   approvalId: string,
   status: ApprovalStatusType
-) => {
+): Promise<{ error: string } | { approval: StoreApprovalResponse["approval"] }> => {
   const headers = {
     ...(await getAuthHeaders()),
   }
 
-  const { approval } = await sdk.client.fetch<StoreApprovalResponse>(
-    `/store/approvals/${approvalId}`,
-    {
-      method: "POST",
-      headers,
-      body: {
-        status,
-      },
-      credentials: "include",
+  try {
+    const { approval } = await sdk.client.fetch<StoreApprovalResponse>(
+      `/store/approvals/${approvalId}`,
+      {
+        method: "POST",
+        headers,
+        body: {
+          status,
+        },
+        credentials: "include",
+      }
+    )
+
+    const cacheTag = await getCacheTag("approvals")
+    revalidateTag(cacheTag, { expire: 0 })
+
+    const cartTag = await getCacheTag("carts")
+    revalidateTag(cartTag, { expire: 0 })
+
+    return { approval }
+  } catch (e) {
+    return {
+      error:
+        (e as Error)?.message ||
+        "Couldn't save the decision. Reload and try again.",
     }
-  )
-
-  const cacheTag = await getCacheTag("approvals")
-  revalidateTag(cacheTag, { expire: 0 })
-
-  const cartTag = await getCacheTag("carts")
-  revalidateTag(cartTag, { expire: 0 })
-
-  return approval
-}
-
-export const startApprovalFlow = async (approvalId: string, cartId: string) => {
-  await updateApproval(approvalId, ApprovalStatusType.APPROVED)
-
-  const cart = await retrieveCart(cartId)
-
-  const { isPendingAdminApproval } = getCartApprovalStatus(cart)
-
-  if (!isPendingAdminApproval) {
-    redirect(`/checkout?cartId=${cartId}&step=payment`)
   }
 }

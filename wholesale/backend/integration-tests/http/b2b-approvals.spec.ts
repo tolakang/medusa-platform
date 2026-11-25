@@ -122,6 +122,37 @@ medusaIntegrationTestRunner({
         expect((await b2b.checkout(cartId, buyer.token)).order).not.toBeNull();
       });
 
+      it("a company admin's approval covering the total overrides the employee's spending limit", async () => {
+        const company = await b2b.company();
+        await b2b.approvalSettings(company.id, { requires_admin_approval: true });
+        const buyer = await b2b.employee(company.id, { spending_limit: 1 });
+        const admin = await b2b.employee(company.id, { is_admin: true });
+        const { data } = await b2b.cart(buyer.token, 2);
+
+        // Without approval: the approval rule refuses first.
+        expect((await b2b.checkout(data.cart.id, buyer.token)).order).toBeNull();
+
+        const asked = await requestApproval(data.cart.id, buyer.token);
+        expect(asked.status).toEqual(200);
+        expect(
+          (await decide(asked.data.approvals[0].id, admin.token, "approved")).status
+        ).toEqual(200);
+
+        // Approved and locked, over the limit: it checks out (it was stuck).
+        const { order, refused } = await b2b.checkout(data.cart.id, buyer.token);
+        expect(refused ?? null).toBeNull();
+        expect(order).not.toBeNull();
+      });
+
+      it("without an approval the spending limit still applies", async () => {
+        const company = await b2b.company();
+        const buyer = await b2b.employee(company.id, { spending_limit: 1 });
+        const { data } = await b2b.cart(buyer.token, 1);
+        const { order, refused } = await b2b.checkout(data.cart.id, buyer.token);
+        expect(order).toBeNull();
+        expect(refused).toContain("spending limit");
+      });
+
       it("a rejected cart can't check out", async () => {
         const company = await b2b.company();
         await b2b.approvalSettings(company.id, { requires_admin_approval: true });

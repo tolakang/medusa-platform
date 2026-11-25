@@ -80,10 +80,10 @@ export const AdminGetEmployeeParams = createSelectParams();
 export type AdminCreateEmployeeType = z.infer<typeof AdminCreateEmployee>;
 export const AdminCreateEmployee = z
   .object({
-    spending_limit: z.number().optional(),
+    spending_limit: z.number().nonnegative().optional(),
     raw_spending_limit: z
       .object({
-        value: z.number().optional(),
+        value: z.number().nonnegative().optional(),
         precision: z.number().optional(),
       })
       .optional(),
@@ -96,10 +96,10 @@ export type AdminUpdateEmployeeType = z.infer<typeof AdminUpdateEmployee>;
 export const AdminUpdateEmployee = z
   .object({
     id: z.string(),
-    spending_limit: z.number().optional(),
+    spending_limit: z.number().nonnegative().optional(),
     raw_spending_limit: z
       .object({
-        value: z.number().optional(),
+        value: z.number().nonnegative().optional(),
         precision: z.number().optional(),
       })
       .optional(),

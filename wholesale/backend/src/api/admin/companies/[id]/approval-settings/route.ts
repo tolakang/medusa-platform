@@ -53,5 +53,7 @@ export const POST = async (
     { throwIfKeyNotFound: true }
   );
 
-  res.json({ approvalSettings });
+  // `approval_settings` is the updated record; `approvalSettings` (a list)
+  // stays for callers of the starter's shape.
+  res.json({ approval_settings: approvalSettings[0], approvalSettings });
 };

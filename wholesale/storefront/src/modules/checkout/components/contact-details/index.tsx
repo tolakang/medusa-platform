@@ -1,6 +1,7 @@
 "use client"
 
 import { setContactDetails } from "@/lib/data/cart"
+import { cartAwaitsApproval } from "@/lib/util/cart-approval"
 import Divider from "@/modules/common/components/divider"
 import { ApprovalStatusType, B2BCart, B2BCustomer } from "@/types"
 import { CheckCircleSolid } from "@medusajs/icons"
@@ -44,13 +45,8 @@ const ContactDetails = ({
     cart.billing_address?.address_1 &&
     cart.email
 
-  const requiresApproval =
-    cart.company?.approval_settings?.requires_admin_approval ||
-    cart.company?.approval_settings?.requires_sales_manager_approval
-
-  const cartApprovalStatus = cart?.approval_status?.status
-
-  const customerIsAdmin = customer?.employee?.is_admin || false
+  const awaitsApproval = cartAwaitsApproval(cart, customer)
+  const cartApprovalStatus = cart.approval_status?.status
 
   const handleEdit = () => {
     router.push(pathname + "?" + createQueryString("step", "contact-details"), {
@@ -61,11 +57,7 @@ const ContactDetails = ({
   const handleSubmit = (formData: FormData) => {
     formAction(formData)
 
-    const step =
-      requiresApproval &&
-      (!customerIsAdmin || cartApprovalStatus !== ApprovalStatusType.APPROVED)
-        ? "review"
-        : "payment"
+    const step = awaitsApproval ? "review" : "payment"
 
     router.push(pathname + "?" + createQueryString("step", step), {
       scroll: false,
@@ -115,9 +107,7 @@ const ContactDetails = ({
                   className="mt-6"
                   data-testid="submit-address-button"
                 >
-                  {requiresApproval &&
-                  cartApprovalStatus !== ApprovalStatusType.APPROVED &&
-                  !customerIsAdmin
+                  {awaitsApproval
                     ? "Review order"
                     : "Next step"}
                 </SubmitButton>

@@ -122,9 +122,16 @@ medusaIntegrationTestRunner({
         // The admin can.
         expect((await post("/store/companies/me", { name: "Acme Ltd" }, admin.token)).data.company.name).toEqual("Acme Ltd");
         expect((await post(path, { spending_limit: 250 }, admin.token)).data.employee.spending_limit).toEqual(250);
-        expect(
-          (await post("/store/companies/me/approval-settings", { requires_admin_approval: true }, admin.token)).status
-        ).toEqual(201);
+        // A negative limit is refused (role test 2026-11-25).
+        expect((await post(path, { spending_limit: -50 }, admin.token)).status).toEqual(400);
+        // The answer is the updated settings, not an empty 201.
+        const settings = await post(
+          "/store/companies/me/approval-settings",
+          { requires_admin_approval: true },
+          admin.token
+        );
+        expect(settings.status).toEqual(200);
+        expect(settings.data.approval_settings.requires_admin_approval).toEqual(true);
         expect(
           (await get("/store/companies/me", admin.token)).data.company.approval_settings.requires_admin_approval
         ).toEqual(true);
@@ -157,8 +164,8 @@ medusaIntegrationTestRunner({
         const joined = await post(
           "/store/companies/join",
           {
-            // The code part may be typed in lower case.
-            join_code: invited.data.invitation.join_code.replace(/\.(.*)$/, (_: string, c: string) => "." + c.toLowerCase()),
+            // The whole code may be typed in lower case.
+            join_code: invited.data.invitation.join_code.toLowerCase(),
           },
           recruit.token
         );

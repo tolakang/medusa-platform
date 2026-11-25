@@ -1,4 +1,5 @@
 import {
+  adminApprovalCoversTotal,
   assertApprovalsGranted,
   assertApprovedCompanyBuyer,
   assertCartItemsUnlocked,
@@ -129,7 +130,7 @@ describe("assertCreditLimit", () => {
   it("allows up to the limit and refuses above it", () => {
     expect(() => assertCreditLimit(company(), 600, 400)).not.toThrow();
     expect(() => assertCreditLimit(company(), 600, 401)).toThrow(
-      "over its credit limit"
+      "Over the company credit limit"
     );
   });
 
@@ -145,7 +146,7 @@ describe("assertCreditLimit", () => {
   it("a limit of 0 means no credit at all on net terms", () => {
     expect(() =>
       assertCreditLimit(company({ credit_limit: 0 }), 0, 1)
-    ).toThrow("over its credit limit");
+    ).toThrow("Over the company credit limit");
   });
 });
 
@@ -275,5 +276,27 @@ describe("assertCartItemsUnlocked", () => {
     expect(() =>
       assertCartItemsUnlocked([{ type: "admin", status: "approved" }, null])
     ).toThrow("approved");
+  });
+});
+
+describe("adminApprovalCoversTotal (role test 2026-11-25)", () => {
+  it("a granted admin approval covering the total overrides the spending limit", () => {
+    const approved = { type: "admin", status: "approved", covered_total: 2960 };
+    expect(adminApprovalCoversTotal([approved], 2960)).toBe(true);
+    expect(adminApprovalCoversTotal([approved], 2961)).toBe(false);
+    expect(adminApprovalCoversTotal([{ ...approved, status: "pending" }], 10)).toBe(false);
+    expect(adminApprovalCoversTotal([{ ...approved, type: "sales_manager" }], 10)).toBe(false);
+    // An approval without a recorded total doesn't lift the limit.
+    expect(adminApprovalCoversTotal([{ type: "admin", status: "approved" }], 10)).toBe(false);
+  });
+
+  it("the credit-limit refusal says how much is left", () => {
+    expect(() =>
+      assertCreditLimit(
+        { id: "c", payment_terms: "net_30", credit_limit: 1000, currency_code: "eur" },
+        800,
+        500
+      )
+    ).toThrow("Over the company credit limit (200.00 EUR left).");
   });
 });

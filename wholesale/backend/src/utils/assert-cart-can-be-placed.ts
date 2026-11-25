@@ -3,6 +3,7 @@ import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/util
 import { getCartApprovalStatus } from "./get-cart-approval-status";
 import { assertBuyerCanSpend } from "./b2b-spend-checks";
 import {
+  adminApprovalCoversTotal,
   assertApprovalsGranted,
   assertApprovedCompanyBuyer,
   assertMinOrderQuantities,
@@ -69,15 +70,20 @@ export async function assertCartCanBePlaced(container: MedusaContainer, cartId: 
   // the company-admin approval). The starter only blocked pending carts, so
   // a buyer could check out without asking.
   const settings = await loadApprovalSettings(container, company.id);
+  const approvals = await loadCartApprovals(container, cartId);
+  // Approvals cover the goods (shipping is chosen after approval).
+  const itemTotal = Number(current?.item_total ?? 0);
   assertApprovalsGranted(
     requiredApprovalTypes(settings, cartTotal, !!buyer!.employee?.is_admin),
-    await loadCartApprovals(container, cartId),
-    // Approvals cover the goods (shipping is chosen after approval).
-    Number(current?.item_total ?? 0)
+    approvals,
+    itemTotal
   );
 
-  // Employee spending limit and, on net terms, company credit limit.
-  await assertBuyerCanSpend(container, buyer!, company, cartTotal);
+  // Employee spending limit (unless a company admin approved this total)
+  // and, on net terms, company credit limit.
+  await assertBuyerCanSpend(container, buyer!, company, cartTotal, {
+    spendingLimitApproved: adminApprovalCoversTotal(approvals, itemTotal),
+  });
 
   const sessions =
     (queryCart as { payment_collection?: { payment_sessions?: { provider_id?: string }[] } })

@@ -34,7 +34,7 @@ export const POST = async (
     );
   }
 
-  await updateApprovalSettingsWorkflow.run({
+  const { result: updated } = await updateApprovalSettingsWorkflow.run({
     input: {
       id: approval_settings.id,
       requires_admin_approval: req.validatedBody.requires_admin_approval,
@@ -42,5 +42,6 @@ export const POST = async (
     container: req.scope,
   });
 
-  res.status(201).send();
+  // The updated settings, not an empty 201 (role test 2026-11-25).
+  res.json({ approval_settings: updated });
 };

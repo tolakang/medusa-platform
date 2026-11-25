@@ -51,9 +51,13 @@ const ApprovalCardActions = ({
     // A refused decision (already decided, gone) used to leave the button
     // spinning with no message.
     try {
-      await updateApproval(pendingAdminApproval.id, ApprovalStatusType.APPROVED)
-    } catch (e) {
-      toast.error((e as Error).message || "Couldn't save the decision. Reload and try again.")
+      const result = await updateApproval(
+        pendingAdminApproval.id,
+        ApprovalStatusType.APPROVED
+      )
+      if ("error" in result) {
+        toast.error(result.error)
+      }
     } finally {
       setApproving(false)
     }
@@ -73,9 +77,13 @@ const ApprovalCardActions = ({
     // A refused decision (already decided, gone) used to leave the button
     // spinning with no message.
     try {
-      await updateApproval(pendingAdminApproval.id, ApprovalStatusType.REJECTED)
-    } catch (e) {
-      toast.error((e as Error).message || "Couldn't save the decision. Reload and try again.")
+      const result = await updateApproval(
+        pendingAdminApproval.id,
+        ApprovalStatusType.REJECTED
+      )
+      if ("error" in result) {
+        toast.error(result.error)
+      }
     } finally {
       setRejecting(false)
     }

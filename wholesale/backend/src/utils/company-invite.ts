@@ -51,10 +51,13 @@ export function companyFromJoinCode(code: unknown, email: string): string | null
   if (typeof code !== "string") {
     return null;
   }
-  const [companyId, given] = code.trim().split(".");
-  if (!companyId || !given || !/^comp_[A-Za-z0-9]+$/.test(companyId)) {
+  const [rawId, given] = code.trim().split(".");
+  // Company ids are "comp_" + an upper-case ULID, so the whole code is
+  // case-insensitive (a lower-cased code used to be refused).
+  if (!rawId || !given || !/^comp_[A-Za-z0-9]+$/i.test(rawId)) {
     return null;
   }
+  const companyId = `comp_${rawId.slice(5).toUpperCase()}`;
   const a = Buffer.from(given.toUpperCase().replace(/[^A-Z0-9]/g, ""));
   const b = Buffer.from(signature(companyId, email));
   return a.length === b.length && timingSafeEqual(a, b) ? companyId : null;
