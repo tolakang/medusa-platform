@@ -56,4 +56,13 @@ describe("totals per seller", () => {
       { seller_id: "b", currency_code: "usd", amount: 0.3, count: 2 },
     ])
   })
+
+  it("rounds a riel total to whole riel", () => {
+    expect(
+      summarizeBySeller([
+        { seller_id: "a", currency_code: "khr", amount: 100.4 },
+        { seller_id: "a", currency_code: "khr", amount: 100.4 },
+      ])
+    ).toEqual([{ seller_id: "a", currency_code: "khr", amount: 201, count: 2 }])
+  })
 })

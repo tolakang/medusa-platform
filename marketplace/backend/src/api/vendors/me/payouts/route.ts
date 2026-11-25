@@ -3,6 +3,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MathBN } from "@medusajs/framework/utils"
+import { roundToCurrency } from "../../../../lib/vendor-commission"
 
 // GET /vendors/me/payouts (TASKS P6-06; the vendor portal shows it in P6-09):
 // the signed-in vendor's payouts, newest first, and what it has earned that
@@ -28,12 +29,13 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
     fields: ["payout_amount", "currency_code"],
     filters: { vendor_id: vendorId, status: "pending" },
   })
+  // Summed exactly, rounded once per currency.
+  const sums = new Map<string, ReturnType<typeof MathBN.convert>>()
   const upcoming = new Map<string, number>()
   for (const c of pending) {
-    upcoming.set(
-      c.currency_code,
-      MathBN.convert(MathBN.add(upcoming.get(c.currency_code) ?? 0, c.payout_amount), 2).toNumber()
-    )
+    const sum = MathBN.add(sums.get(c.currency_code) ?? 0, c.payout_amount)
+    sums.set(c.currency_code, sum)
+    upcoming.set(c.currency_code, roundToCurrency(sum, c.currency_code))
   }
   res.json({
     vendor_payouts: payouts,

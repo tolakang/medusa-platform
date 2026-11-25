@@ -6,7 +6,9 @@ import {
   transform,
   WorkflowResponse,
 } from "@medusajs/framework/workflows-sdk"
-import { MedusaError } from "@medusajs/framework/utils"
+import type { MedusaContainer } from "@medusajs/framework/types"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { FULFILLMENT_FIELDS, isFullyFulfilled } from "../../lib/order-fulfillment"
 import { acquireLockStep, releaseLockStep } from "@medusajs/medusa/core-flows"
 import { MARKETPLACE_MODULE } from "../../modules/marketplace"
 import type MarketplaceModuleService from "../../modules/marketplace/service"
@@ -19,7 +21,8 @@ type Created = { payout_ids: string[]; commission_ids: string[] }
 
 // Every pending commission recorded before the cutoff goes into one payout
 // per vendor and currency for the period (TASKS P6-06), except one held for
-// a refund to review (F-078). The flag isn't undone if a later step fails:
+// a refund to review (F-078) or whose child order isn't fully fulfilled yet
+// (owner decision 2026-11-25). The flag isn't undone if a later step fails:
 // it records a refund that is there either way. A vendor that
 // already has that period's payout in that currency keeps its commissions
 // pending for the next one (the unique index would refuse a second payout).
@@ -44,15 +47,24 @@ const createPayoutsStep = createStep(
         toFlag.map((c) => ({ id: c.id, refund_review: "to_review" as const }))
       )
     }
-    const pending = due.filter((c) => !held.includes(c))
+    const notHeld = due.filter((c) => !held.includes(c))
+    // Owner decision 2026-11-25: only a fulfilled child order is paid out; an
+    // unfulfilled one stays pending for a later payout.
+    const fulfilled = await fulfilledOrderIds(container, notHeld.map((c) => c.order_id))
+    const pending = notHeld.filter((c) => fulfilled.has(c.order_id))
     const lines = groupPayouts(pending)
     const existing = await marketplace.listVendorPayouts({ period: input.period })
     const taken = new Set(existing.map((p) => `${p.vendor_id}:${p.currency_code}`))
+    const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
     const created: Created = { payout_ids: [], commission_ids: [] }
     const payouts: { id: string; vendor_id: string; currency_code: string; amount: number; count: number }[] = []
     try {
       for (const line of lines) {
         if (taken.has(`${line.vendor_id}:${line.currency_code}`)) {
+          logger.info(
+            `Vendor payouts: ${line.commission_ids.length} commission(s) of vendor ${line.vendor_id} ` +
+              `in ${line.currency_code} wait for the next payout; the ${input.period} payout already exists.`
+          )
           continue
         }
         const payout = await marketplace.createVendorPayouts({
@@ -86,6 +98,19 @@ const createPayoutsStep = createStep(
     }
   }
 )
+
+// The child orders, of these, whose every item is in an active fulfilment.
+async function fulfilledOrderIds(container: MedusaContainer, orderIds: string[]) {
+  if (!orderIds.length) {
+    return new Set<string>()
+  }
+  const { data: orders } = await container.resolve(ContainerRegistrationKeys.QUERY).graph({
+    entity: "order",
+    fields: ["id", ...FULFILLMENT_FIELDS],
+    filters: { id: [...new Set(orderIds)] },
+  })
+  return new Set(orders.filter(isFullyFulfilled).map((o) => o.id))
+}
 
 async function undoPayouts(marketplace: MarketplaceModuleService, created: Created) {
   if (created.commission_ids.length) {

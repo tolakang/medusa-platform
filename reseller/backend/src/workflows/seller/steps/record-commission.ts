@@ -71,7 +71,7 @@ export const recordSellerCommissionStep = createStep(
       order_id: order.id,
       order_total: base,
       rate,
-      amount: commissionAmount(base, rate),
+      amount: commissionAmount(base, rate, order.currency_code),
       currency_code: order.currency_code,
     })
     return new StepResponse({ commission, created: true }, commission.id)

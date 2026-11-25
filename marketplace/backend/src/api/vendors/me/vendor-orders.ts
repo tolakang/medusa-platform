@@ -1,5 +1,6 @@
 import type { AuthenticatedMedusaRequest } from "@medusajs/framework/http"
-import { ContainerRegistrationKeys, MedusaError, MathBN } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
+import { remainingByItem } from "../../../lib/order-fulfillment"
 
 // The signed-in vendor's child orders (TASKS P6-09, P6-10): every vendor
 // order route goes through here, so a vendor only ever sees and fulfils its
@@ -64,26 +65,7 @@ export async function vendorOrderIds(req: AuthenticatedMedusaRequest): Promise<s
   return (vendor?.orders ?? []).map((o) => o!.id)
 }
 
-type OrderRow = Record<string, any>
-
-/** Each item's quantity not yet in an active fulfilment. */
-export function remainingByItem(order: OrderRow): Record<string, number> {
-  const done: Record<string, ReturnType<typeof MathBN.convert>> = {}
-  for (const f of order.fulfillments ?? []) {
-    if (f?.canceled_at) {
-      continue
-    }
-    for (const fi of f?.items ?? []) {
-      done[fi.line_item_id] = MathBN.add(done[fi.line_item_id] ?? 0, fi.quantity)
-    }
-  }
-  return Object.fromEntries(
-    (order.items ?? []).map((i: OrderRow) => [
-      i.id,
-      Math.max(0, MathBN.sub(i.quantity, done[i.id] ?? 0).toNumber()),
-    ])
-  )
-}
+export { remainingByItem }
 
 /** The vendor's view of an order: what's left to fulfil, and the payout. */
 export async function vendorOrders(req: AuthenticatedMedusaRequest, ids: string[]) {

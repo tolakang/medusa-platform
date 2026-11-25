@@ -1,4 +1,12 @@
-import { adjustCommission, commissionAmount, commissionBase, commissionRateFor, defaultCommissionRate } from "../../modules/seller/commission"
+import {
+  adjustCommission,
+  commissionAmount,
+  commissionBase,
+  commissionRateFor,
+  currencyDecimals,
+  defaultCommissionRate,
+  roundToCurrency,
+} from "../../modules/seller/commission"
 
 // TASKS P5-04: commission rates, amounts and adjustments.
 
@@ -92,5 +100,28 @@ describe("commission base (D11, TASKS P5-12)", () => {
     expect(commissionBase({ item_total: 33.335, item_tax_total: 0 })).toEqual(33.34)
     expect(commissionBase({ item_total: 0, item_tax_total: 0 })).toEqual(0)
     expect(commissionBase({})).toEqual(0)
+  })
+})
+
+// Owner 2026-11-25: amounts round to the currency's minor units (KHR 0, USD 2).
+describe("rounding to the currency", () => {
+  it("knows each currency's decimals", () => {
+    expect(currencyDecimals("khr")).toBe(0)
+    expect(currencyDecimals("usd")).toBe(2)
+    expect(currencyDecimals(null)).toBe(2)
+    expect(currencyDecimals("??")).toBe(2)
+    expect(roundToCurrency(999.6, "khr")).toBe(1000)
+  })
+
+  it("rounds a riel commission to whole riel and a dollar one to cents", () => {
+    expect(commissionBase({ item_total: 20500.7, item_tax_total: 0, currency_code: "khr" })).toBe(20501)
+    expect(commissionAmount(20501, 12.5, "khr")).toBe(2563)
+    expect(commissionAmount(33.33, 10, "usd")).toBe(3.33)
+    expect(
+      adjustCommission(
+        { status: "pending", order_total: 10000, rate: 12.5, amount: 1250, currency_code: "khr" },
+        { kind: "refunded", refunded_total: 333 }
+      )
+    ).toEqual({ action: "amount", amount: 1208 })
   })
 })

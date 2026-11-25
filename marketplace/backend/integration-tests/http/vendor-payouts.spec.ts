@@ -36,8 +36,13 @@ medusaIntegrationTestRunner({
           (err) => err.response
         )
 
-      // Two vendors: Dara at the default 10 %, Sok at its own 20 %.
-      const twoVendorOrder = async () => {
+      // The vendor fulfils its child order (only fulfilled ones are paid out).
+      const fulfil = (vendor: { auth: any }, orderId: string) =>
+        api.post(`/vendors/me/orders/${orderId}/fulfillments`, {}, vendor.auth)
+
+      // Two vendors: Dara at the default 10 %, Sok at its own 20 %. Both
+      // child orders fulfilled unless `fulfilled: false`.
+      const twoVendorOrder = async ({ fulfilled = true } = {}) => {
         const dara = await kit.signUpVendor(admin, "dara@vendor.test", "Dara Crafts")
         const sok = await kit.signUpVendor(admin, "sok@vendor.test", "Sok Goods")
         await api.post(`/admin/vendors/${sok.id}`, { commission_rate: 20 }, admin)
@@ -48,7 +53,15 @@ medusaIntegrationTestRunner({
           { handle: "sweatshirt", quantity: 1 },
         ])
         const res = await api.post(`/store/carts/${cartId}/complete-vendor`, {}, shop.store)
-        return { dara, sok, res }
+        const childOf = (vendorId: string) =>
+          (res.data.vendor_orders as { vendor_id: string; order_id: string }[]).find(
+            (c) => c.vendor_id === vendorId
+          )!.order_id
+        if (fulfilled) {
+          await fulfil(dara, childOf(dara.id))
+          await fulfil(sok, childOf(sok.id))
+        }
+        return { dara, sok, res, childOf }
       }
 
       const nextMonth = () => {
@@ -123,6 +136,24 @@ medusaIntegrationTestRunner({
         expect(await marketplace().listVendorPayouts({})).toHaveLength(2)
       })
 
+      it("pays out only fulfilled child orders; an unfulfilled one waits for a later payout", async () => {
+        const { dara, sok, childOf } = await twoVendorOrder({ fulfilled: false })
+        expect((await runPayouts()).result).toEqual([])
+
+        await fulfil(dara, childOf(dara.id))
+        const { result } = await runPayouts()
+        expect(result).toEqual([expect.objectContaining({ vendor_id: dara.id, count: 1 })])
+        const [soks] = await marketplace().listVendorCommissions({ vendor_id: sok.id })
+        expect(soks).toEqual(expect.objectContaining({ status: "pending", payout_id: null }))
+
+        // Fulfilled later, Sok's commission joins the next period's payout.
+        await fulfil(sok, childOf(sok.id))
+        const later = await createVendorPayoutsWorkflow(getContainer()).run({
+          input: { cutoff: nextMonth(), period: "2099-01" },
+        })
+        expect(later.result).toEqual([expect.objectContaining({ vendor_id: sok.id, count: 1 })])
+      })
+
       it("leaves commissions recorded after the cutoff for the next payout", async () => {
         await twoVendorOrder()
         const { result } = await createVendorPayoutsWorkflow(getContainer()).run({
@@ -195,8 +226,9 @@ medusaIntegrationTestRunner({
       })
 
       it("a cancelled child order loses its commission before payout, not after", async () => {
-        const { res } = await twoVendorOrder()
-        const [first, second] = res.data.vendor_orders as { order_id: string }[]
+        const { res, dara, sok } = await twoVendorOrder({ fulfilled: false })
+        const [first, second] = res.data.vendor_orders as { order_id: string; vendor_id: string }[]
+        await fulfil(second.vendor_id === dara.id ? dara : sok, second.order_id)
 
         await cancelOrderWorkflow(getContainer()).run({
           input: { order_id: first.order_id },

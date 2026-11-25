@@ -2,6 +2,8 @@ import {
   commissionAmount,
   commissionBase,
   commissionRateFor,
+  currencyDecimals,
+  roundToCurrency,
   defaultCommissionRate,
   groupPayouts,
   isPayoutDay,
@@ -63,5 +65,31 @@ describe("vendor commission rules", () => {
       { vendor_id: "v2", currency_code: "khr", amount: 4000, commission_ids: ["c4"] },
       { vendor_id: "v2", currency_code: "usd", amount: 10.3, commission_ids: ["c1", "c3"] },
     ])
+  })
+})
+
+// Owner 2026-11-25: amounts round to the currency's minor units (KHR 0, USD 2).
+describe("rounding to the currency", () => {
+  it("knows each currency's decimals", () => {
+    expect(currencyDecimals("khr")).toBe(0)
+    expect(currencyDecimals("USD")).toBe(2)
+    expect(currencyDecimals("jpy")).toBe(0)
+    expect(currencyDecimals(undefined)).toBe(2)
+    expect(currencyDecimals("not-a-code")).toBe(2)
+    expect(roundToCurrency(1234.5678, "khr")).toBe(1235)
+    expect(roundToCurrency(12.345, "usd")).toBe(12.35)
+  })
+
+  it("rounds commissions, payouts and payout lines in riel to whole riel", () => {
+    expect(commissionBase({ item_total: 10450.4, item_tax_total: 0, currency_code: "khr" })).toBe(10450)
+    expect(commissionAmount(10450, 12.5, "khr")).toBe(1306)
+    expect(commissionAmount(33.33, 10, "usd")).toBe(3.33)
+    expect(vendorPayoutAmount(10450, 1306.4, "khr")).toBe(9144)
+    expect(
+      groupPayouts([
+        { id: "a", vendor_id: "v", currency_code: "khr", payout_amount: 100.4 },
+        { id: "b", vendor_id: "v", currency_code: "khr", payout_amount: 100.4 },
+      ])[0].amount
+    ).toBe(201)
   })
 })

@@ -188,6 +188,35 @@ medusaIntegrationTestRunner({
         }
       })
 
+      it("an edit publishes when approval is switched off (owner 2026-11-25)", async () => {
+        const before = process.env.MARKETPLACE_REQUIRE_PRODUCT_APPROVAL
+        process.env.MARKETPLACE_REQUIRE_PRODUCT_APPROVAL = "false"
+        try {
+          const dara = await vendor("dara@vendor.test", "Dara Crafts")
+          const created = await call(api.post("/vendors/products", product("Mat"), dara.auth))
+          const id = created.data.product.id
+          const listed = await call(api.get("/vendors/products", dara.auth))
+          expect(listed.data.approval_required).toBe(false)
+          const edited = await call(
+            api.post(`/vendors/products/${id}`, { title: "Woven mat", status: "published" }, dara.auth)
+          )
+          expect(edited.status).toBe(200)
+          expect(edited.data.product).toEqual(expect.objectContaining({ title: "Woven mat", status: "published" }))
+          const {
+            data: [stored],
+          } = await getContainer()
+            .resolve(ContainerRegistrationKeys.QUERY)
+            .graph({ entity: "product", fields: ["status"], filters: { id } })
+          expect(stored.status).toBe("published")
+        } finally {
+          if (before === undefined) {
+            delete process.env.MARKETPLACE_REQUIRE_PRODUCT_APPROVAL
+          } else {
+            process.env.MARKETPLACE_REQUIRE_PRODUCT_APPROVAL = before
+          }
+        }
+      })
+
       it("refuses a variant linked to an existing inventory item (review 2, A1)", async () => {
         const dara = await vendor("dara@crafts.test", "Dara Crafts")
         const body = product("Borrowed stock")
@@ -252,7 +281,10 @@ medusaIntegrationTestRunner({
         const again = (await call(api.get("/vendors/products", sok.auth))).data.products.find((p: { id: string }) => p.id === id)
         expect(again).toEqual(expect.objectContaining({ title: "Krama scarf", status: "proposed" }))
         expect(again.metadata?.rejection_note).toBeUndefined()
-        expect((await call(api.post(`/vendors/products/${id}`, { status: "published" }, sok.auth))).status).toBe(400)
+        const publish = await call(api.post(`/vendors/products/${id}`, { status: "published" }, sok.auth))
+        expect(publish.status).toBe(400)
+        expect(publish.data.message).toBe(VENDOR_PRODUCT_NEEDS_APPROVAL_MESSAGE)
+        expect((await call(api.get("/vendors/products", sok.auth))).data.approval_required).toBe(true)
 
         // Another vendor can't touch it.
         const other = await vendor("vy@vendor.test", "Vy Pots")

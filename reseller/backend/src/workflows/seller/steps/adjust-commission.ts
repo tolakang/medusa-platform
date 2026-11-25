@@ -64,6 +64,7 @@ export const adjustSellerCommissionStep = createStep(
         order_total: Number(commission.order_total),
         rate: Number(commission.rate),
         amount: Number(commission.amount),
+        currency_code: commission.currency_code,
       },
       input.kind === "canceled"
         ? { kind: "canceled" }
