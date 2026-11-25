@@ -4,8 +4,8 @@ import { cancelBookingWorkflow } from "../../../../../../workflows/cancel-bookin
 import { isPartner, ownResourceIds } from "../../../own"
 
 // POST /providers/me/bookings/:id/cancel (TASKS P3-32): a provider cancels a
-// booking on one of their own calendars; the shop's policy decides the refund
-// (cancel-booking, P3-08). Staff don't see money, so only a partner gets the
+// booking on one of their own calendars; a staff cancel always refunds the
+// customer in full (cancel-booking, P3-08; owner decision 2026-11-25). Staff don't see money, so only a partner gets the
 // refunded amount.
 export const POST = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const providerId = req.auth_context.actor_id

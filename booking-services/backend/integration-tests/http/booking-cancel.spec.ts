@@ -4,6 +4,7 @@ import {
   capturePaymentWorkflow,
   createDefaultsWorkflow,
   createShippingProfilesWorkflow,
+  refundPaymentWorkflow,
 } from "@medusajs/medusa/core-flows"
 import seedInitialData from "../../src/scripts/seed-initial-data"
 import seed from "../../src/scripts/seed"
@@ -157,21 +158,60 @@ medusaIntegrationTestRunner({
         expect(await slotFree()).toBe(true)
       })
 
-      it("P3-16: outside the policy, cancels without a refund", async () => {
-        const { bookingId, paymentId } = await placed({ capture: true })
+      const startSoon = async (bookingId: string, customerId?: string) => {
         // Move the booking to start in 2 hours: inside the last 24 hours.
         const soon = Date.now() + 2 * 3600 * 1000
         await booking().updateBookings({
           id: bookingId,
           starts_at: new Date(soon),
           ends_at: new Date(soon + 3600 * 1000),
+          ...(customerId ? { customer_id: customerId } : {}),
         })
+      }
 
-        const { result } = await cancelBookingWorkflow(getContainer()).run({ input: { booking_id: bookingId } })
+      it("P3-16: a customer cancelling inside the window gets no refund", async () => {
+        const { bookingId, paymentId } = await placed({ capture: true })
+        await startSoon(bookingId, "cus_window_test")
+
+        const { result } = await cancelBookingWorkflow(getContainer()).run({
+          input: { booking_id: bookingId, customer_id: "cus_window_test" },
+        })
 
         expect(result).toMatchObject({ refund: "outside_policy", refunded_amount: 0 })
         expect(result.booking.status).toEqual("cancelled")
         expect(await refundsOf(paymentId)).toEqual([])
+      })
+
+      it("staff (provider/admin) cancelling inside the window refunds in full", async () => {
+        const { bookingId, paymentId, itemTotal } = await placed({ capture: true })
+        await startSoon(bookingId)
+
+        const { result } = await cancelBookingWorkflow(getContainer()).run({
+          input: { booking_id: bookingId, created_by: "prov_test" },
+        })
+
+        expect(result).toMatchObject({ refund: "refunded", refunded_amount: itemTotal })
+        expect(await refundsOf(paymentId)).toEqual([
+          { amount: itemTotal, note: `Booking ${bookingId} cancelled by the shop: refunded in full.` },
+        ])
+      })
+
+      it("a staff cancel after a partial refund refunds only what is left (never twice)", async () => {
+        const { bookingId, paymentId, itemTotal } = await placed({ capture: true })
+        await startSoon(bookingId)
+        const {
+          data: [payment],
+        } = await query().graph({ entity: "payment", fields: ["captures.amount"], filters: { id: paymentId } })
+        const captured = (payment.captures ?? []).reduce((s, c) => s + Number(c!.amount), 0)
+        // The shop already refunded all but half of the booking's price.
+        const left = Math.floor(itemTotal / 2)
+        await refundPaymentWorkflow(getContainer()).run({ input: { payment_id: paymentId, amount: captured - left } })
+
+        const { result } = await cancelBookingWorkflow(getContainer()).run({ input: { booking_id: bookingId } })
+
+        expect(result).toMatchObject({ refund: "refunded", refunded_amount: left })
+        const refunds = await refundsOf(paymentId)
+        expect(refunds.reduce((s, r) => s + r.amount, 0)).toEqual(captured)
       })
 
       it("cancels without a refund when the payment isn't captured yet", async () => {

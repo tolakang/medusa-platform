@@ -23,6 +23,17 @@ describe("cancelDecision", () => {
     })
   })
 
+  it("always refunds a confirmed booking when staff cancel, even inside the window", () => {
+    expect(cancelDecision({ status: "confirmed", starts_at: inHours(1) }, now, 24, { byStaff: true })).toEqual({
+      allowed: true,
+      refund: true,
+    })
+    expect(cancelDecision({ status: "pending", starts_at: inHours(1) }, now, 24, { byStaff: true })).toEqual({
+      allowed: true,
+      refund: false,
+    })
+  })
+
   it("never refunds a pending hold (nothing was paid)", () => {
     expect(cancelDecision({ status: "pending", starts_at: inHours(72) }, now, 24)).toEqual({
       allowed: true,
