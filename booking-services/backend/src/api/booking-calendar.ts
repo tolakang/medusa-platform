@@ -12,6 +12,8 @@ export const BOOKING_FIELDS = [
   "ends_at",
   "hold_expires_at",
   "notes",
+  "walk_in_name",
+  "walk_in_phone",
   "address",
   "dropoff_address",
   "seats",

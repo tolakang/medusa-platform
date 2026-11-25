@@ -246,7 +246,8 @@ medusaIntegrationTestRunner({
         const service = (await api.post("/providers/me/services", { title: "Check-up", lengths: [{ minutes: 60, price: 5 }] }, dara.auth)).data.service
 
         // Dara books a walk-in on her own calendar; Vuthy can't on hers.
-        const walkIn = { resource_id: dara.calendar.id, starts_at: at("02:00"), ends_at: at("03:00"), notes: "Walk-in" }
+        const walkIn = { resource_id: dara.calendar.id, starts_at: at("02:00"), ends_at: at("03:00"), notes: "Walk-in", walk_in_name: "Chan", walk_in_phone: "+855 12 345 678" }
+        expect((await call(api.post("/providers/me/bookings", { ...walkIn, walk_in_phone: "12" }, dara.auth))).status).toBe(400)
         const made = await call(api.post("/providers/me/bookings", walkIn, dara.auth))
         expect(made.status).toBe(201)
         expect((await call(api.post("/providers/me/bookings", walkIn, vuthy.auth))).status).toBe(404)
@@ -255,8 +256,8 @@ medusaIntegrationTestRunner({
 
         const window = `from=${at("00:00")}&to=${at("23:00")}`
         const mine = await api.get(`/providers/me/bookings?${window}`, dara.auth)
-        expect(mine.data.bookings.map((b: any) => [b.id, b.status, b.resource.name, b.notes])).toEqual([
-          [made.data.booking.id, "confirmed", "Dr. Dara", "Walk-in"],
+        expect(mine.data.bookings.map((b: any) => [b.id, b.status, b.resource.name, b.notes, b.walk_in_name, b.walk_in_phone])).toEqual([
+          [made.data.booking.id, "confirmed", "Dr. Dara", "Walk-in", "Chan", "+855 12 345 678"],
         ])
         expect((await api.get(`/providers/me/bookings?${window}`, vuthy.auth)).data.bookings).toEqual([])
         expect((await call(api.get(`/providers/me/bookings?${window}&resource_id=${dara.calendar.id}`, vuthy.auth))).status).toBe(404)

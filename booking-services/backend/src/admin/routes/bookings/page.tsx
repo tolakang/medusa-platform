@@ -239,7 +239,7 @@ const BookingsPage = () => {
     if (view !== "day") next.set("view", view)
     if (next.toString() !== params.toString()) setParams(next, { replace: true })
   }, [resourceId, date, view, params, setParams])
-  const [walkIn, setWalkIn] = useState({ time: "09:00", minutes: "60", notes: "" })
+  const [walkIn, setWalkIn] = useState({ time: "09:00", minutes: "60", notes: "", name: "", phone: "" })
   // Two-step cancel in the page (no browser dialog): Cancel → Yes, cancel.
   const [confirming, setConfirming] = useState<string | null>(null)
   const [moving, setMoving] = useState<string | null>(null)
@@ -287,10 +287,12 @@ const BookingsPage = () => {
           resource_id: resourceId,
           ...walkInTimes(date, walkIn.time, Number(walkIn.minutes), resource!.timezone),
           notes: walkIn.notes || null,
+          walk_in_name: walkIn.name.trim() || null,
+          walk_in_phone: walkIn.phone.trim() || null,
         },
       }),
     onSuccess: () => {
-      setWalkIn((w) => ({ ...w, notes: "" }))
+      setWalkIn((w) => ({ ...w, notes: "", name: "", phone: "" }))
       refresh()
     },
   })
@@ -488,6 +490,20 @@ const BookingsPage = () => {
               step={5}
               value={walkIn.minutes}
               onChange={(e) => setWalkIn({ ...walkIn, minutes: e.target.value })}
+            />
+          </div>
+          <div className="flex flex-col gap-y-1">
+            <Label size="small">Name (optional)</Label>
+            <Input value={walkIn.name} maxLength={120} onChange={(e) => setWalkIn({ ...walkIn, name: e.target.value })} />
+          </div>
+          <div className="flex flex-col gap-y-1">
+            <Label size="small">Phone (optional)</Label>
+            <Input
+              type="tel"
+              inputMode="tel"
+              placeholder="012 345 678"
+              value={walkIn.phone}
+              onChange={(e) => setWalkIn({ ...walkIn, phone: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-y-1">

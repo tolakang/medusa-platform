@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { backendFetch } from "@/lib/server/medusa"
 import { requireProvider } from "@/lib/server/provider"
 import { isDate, walkInTimes } from "@/lib/time"
+import { isValidPhone } from "@/lib/format"
 
 export type FormState = { error?: string; info?: string }
 
@@ -27,10 +28,15 @@ export async function bookWalkIn(_: FormState, form: FormData): Promise<FormStat
     return { error: "Enter the length in minutes, from 5 to 720." }
   }
   const notes = String(form.get("notes") ?? "").trim().slice(0, 500)
+  const name = String(form.get("walk_in_name") ?? "").trim().slice(0, 120)
+  const phone = String(form.get("walk_in_phone") ?? "").trim()
+  if (!isValidPhone(phone)) {
+    return { error: "Enter a phone number with digits only, for example 012 345 678 or +855 12 345 678." }
+  }
   const result = await backendFetch("/providers/me/bookings", {
     token,
     method: "POST",
-    body: { resource_id: calendar.id, ...walkInTimes(date, time, minutes, calendar.timezone), notes: notes || null },
+    body: { resource_id: calendar.id, ...walkInTimes(date, time, minutes, calendar.timezone), notes: notes || null, walk_in_name: name || null, walk_in_phone: phone || null },
   })
   if (!result.ok) {
     return { error: result.message }

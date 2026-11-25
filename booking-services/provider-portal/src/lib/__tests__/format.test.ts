@@ -1,7 +1,16 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { customerLabel, hoursText, money, parseHours, parseLengths, priceValue } from "../format.ts"
+import { customerLabel, hoursText, isValidPhone, money, parseHours, parseLengths, priceValue } from "../format.ts"
 import { seal, unseal } from "../session-seal.ts"
+
+test("walk-in name and phone", () => {
+  assert.equal(customerLabel({ customer: null, walk_in_name: "Chan", walk_in_phone: "012 345 678" }), "Walk-in: Chan · 012 345 678")
+  assert.equal(customerLabel({ customer: null }), "Walk-in")
+  assert.equal(isValidPhone("+855 12 345 678"), true)
+  assert.equal(isValidPhone(""), true)
+  assert.equal(isValidPhone("call me"), false)
+  assert.equal(isValidPhone("1234"), false)
+})
 
 test("money and customer labels", () => {
   assert.equal(money(12.5, "usd"), "$12.50")

@@ -105,7 +105,22 @@ export const STATUS_LABEL: Record<string, string> = {
 
 export function customerLabel(b: {
   customer?: { email: string | null; first_name: string | null; last_name: string | null } | null
+  walk_in_name?: string | null
+  walk_in_phone?: string | null
 }): string {
   const c = b.customer
-  return [c?.first_name, c?.last_name].filter(Boolean).join(" ") || c?.email || "Walk-in"
+  const known = [c?.first_name, c?.last_name].filter(Boolean).join(" ") || c?.email
+  if (known) return known
+  // A walk-in's own name and phone, when staff wrote them down.
+  const walkIn = [b.walk_in_name, b.walk_in_phone].filter(Boolean).join(" · ")
+  return walkIn ? `Walk-in: ${walkIn}` : "Walk-in"
+}
+
+// The backend's phone rule (medusa-core lib/phone): an optional leading +,
+// then digits, spaces, hyphens or parentheses, 8 to 15 digits.
+export function isValidPhone(value: string): boolean {
+  if (!value) return true
+  if (!/^\+?[0-9 ()-]+$/.test(value)) return false
+  const digits = value.replace(/\D/g, "").length
+  return digits >= 8 && digits <= 15
 }

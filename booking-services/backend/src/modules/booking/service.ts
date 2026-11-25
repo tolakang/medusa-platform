@@ -101,6 +101,9 @@ export type CreateHoldInput = {
   customer_id?: string | null
   line_item_id?: string | null
   notes?: string | null
+  // A walk-in's own name and phone (no customer account needed).
+  walk_in_name?: string | null
+  walk_in_phone?: string | null
   // Where a visit at the customer's place is (kind B, P3-20).
   address?: string | null
   // A trip's drop-off (kind C, P3-21).
@@ -328,6 +331,8 @@ class BookingModuleService extends MedusaService({
         customer_id: input.customer_id ?? null,
         line_item_id: input.line_item_id ?? null,
         notes: input.notes ?? null,
+        walk_in_name: input.walk_in_name ?? null,
+        walk_in_phone: input.walk_in_phone ?? null,
         address: input.address ?? null,
         dropoff_address: input.dropoff_address ?? null,
         seats: input.seats ?? 1,

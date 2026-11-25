@@ -19,6 +19,22 @@ export function WalkInForm({ resourceId, date }: { resourceId: string; date: str
           <span className="text-sm font-medium">Minutes</span>
           <input className="field w-24" name="minutes" type="number" min={5} max={720} step={5} defaultValue={30} required />
         </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium">Name (optional)</span>
+          <input className="field" name="walk_in_name" maxLength={120} autoComplete="off" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium">Phone (optional)</span>
+          <input
+            className="field w-40"
+            name="walk_in_phone"
+            type="tel"
+            inputMode="tel"
+            placeholder="012 345 678"
+            pattern={String.raw`\+?[\(\) \-]*(?:[0-9][\(\) \-]*){8,15}`}
+            title="Digits only, for example 012 345 678 or +855 12 345 678."
+          />
+        </label>
         <label className="flex flex-1 flex-col gap-1">
           <span className="text-sm font-medium">Notes (optional)</span>
           <input className="field" name="notes" maxLength={500} />

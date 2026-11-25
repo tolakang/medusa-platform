@@ -1,4 +1,5 @@
 import { z } from "@medusajs/framework/zod"
+import { walkInContact } from "../../walk-in-contact"
 
 // Admin booking routes (TASKS P3-11). Weekly hours as in booking_schedule
 // (P3-01): weekday 0-6 (0 = Sunday), "HH:MM" local to the resource.
@@ -41,6 +42,7 @@ export const PostAdminWalkIn = z.object({
   ends_at: instant,
   customer_id: z.string().min(1).nullish(),
   notes: z.string().max(500).nullish(),
+  ...walkInContact,
 })
 export type PostAdminWalkInType = z.infer<typeof PostAdminWalkIn>
 

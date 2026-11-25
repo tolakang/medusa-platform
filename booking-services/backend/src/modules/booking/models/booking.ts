@@ -24,6 +24,10 @@ export const Booking = model
     cart_id: model.text().nullable(),
     line_item_id: model.text().nullable(),
     notes: model.text().nullable(),
+    // A walk-in's name and phone, when the person has no customer account
+    // (P3-11 follow-up); online bookings use the order's contact.
+    walk_in_name: model.text().nullable(),
+    walk_in_phone: model.text().nullable(),
     // Where the visit is, for a service done at the customer's place (kind
     // B, TASKS P3-20): the address as the customer wrote it. What needs doing
     // is in `notes`.
