@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
 import { errorText, statusLabel } from "../../lib/format"
+import { usePageTitle } from "../../lib/page-title"
 
 // Reviews (TASKS P3-29): customers' reviews of bookings they had, newest
 // first. They're published at once; Hide takes one off the shop, Show puts
@@ -66,6 +67,7 @@ const Reply = ({ review, onSaved }: { review: Review; onSaved: () => void }) => 
 const stars = (n: number) => "★".repeat(n) + "☆".repeat(5 - n)
 
 const ReviewsPage = () => {
+  usePageTitle("Reviews")
   const client = useQueryClient()
   const { data, isLoading, error } = useQuery({
     queryKey: ["booking-reviews"],

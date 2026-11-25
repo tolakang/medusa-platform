@@ -3,6 +3,7 @@ import { ReceiptPercent } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
+import { usePageTitle } from "../../lib/page-title"
 
 // Passes (TASKS P3-29 follow-up): customers' passes, soonest to expire first,
 // with credits left and the order they came from. Reads GET /admin/booking/passes.
@@ -18,6 +19,7 @@ type Pass = {
 }
 
 const PassesPage = () => {
+  usePageTitle("Passes")
   const { data, isLoading, error } = useQuery({
     queryKey: ["booking-passes"],
     queryFn: () => sdk.client.fetch<{ passes: Pass[] }>("/admin/booking/passes"),

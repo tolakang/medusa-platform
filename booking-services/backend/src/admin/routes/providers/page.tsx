@@ -4,6 +4,7 @@ import { Badge, Button, Container, Heading, Input, Label, Select, Table, Text, t
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { usePageTitle } from "../../lib/page-title"
 
 // Providers (TASKS P3-31, BUILD_PLAN §9.3 "Providers"): invite staff for a
 // staff resource and give them the invite code, approve or suspend partners,
@@ -87,6 +88,7 @@ const STATUS: Record<Provider["status"], { label: string; color: "green" | "oran
 }
 
 const ProvidersPage = () => {
+  usePageTitle("Providers")
   const queryClient = useQueryClient()
   const [form, setForm] = useState({ name: "", email: "", resource_id: NEW_RESOURCE })
   const [rate, setRate] = useState<{ id: string; value: string } | null>(null)

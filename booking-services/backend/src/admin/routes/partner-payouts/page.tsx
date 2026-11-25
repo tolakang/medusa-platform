@@ -4,6 +4,7 @@ import { Badge, Button, Container, Heading, Input, Table, Text, toast, usePrompt
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { usePageTitle } from "../../lib/page-title"
 
 // Partner payouts (TASKS P3-33, plan §9.3 "Money"): the monthly payout report
 // to pay from, marking a payout paid with its transfer reference, and
@@ -42,6 +43,7 @@ const money = (amount: number, currency: string) => {
 }
 
 const PartnerPayoutsPage = () => {
+  usePageTitle("Partner payouts")
   const queryClient = useQueryClient()
   const [refs, setRefs] = useState<Record<string, string>>({})
   const payouts = useQuery({
