@@ -1,4 +1,5 @@
 import { MathBN } from "@medusajs/framework/utils"
+import { roundToCurrency } from "./commission"
 
 // TASKS P5-05 (plan §9.5: monthly payout batch, RESELLER_PAYOUT_DAY). Pure.
 
@@ -29,6 +30,8 @@ export function summarizeBySeller(
   commissions: { seller_id: string; currency_code: string; amount: number | string }[]
 ): DueLine[] {
   const lines = new Map<string, DueLine>()
+  // Summed exactly, rounded once per line (rounding each step drifts).
+  const sums = new Map<string, ReturnType<typeof MathBN.convert>>()
   for (const commission of commissions) {
     const key = `${commission.seller_id}:${commission.currency_code}`
     const line = lines.get(key) ?? {
@@ -37,7 +40,9 @@ export function summarizeBySeller(
       amount: 0,
       count: 0,
     }
-    line.amount = MathBN.convert(MathBN.add(line.amount, commission.amount), 2).toNumber()
+    const sum = MathBN.add(sums.get(key) ?? 0, commission.amount)
+    sums.set(key, sum)
+    line.amount = roundToCurrency(sum, commission.currency_code)
     line.count += 1
     lines.set(key, line)
   }

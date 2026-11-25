@@ -3,6 +3,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { MathBN, MedusaError } from "@medusajs/framework/utils"
+import { roundToCurrency } from "../../../../modules/seller/commission"
 import { SELLER_MODULE } from "../../../../modules/seller"
 import SellerModuleService from "../../../../modules/seller/service"
 import { GetSellerCommissions } from "../../validators"
@@ -48,13 +49,15 @@ export const GET = async (
     { seller_id: req.auth_context.actor_id },
     { select: ["status", "currency_code", "amount"] }
   )
+  // Summed exactly, rounded once per status and currency.
+  const sums = new Map<string, ReturnType<typeof MathBN.convert>>()
   const totals: Record<string, Record<string, number>> = {}
   for (const c of all) {
+    const key = `${c.status}:${c.currency_code}`
+    const sum = MathBN.add(sums.get(key) ?? 0, c.amount)
+    sums.set(key, sum)
     totals[c.status] ??= {}
-    totals[c.status][c.currency_code] = MathBN.convert(
-      MathBN.add(totals[c.status][c.currency_code] ?? 0, c.amount),
-      2
-    ).toNumber()
+    totals[c.status][c.currency_code] = roundToCurrency(sum, c.currency_code)
   }
 
   res.json({ commissions, count, limit, offset, totals })

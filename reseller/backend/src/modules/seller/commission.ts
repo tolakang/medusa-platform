@@ -1,4 +1,35 @@
+import type { BigNumberInput } from "@medusajs/framework/types"
 import { MathBN } from "@medusajs/framework/utils"
+
+// Riel is used without decimals (owner 2026-11-25), though ISO 4217 and
+// Intl give KHR 2; the map wins over Intl.
+const DECIMALS: Record<string, number> = { khr: 0 }
+
+/**
+ * How many decimals a currency's amounts have: the map above, else Intl's
+ * (USD 2, JPY 0). Unknown or missing code: 2.
+ */
+export function currencyDecimals(currencyCode?: string | null) {
+  if (!currencyCode) {
+    return 2
+  }
+  const own = DECIMALS[currencyCode.toLowerCase()]
+  if (own !== undefined) {
+    return own
+  }
+  try {
+    return (
+      new Intl.NumberFormat("en", { style: "currency", currency: currencyCode.toUpperCase() })
+        .resolvedOptions().maximumFractionDigits ?? 2
+    )
+  } catch {
+    return 2
+  }
+}
+
+/** The amount rounded to the currency's minor units. */
+export const roundToCurrency = (value: BigNumberInput, currencyCode?: string | null) =>
+  MathBN.convert(value, currencyDecimals(currencyCode)).toNumber()
 
 // TASKS P5-04 (plan §9.5): what a seller earns on an order. Pure, so the
 // workflows and the unit tests share it.
@@ -29,20 +60,21 @@ export function commissionRateFor(
 export function commissionBase(order: {
   item_total?: unknown
   item_tax_total?: unknown
+  currency_code?: string | null
 }) {
   const base = MathBN.sub(
     MathBN.convert((order.item_total as number) ?? 0),
     MathBN.convert((order.item_tax_total as number) ?? 0)
   )
-  return Math.max(0, MathBN.convert(base, 2).toNumber())
+  return Math.max(0, roundToCurrency(base, order.currency_code))
 }
 
-/** rate percent of the base, rounded to cents, never below 0. */
-export function commissionAmount(base: number, rate: number) {
+/** rate percent of the base, rounded to the currency's minor units, never below 0. */
+export function commissionAmount(base: number, rate: number, currencyCode?: string | null) {
   if (base <= 0 || rate <= 0) {
     return 0
   }
-  return MathBN.convert(MathBN.div(MathBN.mult(base, rate), 100), 2).toNumber()
+  return roundToCurrency(MathBN.div(MathBN.mult(base, rate), 100), currencyCode)
 }
 
 export type CommissionAdjustment =
@@ -64,7 +96,13 @@ export type CommissionEvent =
  * its items only), and cancels it when nothing is left.
  */
 export function adjustCommission(
-  commission: { status: string; order_total: number; rate: number; amount: number },
+  commission: {
+    status: string
+    order_total: number
+    rate: number
+    amount: number
+    currency_code?: string | null
+  },
   event: CommissionEvent
 ): CommissionAdjustment {
   if (commission.status === "cancelled") {
@@ -86,7 +124,7 @@ export function adjustCommission(
   if (kept <= 0) {
     return { action: "cancel" }
   }
-  const amount = commissionAmount(kept, Number(commission.rate))
+  const amount = commissionAmount(kept, Number(commission.rate), commission.currency_code)
   return amount === Number(commission.amount)
     ? { action: "none", reason: "unchanged" }
     : { action: "amount", amount }
