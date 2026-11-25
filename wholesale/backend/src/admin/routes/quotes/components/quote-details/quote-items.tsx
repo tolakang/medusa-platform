@@ -68,9 +68,11 @@ export const QuoteItem = ({
     <>
       <div
         key={item.id}
-        className="text-ui-fg-subtle grid grid-cols-2 items-center gap-x-4 px-6 py-4 text-left"
+        // Polish 2026-11-25: the item column shrinks, the price columns never
+        // do (they were cut off), and the badges wrap under the quantity.
+        className="text-ui-fg-subtle grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-6 py-4 text-left"
       >
-        <div className="flex items-start gap-x-4">
+        <div className="flex min-w-0 items-start gap-x-4">
           <Thumbnail src={item.thumbnail} />
 
           <div>
@@ -95,8 +97,8 @@ export const QuoteItem = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 items-center gap-x-4">
-          <div className="flex items-center justify-end gap-x-4">
+        <div className="grid grid-cols-[minmax(7rem,auto)_minmax(4.5rem,auto)_minmax(7rem,auto)] items-center gap-x-4">
+          <div className="flex items-center justify-end gap-x-4 whitespace-nowrap">
             <AmountCell
               className="text-sm text-right justify-end items-end"
               currencyCode={currencyCode}
@@ -107,7 +109,7 @@ export const QuoteItem = ({
             />
           </div>
 
-          <div className="flex items-center gap-x-2">
+          <div className="flex flex-col items-start gap-y-1">
             <div className="w-fit min-w-[27px]">
               <Badge size="xsmall" color="grey">
                 <span className="tabular-nums text-xs">{item.quantity}</span>x
@@ -120,7 +122,7 @@ export const QuoteItem = ({
                   size="2xsmall"
                   rounded="full"
                   color="blue"
-                  className="mr-1"
+                  className="whitespace-nowrap"
                 >
                   {t("general.new")}
                 </Badge>
@@ -131,7 +133,7 @@ export const QuoteItem = ({
                   size="2xsmall"
                   rounded="full"
                   color="red"
-                  className="mr-1"
+                  className="whitespace-nowrap"
                 >
                   {t("general.removed")}
                 </Badge>
@@ -141,7 +143,7 @@ export const QuoteItem = ({
                     size="2xsmall"
                     rounded="full"
                     color="orange"
-                    className="mr-1"
+                    className="whitespace-nowrap"
                   >
                     {t("general.modified")}
                   </Badge>
@@ -149,11 +151,10 @@ export const QuoteItem = ({
               )}
             </div>
 
-            <div className="overflow-visible"></div>
           </div>
 
           <AmountCell
-            className="text-sm text-right justify-end items-end"
+            className="text-sm text-right justify-end items-end whitespace-nowrap"
             currencyCode={currencyCode}
             amount={
               isAddedItem ? item.detail.quantity * item.unit_price : item.total
