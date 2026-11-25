@@ -50,12 +50,16 @@ export const GET = async (
   };
   const customerId = req.auth_context?.actor_id;
   if (customerId) {
-    const { data: groups } = await query.graph({
-      entity: "customer_group",
-      fields: ["id"],
-      filters: { customers: { id: customerId } } as any,
+    const {
+      data: [customer],
+    } = await query.graph({
+      entity: "customer",
+      fields: ["groups.id"],
+      filters: { id: customerId },
     });
-    pricingContext.customer = { groups: groups.map((g) => ({ id: g.id })) };
+    pricingContext.customer = {
+      groups: (customer?.groups ?? []).flatMap((g) => (g?.id ? [{ id: g.id }] : [])),
+    };
   }
 
   // Break points: 1, every min_quantity and the quantity after every
