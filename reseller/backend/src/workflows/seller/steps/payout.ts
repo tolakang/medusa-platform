@@ -1,5 +1,7 @@
+import { MedusaError } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import { SELLER_MODULE } from "../../../modules/seller"
+import { netPayoutLines } from "../../../modules/seller/payout"
 import SellerModuleService from "../../../modules/seller/service"
 
 /**
@@ -36,15 +38,26 @@ export const payoutLockKeysStep = createStep(
   }
 )
 
+/**
+ * The payout day approves every seller's due commissions except those of
+ * sellers on hold; the owner's "Approve now" (seller_id) approves one seller's
+ * pending commissions up to now, hold or not.
+ */
 export const approveDueCommissionsStep = createStep(
   "approve-due-seller-commissions",
-  async (input: { cutoff: Date }, { container }) => {
+  async (input: { cutoff: Date; seller_id?: string }, { container }) => {
     const sellers = container.resolve<SellerModuleService>(SELLER_MODULE)
+    const held = input.seller_id
+      ? []
+      : (await sellers.listSellers({ payout_hold: true }, { select: ["id"] })).map((s) => s.id)
     // Read inside the lock: a refund may have cancelled some since.
-    const due = await sellers.listSellerCommissions({
-      status: "pending",
-      created_at: { $lt: input.cutoff },
-    })
+    const due = (
+      await sellers.listSellerCommissions({
+        status: "pending",
+        created_at: { $lt: input.cutoff },
+        ...(input.seller_id ? { seller_id: input.seller_id } : {}),
+      })
+    ).filter((commission) => !held.includes(commission.seller_id))
     if (!due.length) {
       return new StepResponse([], [] as string[])
     }
@@ -67,9 +80,22 @@ export const approveDueCommissionsStep = createStep(
  * TASKS P5-05: the shop paid a seller; their approved commissions become
  * paid. Only approved ones: pending commissions aren't due yet.
  */
+export const NEGATIVE_PAYOUT_MESSAGE =
+  "Clawbacks are more than the approved commissions, so nothing is due yet. They carry into the next payout."
+
+type PaidUndo = { commission_ids: string[]; adjustment_ids: string[]; payout_ids: string[] }
+
+/**
+ * Also settles the seller's open adjustments (clawbacks) in the same
+ * currencies and records one payout per currency, with the bank/ABA
+ * reference, for the payout history.
+ */
 export const markSellerCommissionsPaidStep = createStep(
   "mark-seller-commissions-paid",
-  async (input: { seller_id: string; currency_code?: string; paid_at: Date }, { container }) => {
+  async (
+    input: { seller_id: string; currency_code?: string; paid_at: Date; reference?: string | null },
+    { container }
+  ) => {
     const sellers = container.resolve<SellerModuleService>(SELLER_MODULE)
     // Read inside the lock: a refund may have cancelled or changed some since.
     const approved = await sellers.listSellerCommissions({
@@ -77,8 +103,47 @@ export const markSellerCommissionsPaidStep = createStep(
       status: "approved",
       ...(input.currency_code ? { currency_code: input.currency_code } : {}),
     })
+    const undo: PaidUndo = { commission_ids: [], adjustment_ids: [], payout_ids: [] }
     if (!approved.length) {
-      return new StepResponse([], [] as string[])
+      return new StepResponse({ paid: [] as typeof approved, payouts: [] as { id: string }[] }, undo)
+    }
+    const currencies = [...new Set(approved.map((c) => c.currency_code))]
+    const adjustments = await sellers.listSellerAdjustments({
+      seller_id: input.seller_id,
+      status: "open",
+      currency_code: currencies,
+    })
+    const lines = netPayoutLines(
+      approved.map((c) => ({ seller_id: c.seller_id, currency_code: c.currency_code, amount: Number(c.amount) })),
+      adjustments.map((a) => ({ seller_id: a.seller_id, currency_code: a.currency_code, amount: Number(a.amount) }))
+    )
+    if (lines.some((line) => line.net < 0)) {
+      throw new MedusaError(MedusaError.Types.NOT_ALLOWED, NEGATIVE_PAYOUT_MESSAGE)
+    }
+
+    const payouts = await sellers.createSellerPayouts(
+      lines.map((line) => ({
+        seller_id: input.seller_id,
+        currency_code: line.currency_code,
+        amount: line.net,
+        commission_total: line.amount,
+        adjustment_total: line.adjustment,
+        commission_count: line.count,
+        reference: input.reference?.trim() || null,
+        paid_at: input.paid_at,
+      }))
+    )
+    undo.payout_ids = payouts.map((p) => p.id)
+    const payoutByCurrency = new Map(payouts.map((p) => [p.currency_code, p.id]))
+    if (adjustments.length) {
+      await sellers.updateSellerAdjustments(
+        adjustments.map((a) => ({
+          id: a.id,
+          status: "settled" as const,
+          payout_id: payoutByCurrency.get(a.currency_code) ?? null,
+        }))
+      )
+      undo.adjustment_ids = adjustments.map((a) => a.id)
     }
     const paid = await sellers.updateSellerCommissions(
       approved.map((commission) => ({
@@ -87,16 +152,26 @@ export const markSellerCommissionsPaidStep = createStep(
         paid_at: input.paid_at,
       }))
     )
-    return new StepResponse(paid, approved.map((commission) => commission.id))
+    undo.commission_ids = approved.map((commission) => commission.id)
+    return new StepResponse({ paid, payouts }, undo)
   },
-  async (ids: string[] | undefined, { container }) => {
-    if (!ids?.length) {
+  async (undo: PaidUndo | undefined, { container }) => {
+    if (!undo) {
       return
     }
-    await container
-      .resolve<SellerModuleService>(SELLER_MODULE)
-      .updateSellerCommissions(
-        ids.map((id) => ({ id, status: "approved" as const, paid_at: null }))
+    const sellers = container.resolve<SellerModuleService>(SELLER_MODULE)
+    if (undo.commission_ids.length) {
+      await sellers.updateSellerCommissions(
+        undo.commission_ids.map((id) => ({ id, status: "approved" as const, paid_at: null }))
       )
+    }
+    if (undo.adjustment_ids.length) {
+      await sellers.updateSellerAdjustments(
+        undo.adjustment_ids.map((id) => ({ id, status: "open" as const, payout_id: null }))
+      )
+    }
+    if (undo.payout_ids.length) {
+      await sellers.deleteSellerPayouts(undo.payout_ids)
+    }
   }
 )

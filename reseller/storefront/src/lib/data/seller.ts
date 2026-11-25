@@ -3,6 +3,7 @@
 import { cookies as nextCookies, headers as nextHeaders } from "next/headers"
 import { unstable_rethrow } from "next/navigation"
 import { SELLER_COOKIE } from "@lib/util/seller-cookie"
+import { SHOP_NAME } from "@lib/shop"
 
 // Which seller a request belongs to (BUILD_PLAN §9.5, TASKS P5-07). One
 // deployment serves every seller's domain; the backend maps the request's
@@ -19,7 +20,9 @@ const OWN_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? ""
 // Domain → key changes rarely; the backend lookup is cached this long.
 const RESOLVE_REVALIDATE_SECONDS = 300
 
-async function lookup(query: string): Promise<string | null> {
+type ResolvedSeller = { key: string; name: string | null }
+
+async function lookup(query: string): Promise<ResolvedSeller | null> {
   try {
     const response = await fetch(`${BACKEND_URL}/store/sellers/resolve?${query}`, {
       headers: { "x-publishable-api-key": OWN_KEY },
@@ -29,14 +32,19 @@ async function lookup(query: string): Promise<string | null> {
     if (!response.ok) {
       return null
     }
-    const body = (await response.json()) as { publishable_key?: string }
-    return body.publishable_key ?? null
+    const body = (await response.json()) as {
+      publishable_key?: string
+      seller?: { name?: string | null }
+    }
+    return body.publishable_key
+      ? { key: body.publishable_key, name: body.seller?.name?.trim() || null }
+      : null
   } catch {
     return null
   }
 }
 
-export async function getSellerPublishableKey(): Promise<string | null> {
+async function resolveSeller(): Promise<ResolvedSeller | null> {
   let query: string | null = null
   try {
     if ((process.env.SELLER_RESOLVE_MODE || "domain").toLowerCase() === "path") {
@@ -62,4 +70,14 @@ export async function getSellerPublishableKey(): Promise<string | null> {
   }
   const fallback = process.env.DEFAULT_SELLER_HANDLE?.trim()
   return fallback ? lookup(`handle=${encodeURIComponent(fallback)}`) : null
+}
+
+export async function getSellerPublishableKey(): Promise<string | null> {
+  return (await resolveSeller())?.key ?? null
+}
+
+// The shop's name in the header, footer and titles: the seller's own shop
+// name on a seller's domain, else the build-time NEXT_PUBLIC_SHOP_NAME.
+export async function getShopName(): Promise<string> {
+  return (await resolveSeller())?.name || SHOP_NAME
 }

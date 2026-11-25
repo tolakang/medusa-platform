@@ -1,8 +1,8 @@
-import { SHOP_NAME } from "@lib/shop"
+import { getShopName } from "@lib/data/seller"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ChevronDown from "@modules/common/icons/chevron-down"
 
-export default function CheckoutLayout({
+export default async function CheckoutLayout({
   children,
 }: {
   children: React.ReactNode
@@ -29,7 +29,7 @@ export default function CheckoutLayout({
             className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
             data-testid="store-link"
           >
-            {SHOP_NAME}
+            {await getShopName()}
           </LocalizedClientLink>
           <div className="flex-1 basis-0" />
         </nav>

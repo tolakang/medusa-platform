@@ -15,6 +15,11 @@ export type Seller = {
   domain: string | null
   status: "pending" | "active" | "suspended"
   commission_rate: number | null
+  phone?: string | null
+  telegram?: string | null
+  payout_bank_name?: string | null
+  payout_account_name?: string | null
+  payout_account_number?: string | null
   sales_channel?: { id: string; name: string } | null
 }
 

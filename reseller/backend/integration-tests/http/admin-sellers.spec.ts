@@ -90,7 +90,8 @@ medusaIntegrationTestRunner({
         const activated = await update(id, { status: "active" })
         expect(activated.status).toEqual(200)
         expect(activated.data.seller).toEqual(
-          expect.objectContaining({ id, status: "active", invite_code: invited.data.invite_code })
+          // Accepted: the code is spent and no longer shown.
+          expect.objectContaining({ id, status: "active", invite_code: null, accepted_at: expect.any(String) })
         )
         expect((await resolve("shop.sok.com")).data.publishable_key).toEqual(
           invited.data.publishable_key
@@ -192,6 +193,92 @@ medusaIntegrationTestRunner({
         expect(typeof signedIn.data.token).toEqual("string")
         // Someone else's seller id is not found.
         expect((await call(api.post(`/admin/sellers/sel_missing/reset-link`, {}, admin))).status).toEqual(404)
+      })
+
+      it("shows the invite code only while the seller is still invited", async () => {
+        const invited = await invite()
+        const id = invited.data.seller.id
+        const listed = async () =>
+          (await api.get("/admin/sellers", admin)).data.sellers.find((s: any) => s.id === id)
+        expect(await listed()).toEqual(
+          expect.objectContaining({ invite_code: invited.data.invite_code, accepted_at: null })
+        )
+        await onboard(invited)
+        expect(await listed()).toEqual(
+          expect.objectContaining({ invite_code: null, accepted_at: expect.any(String) })
+        )
+        expect((await api.get(`/admin/sellers/${id}`, admin)).data.seller.invite_code).toBeNull()
+      })
+
+      it("holds and releases a seller's payouts", async () => {
+        const invited = await invite()
+        const id = invited.data.seller.id
+        expect((await update(id, { payout_hold: true })).data.seller.payout_hold).toEqual(true)
+        expect((await update(id, { payout_hold: false })).data.seller.payout_hold).toEqual(false)
+        expect((await update(id, { payout_hold: "yes" })).status).toEqual(400)
+      })
+
+      it("a seller saves contact and payout details and changes their password", async () => {
+        const invited = await invite()
+        const token = await onboard(invited)
+        await api.post(`/admin/sellers/${invited.data.seller.id}`, { status: "active" }, admin)
+        const saved = await call(
+          api.post(
+            "/sellers/me",
+            {
+              phone: "+855 12 345 678",
+              telegram: "@sokshop",
+              payout_bank_name: "ABA",
+              payout_account_name: "Sok Dara",
+              payout_account_number: "000 123 456",
+            },
+            bearer(token)
+          )
+        )
+        expect(saved.status).toEqual(200)
+        expect(saved.data.seller).toEqual(
+          expect.objectContaining({
+            name: "Sok Shop",
+            phone: "+855 12 345 678",
+            telegram: "@sokshop",
+            payout_bank_name: "ABA",
+            payout_account_name: "Sok Dara",
+            payout_account_number: "000 123 456",
+          })
+        )
+        // Empty text clears a field.
+        const cleared = await call(api.post("/sellers/me", { telegram: "" }, bearer(token)))
+        expect(cleared.data.seller.telegram).toBeNull()
+        expect(cleared.data.seller.phone).toEqual("+855 12 345 678")
+        // The owner sees them too.
+        expect(
+          (await api.get(`/admin/sellers/${invited.data.seller.id}`, admin)).data.seller.payout_bank_name
+        ).toEqual("ABA")
+
+        const wrong = await call(
+          api.post(
+            "/sellers/me/password",
+            { current_password: "nope-nope-1", new_password: "new-seller-pass-2" },
+            bearer(token)
+          )
+        )
+        expect(wrong.status).toEqual(400)
+        const short = await call(
+          api.post("/sellers/me/password", { current_password: "seller-pass-1", new_password: "x" }, bearer(token))
+        )
+        expect(short.status).toEqual(400)
+        const changed = await call(
+          api.post(
+            "/sellers/me/password",
+            { current_password: "seller-pass-1", new_password: "new-seller-pass-2" },
+            bearer(token)
+          )
+        )
+        expect(changed.status).toEqual(200)
+        const signIn = await call(
+          api.post("/auth/seller/emailpass", { email: "sok@seller.test", password: "new-seller-pass-2" })
+        )
+        expect(signIn.status).toEqual(200)
       })
 
       it("a seller renames their shop, but can't change the domain", async () => {

@@ -129,3 +129,52 @@ export function adjustCommission(
     ? { action: "none", reason: "unchanged" }
     : { action: "amount", amount }
 }
+
+/**
+ * The commission base the shop kept after a refund: the base's share of what
+ * the customer still paid. Refunds are of the whole order (tax, shipping), the
+ * base is its items only.
+ */
+export function keptBase(
+  base: number,
+  event: { refunded_total: number; order_grand_total?: number },
+  currencyCode?: string | null
+) {
+  const paidTotal = Number(event.order_grand_total ?? base)
+  const refunded = Number(event.refunded_total)
+  if (base <= 0 || paidTotal <= 0 || refunded >= paidTotal) {
+    return 0
+  }
+  return Math.max(0, roundToCurrency((base * (paidTotal - refunded)) / paidTotal, currencyCode))
+}
+
+/**
+ * Clawback of a commission already paid out (owner, 2026-11-25): the order is
+ * cancelled or refunded after the payout, so the seller was paid too much. The
+ * difference becomes a negative adjustment carried into their next payout.
+ * `already_adjusted` = the adjustments already recorded for this commission
+ * (negative), so a second partial refund only takes what is new. 0 = nothing
+ * to take back.
+ */
+export function clawbackAmount(
+  commission: {
+    order_total: number
+    rate: number
+    amount: number
+    currency_code?: string | null
+  },
+  event: CommissionEvent,
+  alreadyAdjusted = 0
+) {
+  const target =
+    event.kind === "canceled"
+      ? 0
+      : commissionAmount(
+          keptBase(Number(commission.order_total), event, commission.currency_code),
+          Number(commission.rate),
+          commission.currency_code
+        )
+  const owedNow = Number(commission.amount) + Number(alreadyAdjusted)
+  const delta = roundToCurrency(target - owedNow, commission.currency_code)
+  return delta < 0 ? delta : 0
+}

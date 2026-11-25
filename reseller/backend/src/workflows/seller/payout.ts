@@ -17,10 +17,14 @@ import {
  */
 export const sellerPayoutBatchWorkflow = createWorkflow(
   "seller-payout-batch",
-  function (input: { cutoff: Date }) {
+  function (input: { cutoff: Date; seller_id?: string }) {
     // The same per-order locks as refunds (REVIEW_FIXES B10).
     const keys = payoutLockKeysStep(
-      transform(input, (input) => ({ status: "pending" as const, cutoff: input.cutoff }))
+      transform(input, (input) => ({
+        status: "pending" as const,
+        cutoff: input.cutoff,
+        seller_id: input.seller_id,
+      }))
     ).config({ name: "seller-payout-batch-keys" })
     // An owner of its own: several keys are taken one by one, and a retry
     // must not stop at the keys this run already holds.
@@ -45,7 +49,12 @@ export const sellerPayoutBatchWorkflow = createWorkflow(
 
 export const markSellerPayoutPaidWorkflow = createWorkflow(
   "mark-seller-payout-paid",
-  function (input: { seller_id: string; currency_code?: string; paid_at: Date }) {
+  function (input: {
+    seller_id: string
+    currency_code?: string
+    paid_at: Date
+    reference?: string | null
+  }) {
     const keys = payoutLockKeysStep(
       transform(input, (input) => ({
         status: "approved" as const,
@@ -58,8 +67,9 @@ export const markSellerPayoutPaidWorkflow = createWorkflow(
     const paid = markSellerCommissionsPaidStep(input)
     releaseLockStep({ key: keys, ownerId })
     return new WorkflowResponse(
-      transform(paid, (paid) => ({
+      transform(paid, ({ paid, payouts }) => ({
         paid: paid.length,
+        payouts,
         totals: summarizeBySeller(
           paid.map((c) => ({
             seller_id: c.seller_id,

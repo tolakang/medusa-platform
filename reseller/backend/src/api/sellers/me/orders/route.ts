@@ -37,6 +37,8 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "status",
       "currency_code",
       "total",
+      "payment_collections.captured_amount",
+      "payment_collections.refunded_amount",
       "items.title",
       "items.quantity",
     ],
@@ -47,7 +49,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   const { data: commissions } = orders.length
     ? await query.graph({
         entity: "seller_commission",
-        fields: ["order_id", "amount", "status"],
+        fields: ["order_id", "amount", "status", "refunded_total"],
         filters: {
           order_id: orders.map((order) => order.id),
           seller_id: req.auth_context.actor_id,
@@ -64,6 +66,16 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       status: order.status,
       currency_code: order.currency_code,
       total: order.total,
+      // What the customer paid and got back. `total` goes down with refunds
+      // (verified 2.22.6), so the portal shows these instead.
+      paid_total: (order.payment_collections ?? []).reduce(
+        (sum, c) => sum + Number(c?.captured_amount ?? 0),
+        0
+      ),
+      refunded_total: (order.payment_collections ?? []).reduce(
+        (sum, c) => sum + Number(c?.refunded_amount ?? 0),
+        0
+      ),
       items: (order.items ?? []).filter(Boolean).map((item) => ({
         title: item!.title,
         quantity: item!.quantity,

@@ -65,6 +65,39 @@ export function orderStatusLabel(status: string): string {
   return ORDER_LABELS[status] ?? status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
 }
 
+export type SaleLike = {
+  status: string
+  total: number
+  paid_total?: number
+  refunded_total?: number
+}
+
+/**
+ * A sale's status in plain words (role test 2026-11-25): a refunded order
+ * showed "Placed" with a $0.00 total, since Medusa's order total goes down
+ * with refunds.
+ */
+export function saleStatusLabel(order: SaleLike): string {
+  const paid = Number(order.paid_total ?? 0)
+  const refunded = Number(order.refunded_total ?? 0)
+  if (refunded > 0 && paid > 0) {
+    return refunded >= paid ? "Refunded" : "Partly refunded"
+  }
+  return orderStatusLabel(order.status)
+}
+
+/** What the customer paid (before refunds); the order total if nothing was captured. */
+export function saleAmount(order: SaleLike): number {
+  const paid = Number(order.paid_total ?? 0)
+  return paid > 0 ? paid : Number(order.total ?? 0)
+}
+
+/** No commission row: the order came in while the shop wasn't active. */
+export const NO_COMMISSION_LABEL = "None (your shop wasn't active then)"
+
+/** The seller's shop address, or null before the shop owner sets a domain. */
+export const shopUrl = (domain: string | null | undefined) => (domain ? `https://${domain}` : null)
+
 /** A plain-words label for a commission status. */
 export function commissionLabel(status: string): string {
   return COMMISSION_LABELS[status] ?? orderStatusLabel(status)

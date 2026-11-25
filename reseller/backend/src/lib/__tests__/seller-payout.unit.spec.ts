@@ -1,5 +1,7 @@
 import {
   isPayoutDay,
+  netPayoutLines,
+  nextPayoutDate,
   payoutCutoff,
   payoutDay,
   summarizeBySeller,
@@ -64,5 +66,34 @@ describe("totals per seller", () => {
         { seller_id: "a", currency_code: "khr", amount: 100.4 },
       ])
     ).toEqual([{ seller_id: "a", currency_code: "khr", amount: 201, count: 2 }])
+  })
+})
+
+describe("next payout date", () => {
+  const env = { RESELLER_PAYOUT_DAY: "10" }
+  it("is this month's payout day until it passes, then next month's", () => {
+    expect(nextPayoutDate(new Date("2026-11-03T12:00:00Z"), env).toISOString()).toEqual("2026-11-10T00:00:00.000Z")
+    expect(nextPayoutDate(new Date("2026-11-10T12:00:00Z"), env).toISOString()).toEqual("2026-11-10T00:00:00.000Z")
+    expect(nextPayoutDate(new Date("2026-12-11T00:00:00Z"), env).toISOString()).toEqual("2027-01-10T00:00:00.000Z")
+  })
+})
+
+describe("net payout", () => {
+  it("takes open clawbacks off the approved commissions, per seller and currency", () => {
+    const lines = netPayoutLines(
+      [
+        { seller_id: "a", currency_code: "usd", amount: 10 },
+        { seller_id: "a", currency_code: "usd", amount: 0.1 },
+        { seller_id: "b", currency_code: "usd", amount: 4 },
+      ],
+      [
+        { seller_id: "a", currency_code: "usd", amount: -3.05 },
+        { seller_id: "a", currency_code: "khr", amount: -100 },
+      ]
+    )
+    expect(lines).toEqual([
+      { seller_id: "a", currency_code: "usd", amount: 10.1, count: 2, adjustment: -3.05, net: 7.05 },
+      { seller_id: "b", currency_code: "usd", amount: 4, count: 1, adjustment: 0, net: 4 },
+    ])
   })
 })

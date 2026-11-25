@@ -1,7 +1,8 @@
-import { SHOP_NAME } from "@lib/shop"
+import { getShopName } from "@lib/data/seller"
 import { Button, Heading } from "@modules/common/components/ui";
 import LocalizedClientLink from "@modules/common/components/localized-client-link";
-const Hero = () => {
+const Hero = async () => {
+  const shopName = await getShopName()
   return (
     <div className="h-[260px] small:h-[75vh] w-full border-b border-ui-border-base relative bg-ui-bg-subtle">
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center p-6 small:p-32 gap-4 small:gap-6">
@@ -10,7 +11,7 @@ const Hero = () => {
             level="h1"
             className="text-2xl small:text-3xl leading-8 small:leading-10 text-ui-fg-base font-normal"
           >
-            {SHOP_NAME}
+            {shopName}
           </Heading>
           <Heading
             level="h2"

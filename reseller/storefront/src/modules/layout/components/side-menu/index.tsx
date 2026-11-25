@@ -1,5 +1,4 @@
 "use client"
-import { SHOP_NAME } from "@lib/shop"
 
 import { Popover, PopoverPanel, Transition } from "@headlessui/react"
 import useToggleState from "@lib/hooks/use-toggle-state"
@@ -21,12 +20,13 @@ const SideMenuItems = {
 }
 
 type SideMenuProps = {
+  shopName: string
   regions: HttpTypes.StoreRegion[] | null
   locales: Locale[] | null
   currentLocale: string | null
 }
 
-const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
+const SideMenu = ({ shopName, regions, locales, currentLocale }: SideMenuProps) => {
   const countryToggleState = useToggleState()
   const languageToggleState = useToggleState()
 
@@ -133,7 +133,7 @@ const SideMenu = ({ regions, locales, currentLocale }: SideMenuProps) => {
                         />
                       </div>
                       <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} {SHOP_NAME}. All rights
+                        © {new Date().getFullYear()} {shopName}. All rights
                         reserved.
                       </Text>
                     </div>

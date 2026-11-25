@@ -35,7 +35,16 @@ export async function sellerCatalog(container: MedusaContainer, channelId: strin
   }
   const { data: products } = await query.graph({
     entity: "product",
-    fields: ["id", "title", "handle", "thumbnail", "sales_channels.id"],
+    fields: [
+      "id",
+      "title",
+      "handle",
+      "thumbnail",
+      "sales_channels.id",
+      // The lowest price, shown in the portal's product list.
+      "variants.prices.amount",
+      "variants.prices.currency_code",
+    ],
     filters: { status: "published" },
   })
   return products
@@ -47,7 +56,24 @@ export async function sellerCatalog(container: MedusaContainer, channelId: strin
       title: product.title,
       handle: product.handle,
       thumbnail: product.thumbnail,
+      price: lowestPrice(product.variants as unknown as Parameters<typeof lowestPrice>[0]),
       selected: (product.sales_channels ?? []).some((channel) => channel?.id === channelId),
     }))
     .sort((a, b) => a.title.localeCompare(b.title))
+}
+
+type PriceRow = { amount?: unknown; currency_code?: string | null } | null
+/** The lowest variant price, in the first currency found; null without one. */
+export function lowestPrice(
+  variants: ({ prices?: PriceRow[] | null } | null)[] | null | undefined
+): { amount: number; currency_code: string } | null {
+  const prices = (variants ?? []).flatMap((v) => v?.prices ?? []).filter(
+    (p): p is { amount: unknown; currency_code: string } => !!p?.currency_code && p.amount != null
+  )
+  const currency = prices[0]?.currency_code
+  if (!currency) {
+    return null
+  }
+  const amounts = prices.filter((p) => p.currency_code === currency).map((p) => Number(p.amount))
+  return { amount: Math.min(...amounts), currency_code: currency }
 }

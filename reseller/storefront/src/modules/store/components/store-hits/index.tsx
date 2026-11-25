@@ -48,15 +48,21 @@ const StoreHits = ({ hitsPerPage, currencyCode }: StoreHitsProps) => {
 
   const showSkeleton = hasNoResultsYet || (isSearching && isPagingOnly)
 
+  // The pagination widget stays mounted in every state: unmounting it on an
+  // error and remounting it on the next render started a new search each
+  // time, which looped failed searches thousands of times a minute.
   if (status === "error") {
     return (
-      <Text
-        className="py-16 text-center text-ui-fg-error"
-        data-testid="products-error"
-      >
-        Couldn&apos;t load products
-        {error?.message ? `: ${error.message}` : "."}
-      </Text>
+      <>
+        <Text
+          className="py-16 text-center text-ui-fg-error"
+          data-testid="products-error"
+        >
+          Couldn&apos;t load products
+          {error?.message ? `: ${error.message}` : "."}
+        </Text>
+        <SearchPagination />
+      </>
     )
   }
 

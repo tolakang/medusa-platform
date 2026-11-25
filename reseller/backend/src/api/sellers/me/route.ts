@@ -23,6 +23,11 @@ const meOf = async (req: AuthenticatedMedusaRequest) => {
         "domain",
         "status",
         "commission_rate",
+        "phone",
+        "telegram",
+        "payout_bank_name",
+        "payout_account_name",
+        "payout_account_number",
         "sales_channel.id",
         "sales_channel.name",
       ],
@@ -37,13 +42,36 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   res.json({ seller: await meOf(req) })
 }
 
+// Empty text clears the field.
+const Optional = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullable()
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value || null))
+
 // POST /sellers/me (gap review 2026-11-24): the seller changes their shop
-// name. Domain, handle and rate stay the shop owner's.
-export const PostSellerMe = z.object({ name: z.string().trim().min(1).max(120) }).strict()
+// name, contact details (phone, Telegram) and where they are paid (bank or
+// ABA account). Domain, handle and rate stay the shop owner's.
+export const PostSellerMe = z
+  .object({
+    name: z.string().trim().min(1).max(120).optional(),
+    phone: Optional(40),
+    telegram: Optional(64),
+    payout_bank_name: Optional(80),
+    payout_account_name: Optional(120),
+    payout_account_number: Optional(40),
+  })
+  .strict()
 
 export const POST = async (req: AuthenticatedMedusaRequest<z.infer<typeof PostSellerMe>>, res: MedusaResponse) => {
+  const changes = Object.fromEntries(
+    Object.entries(req.validatedBody).filter(([, value]) => value !== undefined)
+  )
   await req.scope
     .resolve<SellerModuleService>(SELLER_MODULE)
-    .updateSellers({ id: req.auth_context.actor_id, name: req.validatedBody.name })
+    .updateSellers({ id: req.auth_context.actor_id, ...changes })
   res.json({ seller: await meOf(req) })
 }

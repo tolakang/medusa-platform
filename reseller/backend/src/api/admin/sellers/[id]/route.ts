@@ -3,9 +3,8 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils"
-import { inviteCode } from "@medusa-platform/medusa-core/lib/invite-code"
 import { updateSellerWorkflow } from "../../../../workflows/seller/update-seller"
-import { SELLER_FIELDS } from "../route"
+import { SELLER_FIELDS, withInviteCode } from "../route"
 import type { PostAdminSellerUpdateType } from "../validators"
 
 const sellerById = async (req: AuthenticatedMedusaRequest, id: string) => {
@@ -17,7 +16,7 @@ const sellerById = async (req: AuthenticatedMedusaRequest, id: string) => {
   if (!seller) {
     throw new MedusaError(MedusaError.Types.NOT_FOUND, "Seller not found")
   }
-  return { ...seller, invite_code: inviteCode("seller", seller.id) }
+  return withInviteCode(seller)
 }
 
 // GET /admin/sellers/:id (TASKS F-081).

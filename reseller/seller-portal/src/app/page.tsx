@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Shell } from "@/components/shell"
-import { day, money } from "@/lib/format"
+import { CopyButton } from "@/components/copy-button"
+import { commissionLabel, day, money, NO_COMMISSION_LABEL, saleAmount, saleStatusLabel, shopUrl } from "@/lib/format"
 import { requireSeller, sellerGet } from "@/lib/server/seller"
 
 type Totals = Record<string, Record<string, number>>
@@ -9,7 +10,10 @@ type Order = {
   display_id: number
   created_at: string
   currency_code: string
+  status: string
   total: number
+  paid_total?: number
+  refunded_total?: number
   commission: { amount: number; status: string } | null
 }
 
@@ -30,8 +34,21 @@ export default async function OverviewPage() {
       .map(([currency, amount]) => money(amount, currency))
       .join(" · ") || (shopCurrency ? money(0, shopCurrency) : "0")
 
+  const link = shopUrl(seller.domain)
   return (
     <Shell seller={seller} active="/">
+      {link && (
+        <section className="card flex flex-wrap items-center gap-3 p-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm text-ui-fg-subtle">Your shop</p>
+            <p className="truncate font-medium">{link}</p>
+          </div>
+          <a className="btn-primary" href={link} target="_blank" rel="noopener noreferrer">
+            Open my shop
+          </a>
+          <CopyButton text={link} />
+        </section>
+      )}
       <section className="grid gap-4 sm:grid-cols-3">
         {[
           { label: "Waiting for approval", value: sum("pending") },
@@ -67,11 +84,13 @@ export default async function OverviewPage() {
         {orders.length === 0 ? (
           <p className="text-sm text-ui-fg-subtle">No orders in your shop yet.</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="table">
             <thead>
               <tr>
                 <th>Order</th>
                 <th>Date</th>
+                <th>Status</th>
                 <th>Total</th>
                 <th>Your commission</th>
               </tr>
@@ -81,16 +100,18 @@ export default async function OverviewPage() {
                 <tr key={order.id}>
                   <td>#{order.display_id}</td>
                   <td>{day(order.created_at)}</td>
-                  <td>{money(order.total, order.currency_code)}</td>
+                  <td>{saleStatusLabel(order)}</td>
+                  <td>{money(saleAmount(order), order.currency_code)}</td>
                   <td>
                     {order.commission
-                      ? `${money(order.commission.amount, order.currency_code)} (${order.commission.status})`
-                      : "None"}
+                      ? `${money(order.commission.amount, order.currency_code)} (${commissionLabel(order.commission.status)})`
+                      : NO_COMMISSION_LABEL}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </Shell>

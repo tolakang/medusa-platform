@@ -9,6 +9,7 @@ export type UpdateSellerInput = {
   domain?: string | null
   status?: "pending" | "active" | "suspended"
   commission_rate?: number | null
+  payout_hold?: boolean
 }
 
 const domainTaken = (domain: string) =>
@@ -51,6 +52,7 @@ export const updateSellerStep = createStep(
       domain: before.domain,
       status: before.status,
       commission_rate: before.commission_rate,
+      payout_hold: before.payout_hold,
     })
   },
   async (before, { container }) => {

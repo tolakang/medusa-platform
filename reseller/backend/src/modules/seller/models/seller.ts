@@ -1,5 +1,7 @@
 import { model } from "@medusajs/framework/utils"
+import { SellerAdjustment } from "./seller-adjustment"
 import { SellerCommission } from "./seller-commission"
+import { SellerPayout } from "./seller-payout"
 
 // A reseller: sells your products on their own storefront domain and earns a
 // commission on each order (BUILD_PLAN §9.5, TASKS P5-01). Their sales
@@ -22,7 +24,25 @@ export const Seller = model
     // Percent of the order total, 0 to 100. Null = the shop's default
     // (RESELLER_DEFAULT_COMMISSION_RATE), read when a commission is recorded.
     commission_rate: model.float().nullable(),
+    // When the seller accepted the invitation and set a password; null =
+    // still invited (the admin list shows "Invited", the code stays visible).
+    accepted_at: model.dateTime().nullable(),
+    // The owner holds this seller's payouts: the payout day approves nothing
+    // of theirs until the hold is lifted.
+    payout_hold: model.boolean().default(false),
+    // The seller's own contact and payout details (settings page).
+    phone: model.text().nullable(),
+    telegram: model.text().nullable(),
+    payout_bank_name: model.text().nullable(),
+    payout_account_name: model.text().nullable(),
+    payout_account_number: model.text().nullable(),
     commissions: model.hasMany(() => SellerCommission, {
+      mappedBy: "seller",
+    }),
+    adjustments: model.hasMany(() => SellerAdjustment, {
+      mappedBy: "seller",
+    }),
+    payouts: model.hasMany(() => SellerPayout, {
       mappedBy: "seller",
     }),
   })

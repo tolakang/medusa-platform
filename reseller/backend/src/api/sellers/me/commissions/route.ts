@@ -41,6 +41,8 @@ export const GET = async (
       "currency_code",
       "status",
       "paid_at",
+      "refunded_total",
+      "adjusted_base",
       "created_at",
     ],
   })

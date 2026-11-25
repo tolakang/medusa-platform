@@ -128,6 +128,16 @@ export default defineMiddlewares({
       middlewares: [validateAndTransformBody(PostSellerMe)],
     },
     {
+      // The seller changes their password while signed in: the same
+      // strength rule and per-IP limit as sign-in.
+      method: ['POST'],
+      matcher: '/sellers/me/password',
+      middlewares: [
+        limitPerIp('seller_password_change', AUTH_LIMITS.login, 60),
+        validateAndTransformBody(PostCustomerPassword),
+      ],
+    },
+    {
       method: ['POST'],
       matcher: '/sellers/accept',
       middlewares: [

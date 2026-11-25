@@ -22,6 +22,10 @@ export const SellerCommission = model
       .enum(["pending", "approved", "paid", "cancelled"])
       .default("pending"),
     paid_at: model.dateTime().nullable(),
+    // After a refund: what the customer got back, and the base the
+    // commission was recalculated on. Null = never refunded.
+    refunded_total: model.bigNumber().nullable(),
+    adjusted_base: model.bigNumber().nullable(),
     seller: model.belongsTo(() => Seller, {
       mappedBy: "commissions",
     }),

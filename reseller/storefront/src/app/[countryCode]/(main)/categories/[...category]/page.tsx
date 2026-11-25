@@ -1,4 +1,4 @@
-import { SHOP_NAME } from "@lib/shop"
+import { getShopName } from "@lib/data/seller"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
@@ -23,12 +23,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   try {
     const productCategory = await getCategoryByHandle(params.category)
 
-    const title = productCategory.name + " | " + SHOP_NAME
+    const title = productCategory.name + " | " + (await getShopName())
 
     const description = productCategory.description ?? `${title} category.`
 
     return {
-      title: `${title} | ${SHOP_NAME}`,
+      title,
       description,
       alternates: {
         canonical: `${params.category.join("/")}`,

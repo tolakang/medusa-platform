@@ -8,6 +8,12 @@ import { inviteCode } from "@medusa-platform/medusa-core/lib/invite-code"
 import { createSellerWorkflow } from "../../../workflows/seller/create-seller"
 import type { PostAdminSellerType } from "./validators"
 
+/** The invite code while the seller is still invited; null once accepted. */
+export const withInviteCode = <T extends { id: string; accepted_at?: unknown }>(seller: T) => ({
+  ...seller,
+  invite_code: seller.accepted_at ? null : inviteCode("seller", seller.id),
+})
+
 export const SELLER_FIELDS = [
   "id",
   "handle",
@@ -16,6 +22,13 @@ export const SELLER_FIELDS = [
   "domain",
   "status",
   "commission_rate",
+  "accepted_at",
+  "payout_hold",
+  "phone",
+  "telegram",
+  "payout_bank_name",
+  "payout_account_name",
+  "payout_account_number",
   "created_at",
   "sales_channel.id",
   "sales_channel.name",
@@ -41,12 +54,10 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       fields: SELLER_FIELDS,
       pagination: { skip: offset, take: limit, order: { created_at: "DESC" } },
     })
-  // The invite code is the shop's to hand to each seller (REVIEW_FIXES B11).
+  // The invite code is the shop's to hand to each seller (REVIEW_FIXES B11),
+  // until they accept and set a password: then it is spent, and not shown.
   res.json({
-    sellers: sellers.map((seller) => ({
-      ...seller,
-      invite_code: inviteCode("seller", seller.id),
-    })),
+    sellers: sellers.map(withInviteCode),
     count: metadata?.count ?? sellers.length,
     limit,
     offset,

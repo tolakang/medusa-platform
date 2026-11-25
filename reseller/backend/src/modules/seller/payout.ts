@@ -25,6 +25,42 @@ export type DueLine = {
   count: number
 }
 
+/**
+ * The next payout day after `now` (UTC midnight): this month's if it hasn't
+ * passed, else next month's. On the day itself, today.
+ */
+export function nextPayoutDate(now: Date, env: Record<string, string | undefined> = process.env) {
+  const day = payoutDay(env)
+  const thisMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day))
+  return now.getUTCDate() <= day
+    ? thisMonth
+    : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, day))
+}
+
+export type NetLine = DueLine & { adjustment: number; net: number }
+
+/**
+ * Per seller and currency: approved commissions, the open adjustments
+ * (clawbacks, negative) carried into the payout, and what is paid (net).
+ * Adjustments in a currency with no commissions to pay wait.
+ */
+export function netPayoutLines(
+  commissions: { seller_id: string; currency_code: string; amount: number | string }[],
+  adjustments: { seller_id: string; currency_code: string; amount: number | string }[]
+): NetLine[] {
+  const adjusted = new Map(
+    summarizeBySeller(adjustments).map((line) => [`${line.seller_id}:${line.currency_code}`, line.amount])
+  )
+  return summarizeBySeller(commissions).map((line) => {
+    const adjustment = adjusted.get(`${line.seller_id}:${line.currency_code}`) ?? 0
+    return {
+      ...line,
+      adjustment,
+      net: roundToCurrency(MathBN.add(line.amount, adjustment), line.currency_code),
+    }
+  })
+}
+
 /** What each seller is owed, per currency, from a list of commissions. */
 export function summarizeBySeller(
   commissions: { seller_id: string; currency_code: string; amount: number | string }[]

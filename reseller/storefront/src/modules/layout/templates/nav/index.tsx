@@ -1,4 +1,4 @@
-import { SHOP_NAME } from "@lib/shop"
+import { getShopName } from "@lib/data/seller"
 import { Suspense } from "react"
 
 import { listLocales } from "@lib/data/locales"
@@ -16,6 +16,7 @@ export default async function Nav() {
     listLocales(),
     getLocale(),
   ])
+  const shopName = await getShopName()
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
@@ -23,7 +24,7 @@ export default async function Nav() {
         <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
           <div className="flex-1 basis-0 h-full flex items-center">
             <div className="h-full">
-              <SideMenu regions={regions} locales={locales} currentLocale={currentLocale} />
+              <SideMenu shopName={shopName} regions={regions} locales={locales} currentLocale={currentLocale} />
             </div>
           </div>
 
@@ -33,7 +34,7 @@ export default async function Nav() {
               className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase"
               data-testid="nav-store-link"
             >
-              {SHOP_NAME}
+              {shopName}
             </LocalizedClientLink>
           </div>
 
