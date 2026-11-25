@@ -4,6 +4,7 @@ import {
 } from "@medusajs/framework";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 import { addCompanyToCustomerGroupWorkflow } from "../../../../../workflows/company/workflows/";
+import { refreshCompanyCarts } from "../../../../../utils/refresh-company-carts";
 import { adminCompanyFields } from "../../query-config";
 import { AdminAddCompanyToCustomerGroupType } from "../../validators";
 
@@ -19,6 +20,8 @@ export const POST = async (
     input: { company_id: id, group_id },
     container: req.scope,
   });
+  // New price tier: reprice the company's open carts.
+  await refreshCompanyCarts(req.scope, id);
 
   const {
     data: [company],

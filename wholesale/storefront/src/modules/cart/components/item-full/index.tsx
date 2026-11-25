@@ -84,7 +84,11 @@ const ItemFull = ({
     }
   }
 
-  const maxQuantity = item.variant?.inventory_quantity ?? 100
+  // Untracked or backorderable stock has no cap (it read 0 for manage_inventory: false).
+  const maxQuantity =
+    item.variant?.manage_inventory === false || item.variant?.allow_backorder
+      ? Number.MAX_SAFE_INTEGER
+      : item.variant?.inventory_quantity ?? 100
 
   return (
     <Container
