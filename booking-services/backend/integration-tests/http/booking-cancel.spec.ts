@@ -12,6 +12,7 @@ import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
 import { addBookingToCartWorkflow } from "../../src/workflows/add-booking-to-cart"
 import { cancelBookingWorkflow, planCancellation } from "../../src/workflows/cancel-booking"
+import { BOOKING_CANCELLED_TEMPLATE } from "../../src/lib/booking-cancel-email"
 
 // TASKS P3-08 (BUILD_PLAN §9.3) and the P3-16 acceptance criterion:
 // cancellation inside the policy (BOOKING_CANCEL_HOURS, default 24) refunds;
@@ -213,6 +214,40 @@ medusaIntegrationTestRunner({
         expect(await refundsOf(paymentId)).toEqual([
           { amount: itemTotal, note: `Booking ${bookingId} cancelled by the shop: refunded in full.` },
         ])
+      })
+
+      // Cancellation emails so far, waited for (subscribers run after the workflow).
+      const cancelEmails = async (count: number) => {
+        let rows: any[] = []
+        for (let i = 0; i < 20; i++) {
+          rows = (
+            await query().graph({ entity: "notification", fields: ["to", "channel", "data"], filters: { template: BOOKING_CANCELLED_TEMPLATE } })
+          ).data
+          if (rows.length >= count && count > 0) break
+          await new Promise((r) => setTimeout(r, 250))
+        }
+        return rows
+      }
+
+      it("a staff cancel of a paid booking emails the customer once, with the refund", async () => {
+        const { bookingId, itemTotal } = await placed({ capture: true })
+        await cancelBookingWorkflow(getContainer()).run({ input: { booking_id: bookingId, created_by: "prov_test" } })
+
+        const emails = await cancelEmails(1)
+        expect(emails).toHaveLength(1)
+        expect([emails[0].to, emails[0].channel, emails[0].data.refunded_amount, emails[0].data.calendar]).toEqual([
+          "sok@example.com",
+          "email",
+          itemTotal,
+          "Sophea",
+        ])
+      })
+
+      it("a customer's own cancel sends no cancellation email (unchanged)", async () => {
+        const { bookingId } = await placed({ capture: true })
+        await booking().updateBookings({ id: bookingId, customer_id: "cus_self" })
+        await cancelBookingWorkflow(getContainer()).run({ input: { booking_id: bookingId, customer_id: "cus_self" } })
+        expect(await cancelEmails(0)).toEqual([])
       })
 
       it("a staff cancel after a partial refund refunds only what is left (never twice)", async () => {
