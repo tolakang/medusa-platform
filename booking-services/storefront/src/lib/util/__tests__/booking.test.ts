@@ -26,7 +26,32 @@ import {
   itemsPlace,
   noDeliveryNote,
   balanceWhere,
+  cartCount,
+  holdLeft,
+  noPaymentDue,
 } from "../booking.ts"
+
+describe("cart badge, hold countdown, $0 carts", () => {
+  it("counts a booking once, extras not at all, goods by quantity", () => {
+    const booking = { quantity: 3, metadata: { booking_id: "book_1", booking_starts_at: "2026-12-01T02:00:00Z" } }
+    const extra = { quantity: 4, metadata: { booking_extra_for: "book_1" } }
+    const goods = { quantity: 2, metadata: {} }
+    assert.equal(cartCount([booking, extra, goods]), 3)
+    assert.equal(cartCount(null), 0)
+  })
+
+  it("shows the time left as m:ss and null once run out", () => {
+    const now = Date.parse("2026-12-01T00:00:00Z")
+    assert.equal(holdLeft("2026-12-01T00:09:05Z", now), "9:05")
+    assert.equal(holdLeft("2026-12-01T00:00:00Z", now), null)
+  })
+
+  it("knows when nothing is due", () => {
+    assert.equal(noPaymentDue({ items: [{}], total: 0 }), true)
+    assert.equal(noPaymentDue({ items: [], total: 0 }), false)
+    assert.equal(noPaymentDue({ items: [{}], total: 10 }), false)
+  })
+})
 
 describe("wording by booking kind", () => {
   const p = (booking_kind?: string, extra = false) => ({ product: { metadata: { booking_kind, ...(extra ? { booking_extra: true } : {}) } } })

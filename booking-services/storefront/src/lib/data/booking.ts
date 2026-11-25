@@ -61,6 +61,23 @@ export async function listSlots(
     .catch((e) => ({ slots: [], error: e?.message ?? "Could not load times." }))
 }
 
+// When each of the cart's holds runs out, by booking id (GET
+// /store/booking/cart), for the countdown on booking lines.
+export async function listCartHolds(): Promise<Record<string, string>> {
+  const cartId = await getCartId()
+  if (!cartId) {
+    return {}
+  }
+  return sdk.client
+    .fetch<{ holds: { booking_id: string; hold_expires_at: string }[] }>("/store/booking/cart", {
+      query: { cart_id: cartId },
+      headers: await getAuthHeaders(),
+      cache: "no-store",
+    })
+    .then((r) => Object.fromEntries(r.holds.map((h) => [h.booking_id, h.hold_expires_at])))
+    .catch(() => ({}))
+}
+
 export async function addBookingToCart(input: {
   countryCode: string
   variantId: string

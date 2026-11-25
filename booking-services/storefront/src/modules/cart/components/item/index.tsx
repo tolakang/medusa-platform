@@ -8,6 +8,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
 import { extraFor, formatBookingRange, itemBooking } from "@lib/util/booking"
+import HoldCountdown from "@modules/common/components/hold-countdown"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -121,6 +122,7 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
               </span>
             ) : null}
             {booked.dropoff ? <span className="block" data-testid="product-booking-dropoff">To: {booked.dropoff}</span> : null}
+            <HoldCountdown bookingId={item.metadata?.booking_id as string | undefined} />
           </Text>
         )}
       </Table.Cell>

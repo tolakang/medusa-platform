@@ -188,6 +188,23 @@ export function noPaymentDue(cart: { items?: unknown[] | null; total?: number | 
   return (cart?.items?.length ?? 0) > 0 && cart?.total != null && Number(cart.total) === 0
 }
 
+// How many things the cart badge counts (TASKS P3-13 follow-up): a booking
+// once (whatever its seats), an extra not at all (it goes with its booking),
+// anything else by its quantity.
+export function cartCount(items: { quantity: number; metadata?: Meta }[] | null | undefined): number {
+  return (items ?? []).reduce((n, item) => n + (extraFor(item) ? 0 : itemBooking(item) ? 1 : item.quantity), 0)
+}
+
+/** A hold's time left as "m:ss", or null once it has run out. */
+export function holdLeft(expiresAt: string, now = Date.now()): string | null {
+  const ms = Date.parse(expiresAt) - now
+  if (!(ms > 0)) {
+    return null
+  }
+  const s = Math.ceil(ms / 1000)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }
