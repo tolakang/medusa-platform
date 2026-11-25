@@ -2,7 +2,7 @@ import type { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/frame
 import { cancelBookingWorkflow } from "../../../../../../workflows/cancel-booking"
 
 // POST /admin/booking/bookings/:id/cancel (TASKS P3-11): staff cancel any
-// booking; the policy decides the refund (cancel-booking, P3-08).
+// booking; a staff cancel always refunds in full (cancel-booking, P3-08).
 export const POST = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const { result } = await cancelBookingWorkflow(req.scope).run({
     input: { booking_id: req.params.id, created_by: req.auth_context.actor_id },

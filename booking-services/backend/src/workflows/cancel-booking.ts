@@ -19,7 +19,8 @@ import type BookingModuleService from "../modules/booking/service"
 // TASKS P3-08 (BUILD_PLAN §9.3): cancel a booking with the cancellation
 // policy and refund it. A pending hold or a confirmed booking can be
 // cancelled until it starts; a confirmed booking cancelled at least
-// BOOKING_CANCEL_HOURS before the start is refunded the amount of its order
+// BOOKING_CANCEL_HOURS before the start (or cancelled by staff at any time)
+// is refunded the amount of its order
 // item, from a captured payment of its order (P3-16: inside the policy
 // refunds, outside it doesn't). The refund runs last (money can't be rolled
 // back) and carries an idempotency key, so a retried cancellation never
@@ -85,7 +86,12 @@ const planCancellationStep = createStep(
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PACKAGE_PIECE_CANCEL_MESSAGE)
     }
 
-    const decision = cancelDecision(booking, new Date(), service.cancelHours)
+    // Staff (provider portal, admin) cancel without a customer_id: the
+    // window only limits the customer's own cancellations, so staff cancels
+    // always refund in full (owner decision, 2026-11-25).
+    const byStaff = input.customer_id === undefined
+    const decision = cancelDecision(booking, new Date(), service.cancelHours, { byStaff })
+    const inWindow = cancelDecision(booking, new Date(), service.cancelHours)
     if (!decision.allowed) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, decision.message)
     }
@@ -162,7 +168,10 @@ const planCancellationStep = createStep(
         payment_id: payment.id,
         amount: Math.min(amount, payment.available),
         idempotency_key: `booking_cancel_${booking.id}`,
-        note: `Booking ${booking.id} cancelled within the cancellation policy.`,
+        note:
+          inWindow.allowed && inWindow.refund
+            ? `Booking ${booking.id} cancelled within the cancellation policy.`
+            : `Booking ${booking.id} cancelled by the shop: refunded in full.`,
       })
     )
   }

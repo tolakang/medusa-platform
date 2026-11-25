@@ -7,10 +7,14 @@ export type CancelDecision =
 
 // A pending hold or a confirmed booking can be cancelled until it starts.
 // It is refunded when cancelled at least `cancelHours` before the start.
+// The window only limits the customer's own cancellations: when staff (a
+// provider or the shop) cancel a confirmed booking, it is always refunded
+// (owner decision, 2026-11-25).
 export function cancelDecision(
   booking: { status: string; starts_at: Date | string },
   now: Date,
-  cancelHours: number
+  cancelHours: number,
+  opts: { byStaff?: boolean } = {}
 ): CancelDecision {
   if (booking.status !== "pending" && booking.status !== "confirmed") {
     return { allowed: false, message: "This booking can't be cancelled." }
@@ -20,6 +24,6 @@ export function cancelDecision(
     return { allowed: false, message: "This booking has already started." }
   }
   const refund =
-    booking.status === "confirmed" && starts - now.getTime() >= cancelHours * 3600 * 1000
+    booking.status === "confirmed" && (opts.byStaff === true || starts - now.getTime() >= cancelHours * 3600 * 1000)
   return { allowed: true, refund }
 }

@@ -43,7 +43,9 @@ const planPackageCancelStep = createStep(
       throw new MedusaError(MedusaError.Types.NOT_FOUND, PACKAGE_NOT_FOUND_MESSAGE)
     }
     const first = [...pieces].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime())[0]
-    const decision = cancelDecision(first, new Date(), service.cancelHours)
+    // Staff cancels always refund (owner decision, 2026-11-25; see cancel-booking).
+    const decision = cancelDecision(first, new Date(), service.cancelHours, { byStaff: input.customer_id === undefined })
+    const inWindow = cancelDecision(first, new Date(), service.cancelHours)
     if (!decision.allowed) {
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, decision.message)
     }
@@ -99,7 +101,10 @@ const planPackageCancelStep = createStep(
         payment_id: payment.id,
         amount: Math.min(amount, payment.available),
         idempotency_key: `booking_package_cancel_${input.package_id}`,
-        note: `Event package ${input.package_id} cancelled within the cancellation policy.`,
+        note:
+          inWindow.allowed && inWindow.refund
+            ? `Event package ${input.package_id} cancelled within the cancellation policy.`
+            : `Event package ${input.package_id} cancelled by the shop: refunded in full.`,
       })
     )
   }
