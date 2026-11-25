@@ -46,12 +46,19 @@ const ShippingAddress = ({
   }
 
   const handleSubmit = async (formData: FormData) => {
-    await setShippingAddress(formData).catch((e) => {
-      setError(e.message)
-      return
-    })
+    setError(null)
+    const failed = await setShippingAddress(formData).then(
+      () => false,
+      (e) => {
+        setError(e.message)
+        return true
+      }
+    )
+    if (failed) return
 
-    router.push(pathname + "?" + createQueryString("step", "billing-address"), {
+    const next =
+      formData.get("same_as_billing") === "on" ? "delivery" : "billing-address"
+    router.push(pathname + "?" + createQueryString("step", next), {
       scroll: false,
     })
   }

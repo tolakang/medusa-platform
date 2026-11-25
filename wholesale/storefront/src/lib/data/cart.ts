@@ -454,6 +454,12 @@ export async function setShippingAddress(formData: FormData) {
       // customer_id: customer?.id,
       email: customer?.email || formData.get("email"),
     } as unknown as HttpTypes.StoreUpdateCart
+    // "Billing same as shipping" (checkout polish 2026-11-25).
+    if (formData.get("same_as_billing") === "on") {
+      data.billing_address = {
+        ...(data.shipping_address as HttpTypes.StoreAddAddress),
+      }
+    }
     await updateCart(data)
   } catch (e: any) {
     throw new Error(e)
