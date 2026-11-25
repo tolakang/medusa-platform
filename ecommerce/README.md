@@ -24,9 +24,9 @@ ecommerce/
 |---|---|---|---|---|
 | `ecommerce-postgres` | Dokploy **PostgreSQL** | — | — | database `ecommerce` |
 | `ecommerce-redis` | Dokploy **Redis** | — | — | — |
-| `ecommerce-backend` | Application (Dockerfile) | `/ecommerce/backend` | 9000 → `api.example.com` | `backend/.env.example`, `MEDUSA_WORKER_MODE=server` |
+| `ecommerce-backend` | Application (Dockerfile) | `/ecommerce/backend` | 9000 → `api.example.com` | `backend/.env.example`, `MEDUSA_WORKER_MODE=server`, `ORDER_ACCESS_SECRET` (= the storefront's) |
 | `ecommerce-worker` | Application (Dockerfile) | `/ecommerce/backend` | none | same env + worker overrides |
-| `ecommerce-storefront` | Application (Dockerfile) | `/ecommerce/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
+| `ecommerce-storefront` | Application (Dockerfile) | `/ecommerce/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime); runtime `ORDER_ACCESS_SECRET` (`openssl rand -hex 32`, same value as the backend: guest order details, `packages/medusa-core/src/api/order-access.ts`) |
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `ecommerce/<app>/Dockerfile` and **Docker Context Path** `.` (the repo root, since SC-1: both apps are in the root pnpm workspace; paths relative to the repo root, F-011), and **watch paths** `ecommerce/<app>/**` plus the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, so a change to one app never redeploys the other; a Medusa catalog change redeploys both. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 

@@ -52,6 +52,8 @@ services:
       MEDUSA_FF_CACHING: "true"
       JWT_SECRET: local-only-jwt-secret
       COOKIE_SECRET: local-only-cookie-secret
+      # Same value on the storefront: order details proof (order-access.ts).
+      ORDER_ACCESS_SECRET: local-only-order-access-secret
       # Plain http here, so the admin session cookie must not be Secure (local only).
       SESSION_COOKIE_SECURE: "false"
       # Booking settings (BUILD_PLAN 6.3): new resources use the shop's zone.
@@ -103,6 +105,7 @@ services:
     depends_on:
       backend: { condition: service_healthy }
     environment:
+      ORDER_ACCESS_SECRET: local-only-order-access-secret
       NODE_ENV: production
       PORT: "8000"
       MEDUSA_BACKEND_URL: http://localhost:9000

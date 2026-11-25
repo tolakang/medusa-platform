@@ -29,9 +29,9 @@ booking-services/
 |---|---|---|---|---|
 | `booking-services-postgres` | Dokploy **PostgreSQL** | — | — | database `booking_services` |
 | `booking-services-redis` | Dokploy **Redis** | — | — | — |
-| `booking-services-backend` | Application (Dockerfile) | `/booking-services/backend` | 9000 → `api.example.com` | `backend/.env.example`, `MEDUSA_WORKER_MODE=server` |
+| `booking-services-backend` | Application (Dockerfile) | `/booking-services/backend` | 9000 → `api.example.com` | `backend/.env.example`, `MEDUSA_WORKER_MODE=server`, `ORDER_ACCESS_SECRET` (= the storefront's) |
 | `booking-services-worker` | Application (Dockerfile) | `/booking-services/backend` | none | same env + worker overrides |
-| `booking-services-storefront` | Application (Dockerfile) | `/booking-services/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
+| `booking-services-storefront` | Application (Dockerfile) | `/booking-services/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime); runtime `ORDER_ACCESS_SECRET` (`openssl rand -hex 32`, same value as the backend: guest order details, `packages/medusa-core/src/api/order-access.ts`) |
 | `booking-services-provider-portal` | Application (Dockerfile) | `/booking-services/provider-portal` | 3000 → `providers.example.com` | `provider-portal/.env.example`; the backend's `PROVIDER_CORS`, `PROVIDER_PORTAL_URL` and `AUTH_CORS` get its URL |
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `booking-services/<app>/Dockerfile` and **Docker Context Path** `.` (the repo root, since SC-1: the apps are in the root pnpm workspace; paths relative to the repo root, F-011), and **watch paths** `booking-services/<app>/**` plus the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, so a change to one app never redeploys another; a Medusa catalog change redeploys all of them. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
