@@ -162,6 +162,20 @@ export function isServiceOnlyCart(
   return items.length > 0 && items.every((i) => i.requires_shipping === false)
 }
 
+// A pay-later order (the manual provider) not paid yet: its bookings are
+// reserved, not confirmed, and its ticket codes wait for the payment.
+export function awaitingPayment(order: {
+  payment_status?: string | null
+  payment_collections?: { payments?: { provider_id?: string; captured_at?: unknown }[] | null }[] | null
+}): boolean {
+  const payments = (order.payment_collections ?? []).flatMap((c) => c?.payments ?? [])
+  return (
+    payments.length > 0 &&
+    payments.every((p) => p.provider_id?.startsWith("pp_system_default") && !p.captured_at) &&
+    !["captured", "partially_captured"].includes(order.payment_status ?? "")
+  )
+}
+
 export type ItemBooking = {
   starts_at: string
   ends_at: string

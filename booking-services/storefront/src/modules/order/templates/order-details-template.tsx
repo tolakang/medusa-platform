@@ -2,7 +2,7 @@
 
 import { XMark } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
-import { isServiceOnlyCart } from "@lib/util/booking"
+import { awaitingPayment, isServiceOnlyCart } from "@lib/util/booking"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Help from "@modules/order/components/help"
 import EventTickets from "@modules/order/components/event-tickets"
@@ -40,7 +40,7 @@ const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
       >
         <OrderDetails order={order} showStatus bookingStatuses={bookingStatuses} />
         <Items order={order} />
-          <EventTickets orderId={order.id} />
+        <EventTickets orderId={order.id} held={awaitingPayment(order)} />
         <ShippingDetails order={order} />
         <OrderSummary order={order} />
         <Help servicesOnly={isServiceOnlyCart(order)} />

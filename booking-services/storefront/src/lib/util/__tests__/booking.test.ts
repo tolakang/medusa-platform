@@ -6,6 +6,7 @@ import {
   formatSlotTime,
   bookingStatusLabel,
   isServiceOnlyCart,
+  awaitingPayment,
   depositPercent,
   depositSplit,
   paymentPlanText,
@@ -135,5 +136,17 @@ describe("service choices (TASKS P3-19)", () => {
     ]
     assert.deepEqual(orderedServices(cuts).map((v) => v.title), ["30 min", "60 min"])
     assert.deepEqual(tables.map((v) => v.title), ["2 people", "6 people", "4 people"], "the input is not changed")
+  })
+})
+
+describe("awaitingPayment", () => {
+  const manual = (captured_at: unknown) => ({ payment_collections: [{ payments: [{ provider_id: "pp_system_default", captured_at }] }] })
+  it("is true for a pay-later order not captured yet", () => {
+    assert.equal(awaitingPayment({ ...manual(null), payment_status: "authorized" }), true)
+  })
+  it("is false once captured, for card payments and for $0 orders", () => {
+    assert.equal(awaitingPayment({ ...manual("2026-11-25"), payment_status: "captured" }), false)
+    assert.equal(awaitingPayment({ payment_collections: [{ payments: [{ provider_id: "pp_payway_payway" }] }] }), false)
+    assert.equal(awaitingPayment({ payment_collections: [] }), false)
   })
 })

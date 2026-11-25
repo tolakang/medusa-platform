@@ -7,7 +7,11 @@ import QRCode from "qrcode"
 // order is placed, so a fresh confirmation page may not list them yet; the
 // email has them too. Each code is also drawn as a QR code, here on the
 // server (P3-24 follow-up): the code never goes to an outside QR service.
-export default async function EventTickets({ orderId }: { orderId: string }) {
+export default async function EventTickets({ orderId, held = false }: { orderId: string; held?: boolean }) {
+  // Pay later, not paid yet: the codes wait for the payment.
+  if (held) {
+    return null
+  }
   const tickets = await listOrderTickets(orderId)
   if (!tickets.length) {
     return null
