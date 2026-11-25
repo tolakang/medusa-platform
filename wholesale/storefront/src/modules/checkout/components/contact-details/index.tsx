@@ -92,7 +92,8 @@ const ContactDetails = ({
 
           {!isOpen &&
             isCompleted &&
-            cartApprovalStatus !== ApprovalStatusType.PENDING && (
+            cartApprovalStatus !== ApprovalStatusType.PENDING &&
+            cartApprovalStatus !== ApprovalStatusType.APPROVED && (
               <Text>
                 <button
                   onClick={handleEdit}
