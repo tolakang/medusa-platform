@@ -83,7 +83,16 @@ const Item = ({ item, type = "full", currencyCode }: ItemProps) => {
         >
           {item.product_title}
         </Text>
-        <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {/* A booking reads as the service, not "Variant: 30 min". */}
+        {booked ? (
+          item.variant?.title && (
+            <Text className="txt-small text-ui-fg-subtle" data-testid="product-variant">
+              {item.variant.title}
+            </Text>
+          )
+        ) : (
+          <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        )}
         {eventDate && (
           <Text className="txt-small text-ui-fg-subtle" data-testid="product-package">
             Event package on{" "}

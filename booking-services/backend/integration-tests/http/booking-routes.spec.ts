@@ -242,7 +242,7 @@ medusaIntegrationTestRunner({
 
           const { data } = await api.post("/store/booking/cancel", { booking_id: mine.id }, { headers: sok.headers })
           // A walk-in style booking without an order: nothing to refund.
-          expect(data).toEqual({ booking: { id: mine.id, status: "cancelled" }, refund: "no_order", refunded_amount: 0 })
+          expect(data).toEqual({ booking: { id: mine.id, status: "cancelled" }, refund: "no_order", refunded_amount: 0, pass_returned: false })
         })
       })
     })

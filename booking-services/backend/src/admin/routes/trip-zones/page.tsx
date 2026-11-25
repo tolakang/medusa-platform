@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 import { sdk } from "../../lib/sdk"
 import { formatMoney } from "../../lib/format"
+import { usePageTitle } from "../../lib/page-title"
 
 // Trip zones (TASKS P3-21, plan D12 "zones"): the areas trips run between and,
 // for each vehicle of a zone-priced trip service (product metadata
@@ -19,6 +20,7 @@ type Product = { id: string; title: string; metadata?: Record<string, unknown> |
 const ZONES_KEY = ["booking-zones"]
 
 const TripZonesPage = () => {
+  usePageTitle("Trip zones")
   const queryClient = useQueryClient()
   const [zoneName, setZoneName] = useState("")
   const [form, setForm] = useState({ variant_id: "", from: "", to: "", amount: "", minutes: "60" })
@@ -157,7 +159,7 @@ const TripZonesPage = () => {
         <div className="px-6 py-4">
           <Heading level="h1">Trip zones</Heading>
           <Text size="small" className="text-ui-fg-subtle">
-            Areas for trips priced by zones (a product with Metadata booking_kind = C and trip_pricing = zones). Each
+            Areas for trips priced by area (moving or transport services set to charge by area, not by the hour). Each
             vehicle has a price and a length for a trip between two areas; it counts both ways.
           </Text>
         </div>

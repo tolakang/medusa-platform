@@ -18,7 +18,8 @@ export const BookingProvider = model
     id: model.id({ prefix: "bprov" }).primaryKey(),
     role: model.enum(["staff", "partner"]),
     // invited: staff not yet accepted; pending: partner waiting for approval;
-    // active: may sign in and serve; suspended: stopped by the admin.
+    // active: may sign in and serve; suspended: stopped by the admin (a
+    // declined signup is suspended with a status_reason).
     status: model.enum(["invited", "pending", "active", "suspended"]),
     // Sign-in email, stored lowercase (the workflows normalise it).
     email: model.text(),
@@ -35,6 +36,8 @@ export const BookingProvider = model
     // Partner commission in percent, 0 to 100 (P3-33). Null = the shop's
     // default. Staff earn no commission.
     commission_rate: model.float().nullable(),
+    // Why the admin declined a partner's signup or suspended them, in words.
+    status_reason: model.text().nullable(),
     resources: model.hasMany(() => BookingResource, { mappedBy: "provider" }),
     commissions: model.hasMany(() => BookingCommission, { mappedBy: "provider" }),
     payouts: model.hasMany(() => BookingPayout, { mappedBy: "provider" }),

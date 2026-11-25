@@ -3,6 +3,7 @@ import { ReceiptPercent } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
+import { usePageTitle } from "../../lib/page-title"
 
 // Passes (TASKS P3-29 follow-up): customers' passes, soonest to expire first,
 // with credits left and the order they came from. Reads GET /admin/booking/passes.
@@ -18,6 +19,7 @@ type Pass = {
 }
 
 const PassesPage = () => {
+  usePageTitle("Passes")
   const { data, isLoading, error } = useQuery({
     queryKey: ["booking-passes"],
     queryFn: () => sdk.client.fetch<{ passes: Pass[] }>("/admin/booking/passes"),
@@ -88,8 +90,25 @@ const PassesPage = () => {
                   </Table.Cell>
                   <Table.Cell>{p.order_display_id != null ? `#${p.order_display_id}` : "—"}</Table.Cell>
                   <Table.Cell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      {/* Extend by 30 days from the later of today and the end date. */}
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        disabled={change.isPending}
+                        onClick={() => {
+                          const from = Math.max(now, new Date(p.expires_at).getTime())
+                          change.mutate({
+                            id: p.id,
+                            body: { expires_at: new Date(from + 30 * 24 * 3600_000).toISOString() },
+                            done: "Pass extended by 30 days.",
+                          })
+                        }}
+                      >
+                        Extend 30 days
+                      </Button>
                     {!expired && (
-                      <div className="flex justify-end gap-2">
+                      <>
                         <Button
                           size="small"
                           variant="secondary"
@@ -101,8 +120,9 @@ const PassesPage = () => {
                         <Button size="small" variant="secondary" disabled={change.isPending} onClick={() => end(p)}>
                           End now
                         </Button>
-                      </div>
+                      </>
                     )}
+                    </div>
                   </Table.Cell>
                 </Table.Row>
               )

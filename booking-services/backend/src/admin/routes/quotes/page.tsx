@@ -6,6 +6,7 @@ import { useState } from "react"
 import { walkInTimes } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
 import { errorText, formatDate, formatDateTime, formatMoney, statusLabel } from "../../lib/format"
+import { usePageTitle } from "../../lib/page-title"
 
 // Quotes (TASKS P3-27): requests for quote-only services. Staff pick a
 // calendar, a time, a length and a price, add a note, and send it; the
@@ -119,6 +120,7 @@ const PriceForm = ({ quote, resources, onDone }: { quote: Quote; resources: Reso
 }
 
 const QuotesPage = () => {
+  usePageTitle("Quotes")
   const client = useQueryClient()
   const [status, setStatus] = useState("requested")
   const [open, setOpen] = useState<string | null>(null)

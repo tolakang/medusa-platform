@@ -41,7 +41,7 @@ export function CancelButton({ bookingId }: { bookingId: string }) {
       <input type="hidden" name="booking_id" value={bookingId} />
       {sure ? (
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <span className="text-sm">Cancel it? The customer is told, and refunded if the shop&apos;s rules allow.</span>
+          <span className="text-sm">Cancel it? The customer is told and gets a full refund.</span>
           <button className="btn-secondary" type="button" onClick={() => setSure(false)} disabled={working}>
             Keep it
           </button>

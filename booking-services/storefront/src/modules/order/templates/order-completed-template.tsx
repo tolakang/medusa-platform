@@ -13,7 +13,8 @@ import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import TelegramUpdates from "@modules/order/components/telegram-updates"
 import { HttpTypes } from "@medusajs/types"
-import { isServiceOnlyCart } from "@lib/util/booking"
+import { awaitingPayment, isServiceOnlyCart } from "@lib/util/booking"
+import { MANUAL_PAYMENT_LABEL } from "@lib/shop"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -26,6 +27,8 @@ export default async function OrderCompletedTemplate({
   const cookies = await nextCookies()
 
   const isOnboarding = cookies.get("_medusa_onboarding")?.value === "true"
+  // Pay later and not paid yet: reserved, not confirmed.
+  const pending = awaitingPayment(order)
 
   return (
     <div className="py-6 min-h-[calc(100vh-64px)]">
@@ -41,16 +44,26 @@ export default async function OrderCompletedTemplate({
           >
             <span>Thank you!</span>
             <span>
-              {isServiceOnlyCart(order) ? "Your booking is confirmed." : "Your order was placed successfully."}
+              {!isServiceOnlyCart(order)
+                ? "Your order was placed successfully."
+                : pending
+                ? "Your booking is reserved."
+                : "Your booking is confirmed."}
             </span>
           </Heading>
+          {isServiceOnlyCart(order) && pending && (
+            <p className="txt-medium text-ui-fg-subtle" data-testid="order-awaiting-payment">
+              Reserved, pay with {MANUAL_PAYMENT_LABEL.toLowerCase()}. It is
+              confirmed once paid; ticket codes show here after payment.
+            </p>
+          )}
           <OrderDetails order={order} />
           <TelegramUpdates order={order} />
           <Heading level="h2" className="flex flex-row text-3xl-regular">
             Summary
           </Heading>
           <Items order={order} />
-          <EventTickets orderId={order.id} />
+          <EventTickets orderId={order.id} held={pending} />
           <CartTotals totals={order} />
           <ShippingDetails order={order} />
           <PaymentDetails order={order} />

@@ -8,6 +8,7 @@ import { ADMIN_PROVIDER_FIELDS, withInviteCode } from "../route"
 
 export const NOT_ACCEPTED_MESSAGE =
   "This staff member hasn't accepted the invitation yet. Give them the invite code."
+export const DECLINE_REASON_MESSAGE = "Say why you decline this partner."
 export const STAFF_NO_COMMISSION_MESSAGE = "Staff earn no commission; rates are for partners."
 
 type ProviderRow = { id: string; role: string; status: string; email: string } & Record<string, unknown>
@@ -42,9 +43,15 @@ export const POST = async (req: MedusaRequest<PostAdminBookingProviderType>, res
       throw new MedusaError(MedusaError.Types.NOT_ALLOWED, PROVIDER_EMAIL_NOT_VERIFIED_MESSAGE)
     }
   }
+  // Declining a pending partner needs a reason, kept for the record.
+  if (body.status === "suspended" && provider.status === "pending" && !body.status_reason) {
+    throw new MedusaError(MedusaError.Types.INVALID_DATA, DECLINE_REASON_MESSAGE)
+  }
   if (body.commission_rate !== undefined && provider.role !== "partner") {
     throw new MedusaError(MedusaError.Types.NOT_ALLOWED, STAFF_NO_COMMISSION_MESSAGE)
   }
-  await updateBookingProviderWorkflow(req.scope).run({ input: { id: provider.id, ...body } })
+  // Approving or reactivating clears an old reason.
+  const reason = body.status === "active" ? { status_reason: null } : {}
+  await updateBookingProviderWorkflow(req.scope).run({ input: { id: provider.id, ...body, ...reason } })
   res.json({ provider: withInviteCode(await providerById(req, provider.id)) })
 }

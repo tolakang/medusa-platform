@@ -6,6 +6,7 @@ import { useState } from "react"
 import { STATUS_COLOR } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
 import { errorText, statusLabel } from "../../lib/format"
+import { usePageTitle } from "../../lib/page-title"
 
 // Events (TASKS P3-30): event packages with all their pieces on one card,
 // soonest first (the next 90 days). Cancel cancels every piece; the
@@ -60,6 +61,7 @@ const MoveEvent = ({ event, onDone }: { event: Event; onDone: () => void }) => {
 }
 
 const EventsPage = () => {
+  usePageTitle("Events")
   const client = useQueryClient()
   const [confirming, setConfirming] = useState<string | null>(null)
   const { data, isLoading, error } = useQuery({

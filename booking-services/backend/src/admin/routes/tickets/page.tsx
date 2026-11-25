@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
 import { errorText, statusLabel } from "../../lib/format"
+import { usePageTitle } from "../../lib/page-title"
 
 // Tickets (TASKS P3-24): at the door, type the code a guest shows, see the
 // event, date and section, and let them in once. Reads GET
@@ -21,6 +22,7 @@ type Ticket = {
 
 
 const TicketsPage = () => {
+  usePageTitle("Tickets")
   const [code, setCode] = useState("")
   const [ticket, setTicket] = useState<Ticket | null>(null)
 

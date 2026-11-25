@@ -1,3 +1,4 @@
+import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, MathBN, MedusaError } from "@medusajs/framework/utils"
 import {
   createStep,
@@ -42,7 +43,7 @@ export type RefundOutcome =
   | "no_order" // a hold or walk-in without an order: nothing was paid
   | "not_captured" // the order's payment isn't captured yet: nothing to refund
 
-type Plan = {
+export type Plan = {
   booking_id: string
   previous: { status: string; hold_expires_at: string | null }
   outcome: RefundOutcome
@@ -52,9 +53,13 @@ type Plan = {
 type Money = number | string | { toJSON?: () => unknown } | null | undefined
 const num = (v: Money): number => (v === null || v === undefined ? 0 : MathBN.convert(v as number).toNumber())
 
-const planCancellationStep = createStep(
-  "plan-cancellation",
-  async (input: CancelBookingInput, { container }) => {
+// The cancellation plan without side effects: the workflow's first step,
+// and the customer's "what happens if I cancel" preview
+// (GET /store/booking/cancel), so both use the same policy.
+export async function planCancellation(
+  container: MedusaContainer,
+  input: CancelBookingInput
+): Promise<Plan> {
     const query = container.resolve(ContainerRegistrationKeys.QUERY)
     const service = container.resolve<BookingModuleService>(BOOKING_MODULE)
     const {
@@ -129,10 +134,10 @@ const planCancellationStep = createStep(
     })
 
     if (!order) {
-      return new StepResponse(plan("no_order"))
+      return plan("no_order")
     }
     if (!decision.refund) {
-      return new StepResponse(plan("outside_policy"))
+      return plan("outside_policy")
     }
 
     const item = (order.items ?? []).find(
@@ -160,11 +165,10 @@ const planCancellationStep = createStep(
       .sort((a, b) => b.available - a.available)
     const payment = payments[0]
     if (!payment || payment.available <= 0 || amount <= 0) {
-      return new StepResponse(plan("not_captured"))
+      return plan("not_captured")
     }
 
-    return new StepResponse(
-      plan("refunded", {
+    return plan("refunded", {
         payment_id: payment.id,
         amount: Math.min(amount, payment.available),
         idempotency_key: `booking_cancel_${booking.id}`,
@@ -173,8 +177,11 @@ const planCancellationStep = createStep(
             ? `Booking ${booking.id} cancelled within the cancellation policy.`
             : `Booking ${booking.id} cancelled by the shop: refunded in full.`,
       })
-    )
-  }
+}
+
+const planCancellationStep = createStep(
+  "plan-cancellation",
+  async (input: CancelBookingInput, { container }) => new StepResponse(await planCancellation(container, input))
 )
 
 const markBookingCancelledStep = createStep(
@@ -208,7 +215,7 @@ export const cancelBookingWorkflow = createWorkflow(
 
     // A booking paid with a pass gets its credit back within the policy
     // (TASKS P3-29); its order line is $0, so there's no money refund.
-    returnPassCreditStep(
+    const passReturned = returnPassCreditStep(
       transform({ plan, input }, ({ plan, input }) => ({
         booking_id: plan.booking_id,
         // Within the policy, or the shop's own cancellation (no customer).
@@ -238,9 +245,11 @@ export const cancelBookingWorkflow = createWorkflow(
       refundPaymentWorkflow.runAsStep({ input: refundInput })
     })
 
-    const result = transform({ booking, plan }, ({ booking, plan }) => ({
+    const result = transform({ booking, plan, passReturned }, ({ booking, plan, passReturned }) => ({
       booking,
       refund: plan.outcome,
+      // A pass booking got its credit back (TASKS P3-29).
+      pass_returned: !!passReturned,
       refunded_amount: plan.refund?.amount ?? 0,
     }))
     return new WorkflowResponse(result)

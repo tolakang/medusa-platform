@@ -4,7 +4,11 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 // GET /store/customers/me/bookings (TASKS P3-13, F-049): the signed-in
 // customer's bookings for the account page, newest start first, with the
 // resource and the order number. /store/customers/me* is customer-only in
-// Medusa. Holds that ran out are left out.
+// Medusa. Holds that ran out are left out. Guest checkouts with the same
+// email are not merged in: Medusa doesn't verify a new account's email, so
+// that would show a stranger's bookings (addresses) to anyone who signs up
+// with their email.
+
 export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const { data } = await query.graph({
@@ -30,6 +34,10 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
       "order.items.variant_id",
       "order.items.product_id",
       "order.items.metadata",
+      // The service's name for the list.
+      "order.items.product_title",
+      "order.items.variant_title",
+      "order.currency_code",
     ],
     filters: { customer_id: req.auth_context.actor_id },
     pagination: { order: { starts_at: "DESC" }, take: 100 },
@@ -50,6 +58,8 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
           variant_id: item?.variant_id ?? null,
           product_id: item?.product_id ?? null,
           reviewed: reviewed.has(b.id),
+          service: item ? [item.product_title, item.variant_title].filter(Boolean).join(" · ") : null,
+          currency_code: order?.currency_code ?? null,
           order: order ? { id: order.id, display_id: order.display_id } : null,
         }
       }),

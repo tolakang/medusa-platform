@@ -248,7 +248,7 @@ const Payment = ({
                       <CreditCard />
                     )}
                   </Container>
-                  <Text>Another step will appear</Text>
+                  <Text>{paymentInfoMap[selectedPaymentMethod]?.title ?? "Pay on the next step"}</Text>
                 </div>
               </div>
             </div>

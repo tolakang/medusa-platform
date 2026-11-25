@@ -20,6 +20,8 @@ export const GetBookingSlots = z.object({
 
 export const PostBookingCancel = z.object({ booking_id: z.string().min(1) })
 export type PostBookingCancelType = z.infer<typeof PostBookingCancel>
+export const GetBookingCancelPreview = z.object({ booking_id: z.string().min(1) })
+export type GetBookingCancelPreviewType = z.infer<typeof GetBookingCancelPreview>
 
 export const PostBookingCart = z.object({
   cart_id: z.string().min(1),

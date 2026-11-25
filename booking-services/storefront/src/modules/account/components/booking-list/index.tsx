@@ -1,6 +1,7 @@
 "use client"
 
-import { cancelMyBooking, cancelMyPackage, cancelMySeries, listSlots, moveMyBooking, writeReview, type MyBooking, type Slot } from "@lib/data/booking"
+import { cancelMyBooking, cancelMyPackage, cancelMySeries, listSlots, moveMyBooking, previewCancelMyBooking, writeReview, type CancelPreview, type MyBooking, type Slot } from "@lib/data/booking"
+import { convertToLocale } from "@lib/util/money"
 import { formatBookingRange } from "@lib/util/booking"
 import { Badge, Button, Heading, Text, clx } from "@modules/common/components/ui"
 import { useRouter } from "next/navigation"
@@ -11,6 +12,16 @@ const REFUND_TEXT: Record<string, string> = {
   outside_policy: "Cancelled. It was too close to the start for a refund.",
   not_captured: "Cancelled. Your payment wasn't taken yet, so nothing is charged.",
   no_order: "Cancelled.",
+}
+
+// What the customer gets back, said before they confirm the cancel.
+function previewText(p: CancelPreview, currency: string): string {
+  if (p.pass_credit) return "Your pass credit comes back."
+  if (p.refund === "refunded")
+    return `You get ${convertToLocale({ amount: p.refund_amount, currency_code: currency })} back.`
+  if (p.refund === "outside_policy") return "It's too close to the start: there's no refund."
+  if (p.refund === "not_captured") return "Your payment wasn't taken yet, so nothing is charged."
+  return "Nothing was paid, so there's nothing to refund."
 }
 
 // Statuses in the customer's words (design critique, 2026-11-23).
@@ -194,6 +205,19 @@ export default function BookingList({
   const [confirming, setConfirming] = useState<string | null>(null)
   const [changing, setChanging] = useState<string | null>(null)
   const [reviewing, setReviewing] = useState<string | null>(null)
+  // The refund the cancel would give, loaded when "Cancel" is pressed.
+  const [preview, setPreview] = useState<{ id: string; text: string } | null>(null)
+  const askCancel = (b: MyBooking) => {
+    setConfirming(b.id)
+    setPreview(null)
+    if (b.package_id) return
+    previewCancelMyBooking(b.id).then((p) =>
+      setPreview({
+        id: b.id,
+        text: "error" in p ? "We couldn't check the refund; you'll see it after cancelling." : previewText(p, b.currency_code ?? "usd"),
+      })
+    )
+  }
 
   // A piece of an event package cancels the whole package (P3-30).
   const cancel = (id: string) => {
@@ -202,7 +226,12 @@ export default function BookingList({
     setBusy(id)
     start(async () => {
       const result = packageId ? await cancelMyPackage(packageId) : await cancelMyBooking(id)
-      setNotice(result.error ?? REFUND_TEXT[result.refund ?? ""] ?? "Cancelled.")
+      setNotice(
+        result.error ??
+          ("pass_returned" in result && result.pass_returned
+            ? "Cancelled. Your pass credit is back."
+            : REFUND_TEXT[result.refund ?? ""] ?? "Cancelled.")
+      )
       setBusy(null)
       router.refresh()
     })
@@ -226,7 +255,12 @@ export default function BookingList({
           data-testid="booking-row"
         >
           <div className="flex flex-col gap-y-1">
-            <Text className="txt-medium-plus">{formatBookingRange(b.starts_at, b.ends_at, b.resource?.timezone)}</Text>
+            {b.service && (
+              <Text className="txt-medium-plus" data-testid="booking-service">
+                {b.service}
+              </Text>
+            )}
+            <Text className={b.service ? "txt-small" : "txt-medium-plus"}>{formatBookingRange(b.starts_at, b.ends_at, b.resource?.timezone)}</Text>
             <Text className="txt-small text-ui-fg-subtle">
               {b.resource?.name ?? ""}
               {b.order?.display_id != null ? ` · Order #${b.order.display_id}` : ""}
@@ -288,7 +322,7 @@ export default function BookingList({
               <Button
                 variant="secondary"
                 isLoading={pending && busy === b.id}
-                onClick={() => setConfirming(b.id)}
+                onClick={() => askCancel(b)}
                 data-testid="booking-cancel"
               >
                 Cancel
@@ -296,6 +330,11 @@ export default function BookingList({
             )}
             {canCancel && confirming === b.id && (
               <>
+                {!b.package_id && (
+                  <Text className="txt-small" role="status" data-testid="booking-cancel-refund">
+                    {preview?.id === b.id ? preview.text : "Checking your refund…"}
+                  </Text>
+                )}
                 <Button variant="secondary" onClick={() => setConfirming(null)} data-testid="booking-keep">
                   Keep it
                 </Button>

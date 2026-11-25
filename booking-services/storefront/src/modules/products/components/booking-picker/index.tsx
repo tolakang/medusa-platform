@@ -32,7 +32,7 @@ import ExtrasChooser, {
   chosenExtras,
 } from "@modules/products/components/extras-chooser"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useMemo, useState, useTransition } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 
 // Book a service (TASKS P3-13): pick the variant (a length, or a party size for
 // a table, P3-19), a day and a free
@@ -72,7 +72,13 @@ export default function BookingPicker({
     slot: Slot | null
     error: string | null
   }>({ key: "", slot: null, error: null })
-  const [loading, startLoading] = useTransition()
+  // Loading is plain state with a request counter, not a transition: an
+  // async transition around a server action could stay pending on first
+  // load (the slots came back but "Loading times…" never ended). Only the
+  // newest request may set the result.
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const requestId = useRef(0)
   const [booking, startBooking] = useTransition()
   // A visit at the customer's place (kind B, P3-20): where and what.
   const visit = isVisitService(product)
@@ -174,17 +180,35 @@ export default function BookingPicker({
       error: e,
     }))
 
-  useEffect(() => {
+  const loadSlots = useCallback(() => {
     if (!variantId || !date || tripMinutes === null) {
+      setLoading(false)
       return
     }
+    const id = ++requestId.current
     const key = `${variantId}|${date}|${tripMinutes}`
-    startLoading(async () => {
-      const result = await listSlots(variantId, date, tripMinutes)
-      setSlots(result.slots)
-      setPicked({ key, slot: null, error: result.error ?? null })
-    })
+    setLoading(true)
+    setLoadError(null)
+    listSlots(variantId, date, tripMinutes)
+      .then((result) => {
+        if (id !== requestId.current) return
+        setSlots(result.slots)
+        setLoadError(result.error ?? null)
+        setPicked({ key, slot: null, error: null })
+      })
+      .catch(() => {
+        if (id !== requestId.current) return
+        setSlots([])
+        setLoadError("Could not load times.")
+      })
+      .finally(() => {
+        if (id === requestId.current) setLoading(false)
+      })
   }, [variantId, date, tripMinutes])
+
+  useEffect(() => {
+    loadSlots()
+  }, [loadSlots])
 
   const book = () => {
     if (!chosen) {
@@ -292,6 +316,7 @@ export default function BookingPicker({
               onChange={(e) => setAddress(e.target.value)}
               maxLength={300}
               className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
+              aria-label="Pickup address"
               data-testid="booking-pickup"
               id="booking-pickup"
               {...errProps("booking-pickup")}
@@ -305,6 +330,7 @@ export default function BookingPicker({
               onChange={(e) => setDropoff(e.target.value)}
               maxLength={300}
               className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
+              aria-label="Drop-off address"
               data-testid="booking-dropoff"
               id="booking-dropoff"
               {...errProps("booking-dropoff")}
@@ -318,6 +344,7 @@ export default function BookingPicker({
                 value={hours}
                 onChange={(e) => setHours(Number(e.target.value))}
                 className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
+                aria-label="How many hours"
                 data-testid="booking-hours"
               >
                 {Array.from(
@@ -361,6 +388,7 @@ export default function BookingPicker({
                     value={f.value}
                     onChange={(e) => f.set(e.target.value)}
                     className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
+                    aria-label={`${f.label} area`}
                     data-testid={f.id}
                     id={f.id}
                     {...(f.id === "booking-from-zone" ? errProps(f.id) : {})}
@@ -404,6 +432,7 @@ export default function BookingPicker({
               setChosen(null)
             }}
             className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
+            aria-label="Seats"
             data-testid="booking-seats"
           >
             {Array.from({ length: maxSeats(product) }, (_, i) => i + 1).map(
@@ -431,6 +460,7 @@ export default function BookingPicker({
           min={localDate(null)}
           onChange={(e) => setDate(e.target.value)}
           className="border border-ui-border-base rounded-md px-3 min-h-11 txt-small"
+          aria-label="Day"
           data-testid="booking-date"
         />
       </div>
@@ -455,7 +485,25 @@ export default function BookingPicker({
             Choose a time.
           </Text>
         )}
-        {!loading && slots.length === 0 && (
+        {!loading && loadError && (
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-testid="booking-slots-error"
+          >
+            <Text role="alert" className="txt-small text-ui-fg-error">
+              Could not load times. Check your connection and try again.
+            </Text>
+            <button
+              type="button"
+              className="min-h-11 px-2 txt-small text-ui-fg-interactive underline"
+              onClick={loadSlots}
+              data-testid="booking-slots-retry"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+        {!loading && !loadError && slots.length === 0 && (
           <>
             <div className="flex flex-wrap items-center gap-2">
               <Text className="txt-small text-ui-fg-subtle">
@@ -503,6 +551,13 @@ export default function BookingPicker({
                 type="button"
                 onClick={() => setChosen(s)}
                 disabled={loading}
+                aria-label={`${formatSlotTime(s.starts_at, s.timezone)}${
+                  departure
+                    ? `, ${s.remaining} seats left`
+                    : s.resource_name
+                    ? `, ${s.resource_name}`
+                    : ""
+                }`}
                 aria-pressed={chosen === s}
                 className={clx(
                   "border rounded-md px-2 py-2 min-h-11 txt-small text-left disabled:cursor-wait",

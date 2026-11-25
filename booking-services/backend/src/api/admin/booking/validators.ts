@@ -60,6 +60,8 @@ export const PostAdminBookingProvider = z
     name: z.string().trim().min(1).max(120),
     status: z.enum(["active", "suspended"]),
     commission_rate: z.number().min(0).max(100).nullable(),
+    // Why: required to decline a pending partner (status suspended).
+    status_reason: z.string().trim().min(1).max(500),
   })
   .partial()
 export type PostAdminBookingProviderType = z.infer<typeof PostAdminBookingProvider>

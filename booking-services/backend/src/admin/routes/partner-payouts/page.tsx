@@ -4,6 +4,7 @@ import { Badge, Button, Container, Heading, Input, Table, Text, toast, usePrompt
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { sdk } from "../../lib/sdk"
+import { usePageTitle } from "../../lib/page-title"
 
 // Partner payouts (TASKS P3-33, plan §9.3 "Money"): the monthly payout report
 // to pay from, marking a payout paid with its transfer reference, and
@@ -42,6 +43,7 @@ const money = (amount: number, currency: string) => {
 }
 
 const PartnerPayoutsPage = () => {
+  usePageTitle("Partner payouts")
   const queryClient = useQueryClient()
   const [refs, setRefs] = useState<Record<string, string>>({})
   const payouts = useQuery({
@@ -183,7 +185,7 @@ const PartnerPayoutsPage = () => {
         </Table>
         {!payouts.isLoading && !payoutRows.length && (
           <Text size="small" className="text-ui-fg-subtle px-6 py-4">
-            No payouts yet. They are made on the payout day (BOOKING_PAYOUT_DAY) for the month before.
+            No payouts yet. They are made once a month, on the shop's payout day, for the month before.
           </Text>
         )}
       </Container>

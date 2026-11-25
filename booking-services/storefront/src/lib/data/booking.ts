@@ -40,6 +40,9 @@ export type MyBooking = {
   // For reviews (P3-29).
   product_id?: string | null
   reviewed?: boolean
+  // The service's name (product · variant) and the order's currency.
+  service?: string | null
+  currency_code?: string | null
 }
 
 export async function listSlots(
@@ -155,15 +158,30 @@ export async function listMyBookings(): Promise<MyBooking[] | null> {
 
 export async function cancelMyBooking(
   bookingId: string
-): Promise<{ refund?: string; refunded_amount?: number; error?: string }> {
+): Promise<{ refund?: string; refunded_amount?: number; pass_returned?: boolean; error?: string }> {
   try {
-    return await sdk.client.fetch<{ refund: string; refunded_amount: number }>("/store/booking/cancel", {
+    return await sdk.client.fetch<{ refund: string; refunded_amount: number; pass_returned?: boolean }>("/store/booking/cancel", {
       method: "POST",
       headers: await getAuthHeaders(),
       body: { booking_id: bookingId },
     })
   } catch (e) {
     return { error: (e as { message?: string })?.message ?? "Could not cancel this booking." }
+  }
+}
+
+// What cancelling would do (refund or not, how much, pass credit back),
+// shown before the customer confirms. Same policy as the cancel itself.
+export type CancelPreview = { refund: string; refund_amount: number; pass_credit: boolean }
+export async function previewCancelMyBooking(bookingId: string): Promise<CancelPreview | { error: string }> {
+  try {
+    return await sdk.client.fetch<CancelPreview>("/store/booking/cancel", {
+      query: { booking_id: bookingId },
+      headers: await getAuthHeaders(),
+      cache: "no-store",
+    })
+  } catch (e) {
+    return { error: (e as { message?: string })?.message ?? "Could not check the refund." }
   }
 }
 

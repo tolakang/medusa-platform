@@ -3,6 +3,7 @@ import { Clock } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Table, Text, toast, usePrompt } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { sdk } from "../../lib/sdk"
+import { usePageTitle } from "../../lib/page-title"
 
 // Waitlist (TASKS P3-29 follow-up): who waits for a full day of which
 // service, soonest day first. "Time free" = the waitlist job emailed them.
@@ -18,6 +19,7 @@ type Entry = {
 }
 
 const WaitlistPage = () => {
+  usePageTitle("Waitlist")
   const { data, isLoading, error } = useQuery({
     queryKey: ["booking-waitlist"],
     queryFn: () => sdk.client.fetch<{ waitlist: Entry[] }>("/admin/booking/waitlist"),

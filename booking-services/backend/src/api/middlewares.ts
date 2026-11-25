@@ -3,6 +3,7 @@ import {
   configureStoreSearch,
   defineMiddlewares,
   validateAndTransformBody,
+  validateAndTransformQuery,
 } from '@medusajs/framework/http'
 import { PostAdminUploadLimit } from '@medusa-platform/medusa-core/api/admin/upload-limit/validators'
 import { PostCustomerPassword } from '@medusa-platform/medusa-core/api/store/customers/me/password/validators'
@@ -13,7 +14,7 @@ import {
   validatePhoneFields,
 } from './contact-validation'
 import { extendBookingHoldsBeforePayment, setDepositBeforePayment } from './booking-payment'
-import { PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostPackage, PostQuoteRequest, PostRecurring, PostReview, PostWaitlist } from './store/booking/validators'
+import { GetBookingCancelPreview, PostBookingCancel, PostBookingCart, PostBookingMove, PostQuoteAccept, PostPackage, PostQuoteRequest, PostRecurring, PostReview, PostWaitlist } from './store/booking/validators'
 import {
   PostAdminBookingProvider,
   PostAdminBookingResource,
@@ -260,6 +261,12 @@ export default defineMiddlewares({
       method: ['POST'],
       matcher: '/store/booking/cancel',
       middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformBody(PostBookingCancel)],
+    },
+    {
+      // What a cancel would refund, shown before the customer confirms.
+      method: ['GET'],
+      matcher: '/store/booking/cancel',
+      middlewares: [authenticate('customer', ['session', 'bearer']), validateAndTransformQuery(GetBookingCancelPreview, {})],
     },
     {
       // Reviews (TASKS P3-29): anyone reads a service's reviews; a signed-in

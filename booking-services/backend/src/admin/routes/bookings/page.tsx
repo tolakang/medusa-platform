@@ -3,6 +3,7 @@ import { Calendar } from "@medusajs/icons"
 import { Badge, Button, Container, Heading, Input, Label, Select, Text } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import {
   customerLabel,
   groupByLocalDay,
@@ -18,6 +19,11 @@ import {
 } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
 import { errorText, statusLabel } from "../../lib/format"
+import { usePageTitle } from "../../lib/page-title"
+
+
+// "Asia/Phnom_Penh" → "Phnom Penh time": the zone in plain words.
+const zoneLabel = (zone: string) => `${(zone.split("/").pop() ?? zone).replace(/_/g, " ")} time`
 
 // Bookings (TASKS P3-11, BUILD_PLAN §9.3): a day or week calendar per
 // resource, in the resource's own time zone, with walk-in booking and
@@ -96,7 +102,7 @@ const MoveForm = ({
       <div className="flex gap-2">
         <Input type="date" aria-label="New day" value={day} onChange={(e) => setDay(e.target.value)} />
         <Input type="time" aria-label="New start time" value={time} onChange={(e) => setTime(e.target.value)} />
-        <Text size="xsmall" className="self-center text-ui-fg-subtle">{target.timezone}</Text>
+        <Text size="xsmall" className="self-center text-ui-fg-subtle">{zoneLabel(target.timezone)}</Text>
       </div>
       <div className="flex gap-2">
         <Button size="small" isLoading={move.isPending} onClick={() => move.mutate()}>Move</Button>
@@ -218,10 +224,21 @@ const ChangeLength = ({ booking, rental, onDone }: { booking: CalendarBooking; r
 }
 
 const BookingsPage = () => {
+  usePageTitle("Bookings")
   const queryClient = useQueryClient()
-  const [resourceId, setResourceId] = useState("")
-  const [view, setView] = useState<CalendarView>("day")
-  const [date, setDate] = useState("")
+  // The calendar and day live in the URL (?resource=&date=&view=), so a
+  // reload or a shared link opens the same board.
+  const [params, setParams] = useSearchParams()
+  const [resourceId, setResourceId] = useState(() => params.get("resource") ?? "")
+  const [view, setView] = useState<CalendarView>(() => (params.get("view") === "week" ? "week" : "day"))
+  const [date, setDate] = useState(() => (/^\d{4}-\d{2}-\d{2}$/.test(params.get("date") ?? "") ? params.get("date")! : ""))
+  useEffect(() => {
+    const next = new URLSearchParams()
+    if (resourceId) next.set("resource", resourceId)
+    if (date) next.set("date", date)
+    if (view !== "day") next.set("view", view)
+    if (next.toString() !== params.toString()) setParams(next, { replace: true })
+  }, [resourceId, date, view, params, setParams])
   const [walkIn, setWalkIn] = useState({ time: "09:00", minutes: "60", notes: "" })
   // Two-step cancel in the page (no browser dialog): Cancel → Yes, cancel.
   const [confirming, setConfirming] = useState<string | null>(null)
@@ -236,7 +253,7 @@ const BookingsPage = () => {
 
   // First resource and today's date in its zone, once the list is loaded.
   useEffect(() => {
-    if (!resourceId && resources.length) {
+    if (resources.length && !resources.some((r) => r.id === resourceId)) {
       setResourceId(resources[0].id)
     }
   }, [resources, resourceId])
@@ -314,7 +331,7 @@ const BookingsPage = () => {
         <div>
           <Heading level="h1">Bookings</Heading>
           <Text className="text-ui-fg-subtle">
-            Times are in {resource?.timezone ?? "the resource's time zone"}.
+            Times are in {resource ? zoneLabel(resource.timezone) : "the calendar's time zone"}.
           </Text>
         </div>
         <div className="flex flex-wrap items-end gap-3">

@@ -3,7 +3,7 @@ import { Modules } from "@medusajs/framework/utils"
 import { inviteCode } from "@medusa-platform/medusa-core/lib/invite-code"
 import { VERIFY_EMAIL_TEMPLATE } from "@medusa-platform/medusa-core/lib/auth-email"
 import { PROVIDER_PENDING_MESSAGE, PROVIDER_SUSPENDED_MESSAGE } from "../../src/api/provider-auth"
-import { NOT_ACCEPTED_MESSAGE, STAFF_NO_COMMISSION_MESSAGE } from "../../src/api/admin/booking/providers/[id]/route"
+import { DECLINE_REASON_MESSAGE, NOT_ACCEPTED_MESSAGE, STAFF_NO_COMMISSION_MESSAGE } from "../../src/api/admin/booking/providers/[id]/route"
 import { PROVIDER_EMAIL_NOT_VERIFIED_MESSAGE } from "../../src/lib/provider-email"
 import { BOOKING_MODULE } from "../../src/modules/booking"
 import type BookingModuleService from "../../src/modules/booking/service"
@@ -223,6 +223,19 @@ medusaIntegrationTestRunner({
         const stopped = await call(api.get("/providers/me", bearer(token)))
         expect(stopped.status).toBe(401)
         expect(stopped.data.message).toBe(PROVIDER_SUSPENDED_MESSAGE)
+      })
+
+      it("the admin declines a pending partner with a reason", async () => {
+        const registered = await register("declined@clinic.test")
+        const partner = (await api.post("/providers", { name: "Declined Clinic" }, bearer(registered.data.token))).data.provider
+        const noReason = await call(api.post(`/admin/booking/providers/${partner.id}`, { status: "suspended" }, admin))
+        expect(noReason.status).toBe(400)
+        expect(noReason.data.message).toBe(DECLINE_REASON_MESSAGE)
+        const declined = await call(
+          api.post(`/admin/booking/providers/${partner.id}`, { status: "suspended", status_reason: "No licence shown" }, admin)
+        )
+        expect(declined.status).toBe(200)
+        expect(declined.data.provider).toEqual(expect.objectContaining({ status: "suspended", status_reason: "No licence shown" }))
       })
 
       it("an unapproved or suspended partner's calendar offers no times; staff calendars always do", async () => {
