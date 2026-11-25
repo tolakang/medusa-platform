@@ -212,9 +212,13 @@ export function formatBookingRange(starts_at: string, ends_at: string, timeZone?
   return `${parts.weekday} ${parts.day} ${parts.month}, ${time(starts_at)}–${time(ends_at)}`
 }
 
+// The shop's zone, used when a resource has none: the server runs in UTC, so
+// "no zone" printed UTC times and the wrong "today" before 07:00 in Cambodia.
+const SHOP_TIME_ZONE = "Asia/Phnom_Penh"
+
 export function formatSlotTime(at: string, timeZone?: string | null): string {
   return new Intl.DateTimeFormat("en-GB", {
-    timeZone: timeZone || undefined,
+    timeZone: timeZone || SHOP_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
@@ -225,7 +229,7 @@ export function formatSlotTime(at: string, timeZone?: string | null): string {
 export function localDate(timeZone: string | null | undefined, days = 0, now = new Date()): string {
   const at = new Date(now.getTime() + days * 24 * 3600 * 1000)
   const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", { timeZone: timeZone || undefined, year: "numeric", month: "2-digit", day: "2-digit" })
+    new Intl.DateTimeFormat("en-CA", { timeZone: timeZone || SHOP_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" })
       .formatToParts(at)
       .map((p) => [p.type, p.value])
   )

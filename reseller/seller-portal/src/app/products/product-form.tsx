@@ -8,9 +8,17 @@ type Product = { id: string; title: string; handle: string; thumbnail: string | 
 // TASKS P5-08: tick the products to show in your shop, then save.
 export function ProductForm({ products }: { products: Product[] }) {
   const [state, action, saving] = useActionState<SaveState, FormData>(saveProducts, {})
-  // The Save button stays in view under a long list, with the ticked count,
-  // so ticks aren't lost by leaving without saving.
-  const [ticked, setTicked] = useState(() => products.filter((p) => p.selected).length)
+  // The ticks are held here, not in the boxes: React resets a form after its
+  // action, so a failed save put the boxes back to the saved selection while
+  // the count kept the unsaved one. The Save bar stays in view with the count.
+  const [picked, setPicked] = useState(() => new Set(products.filter((p) => p.selected).map((p) => p.id)))
+  const toggle = (id: string, on: boolean) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(id)
+      else next.delete(id)
+      return next
+    })
   return (
     <form action={action} className="card flex flex-col gap-3 p-4">
       {products.length === 0 && (
@@ -25,8 +33,8 @@ export function ProductForm({ products }: { products: Product[] }) {
               type="checkbox"
               name="selected"
               value={product.id}
-              defaultChecked={product.selected}
-              onChange={(e) => setTicked((n) => n + (e.target.checked ? 1 : -1))}
+              checked={picked.has(product.id)}
+              onChange={(e) => toggle(product.id, e.target.checked)}
               className="h-4 w-4"
             />
             {product.thumbnail ? (
@@ -56,7 +64,7 @@ export function ProductForm({ products }: { products: Product[] }) {
             {saving ? "Saving…" : "Save"}
           </button>
           <span className="text-sm text-ui-fg-subtle">
-            {ticked} of {products.length} ticked
+            {picked.size} of {products.length} ticked
           </span>
         </div>
       </div>

@@ -20,6 +20,10 @@ export async function fulfil(_: FulfilState, form: FormData): Promise<FulfilStat
   if (tracking_url && !/^https?:\/\/\S+$/.test(tracking_url)) {
     return { error: "The tracking link must start with http:// or https://." }
   }
+  // A link is stored with its number only; alone it was dropped without a word.
+  if (tracking_url && !tracking_number) {
+    return { error: "Add the tracking number too, or leave the link empty." }
+  }
   const result = await backendFetch(`/vendors/me/orders/${id}/fulfillments`, {
     token,
     method: "POST",

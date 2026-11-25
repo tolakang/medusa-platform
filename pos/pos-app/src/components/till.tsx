@@ -109,7 +109,18 @@ export function Till({ cashier }: { cashier: Cashier }) {
         {screen.name === "registers" && (
           <RegisterPicker registers={registers} onSelect={startSelling} onReload={load} />
         )}
-        {screen.name === "sell" && <Sell key={screen.shift.id} register={screen.register} shift={screen.shift} />}
+        {/* Kept mounted (hidden) under Close shift, so "Back to selling" returns
+            to the same sale instead of an empty cart. */}
+        {(screen.name === "sell" || screen.name === "close") && (
+          <div hidden={screen.name !== "sell"}>
+            <Sell
+              key={screen.shift.id}
+              register={screen.register}
+              shift={screen.shift}
+              active={screen.name === "sell"}
+            />
+          </div>
+        )}
         {screen.name === "close" && (
           <CloseShift
             shift={screen.shift}

@@ -481,8 +481,14 @@ export async function placeOrder(cartId?: string) {
     .catch(medusaError)
 
   if (cartRes?.type === "order") {
-    const countryCode =
-      cartRes.order.shipping_address?.country_code?.toLowerCase()
+    // An order without a shipping country (e.g. services only) must not land
+    // on /undefined/order/...: fall back to billing, then the default region.
+    const countryCode = (
+      cartRes.order.shipping_address?.country_code ||
+      cartRes.order.billing_address?.country_code ||
+      process.env.NEXT_PUBLIC_DEFAULT_REGION ||
+      "kh"
+    ).toLowerCase()
 
     const orderCacheTag = await getCacheTag("orders")
     revalidateTag(orderCacheTag, { expire: 0 })

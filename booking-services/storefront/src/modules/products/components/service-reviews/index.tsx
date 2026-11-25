@@ -1,3 +1,4 @@
+import { formatDate } from "@lib/util/format-date"
 import { listServiceReviews } from "@lib/data/booking"
 
 const stars = (n: number) => "★".repeat(Math.round(n)) + "☆".repeat(5 - Math.round(n))
@@ -27,7 +28,7 @@ export default async function ServiceReviews({ productId }: { productId: string 
               </p>
             )}
             <p className="txt-small text-ui-fg-subtle mt-1">
-              {r.author ?? "A customer"} · {new Date(r.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              {r.author ?? "A customer"} · {formatDate(r.created_at)}
             </p>
           </li>
         ))}

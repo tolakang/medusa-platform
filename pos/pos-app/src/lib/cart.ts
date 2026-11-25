@@ -78,8 +78,16 @@ export function changeDue(total: number, tendered: number): number | null {
   return (cents(tendered) - cents(total)) / 100
 }
 
-// Quick cash buttons: the exact amount, then the next round notes above it.
-export function quickTender(total: number, notes: number[] = [1, 5, 10, 20, 50, 100]): number[] {
+// The cash notes in circulation, per currency; dollar notes for any other.
+const NOTES: Record<string, number[]> = {
+  khr: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
+}
+const DEFAULT_NOTES = [1, 5, 10, 20, 50, 100]
+
+// Quick cash buttons: the exact amount, then the next round notes above it,
+// in the shift currency's notes (a riel shift offered "total + 1 riel").
+export function quickTender(total: number, currency = "usd"): number[] {
+  const notes = NOTES[currency.toLowerCase()] ?? DEFAULT_NOTES
   const amounts = new Set<number>([total])
   for (const note of notes) {
     const rounded = Math.ceil(cents(total) / cents(note)) * note

@@ -2,7 +2,6 @@
 
 import { updateApproval } from "@/lib/data/approvals"
 import Button from "@/modules/common/components/button"
-import LocalizedClientLink from "@/modules/common/components/localized-client-link"
 import { ApprovalStatusType, ApprovalType } from "@/types/approval"
 import { B2BCart } from "@/types/global"
 import {
@@ -11,7 +10,7 @@ import {
   LockClosedSolidMini,
   XMarkMini,
 } from "@medusajs/icons"
-import { usePrompt } from "@medusajs/ui"
+import { toast, usePrompt } from "@medusajs/ui"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 
@@ -49,8 +48,15 @@ const ApprovalCardActions = ({
     if (!confirmed) return
 
     setApproving(true)
-    await updateApproval(pendingAdminApproval.id, ApprovalStatusType.APPROVED)
-    setApproving(false)
+    // A refused decision (already decided, gone) used to leave the button
+    // spinning with no message.
+    try {
+      await updateApproval(pendingAdminApproval.id, ApprovalStatusType.APPROVED)
+    } catch (e) {
+      toast.error((e as Error).message || "Couldn't save the decision. Reload and try again.")
+    } finally {
+      setApproving(false)
+    }
   }
 
   const handleReject = async () => {
@@ -64,14 +70,21 @@ const ApprovalCardActions = ({
     if (!confirmed) return
 
     setRejecting(true)
-    await updateApproval(pendingAdminApproval.id, ApprovalStatusType.REJECTED)
-    setRejecting(false)
+    // A refused decision (already decided, gone) used to leave the button
+    // spinning with no message.
+    try {
+      await updateApproval(pendingAdminApproval.id, ApprovalStatusType.REJECTED)
+    } catch (e) {
+      toast.error((e as Error).message || "Couldn't save the decision. Reload and try again.")
+    } finally {
+      setRejecting(false)
+    }
   }
 
   const handlePlaceOrder = () => {
     setIsRedirecting(true)
     router.push(
-      `/${countryCode}/checkout?cart_id=${cartWithApprovals.id}&step=payment`
+      `/${countryCode}/checkout?cartId=${cartWithApprovals.id}&step=payment`
     )
   }
 
@@ -124,12 +137,8 @@ const ApprovalCardActions = ({
               isLoading={isRedirecting}
               onClick={handlePlaceOrder}
             >
-              <LocalizedClientLink
-                href={`/checkout?cart_id=${cartWithApprovals.id}&step=payment`}
-              >
-                Place Order
-                <ArrowRightMini className="inline-block" />
-              </LocalizedClientLink>
+              Place Order
+              <ArrowRightMini className="inline-block" />
             </Button>
           </>
         ) : null

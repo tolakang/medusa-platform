@@ -91,11 +91,18 @@ export async function editProduct(_: EditState, form: FormData): Promise<EditSta
   return { info: status === "proposed" ? "Saved and sent for review." : "Saved as a draft." }
 }
 
-export async function deleteProduct(form: FormData): Promise<void> {
+export async function deleteProduct(_: EditState, form: FormData): Promise<EditState> {
   const { token } = await requireVendor()
   const id = String(form.get("product_id") ?? "")
-  if (!/^prod_[A-Za-z0-9]+$/.test(id)) return
-  await backendFetch(`/vendors/products/${id}`, { token, method: "DELETE" })
+  if (!/^prod_[A-Za-z0-9]+$/.test(id)) {
+    return { error: "Unknown product." }
+  }
+  // A refused delete (published meanwhile, gone, network) used to land on the
+  // list as if it had worked.
+  const result = await backendFetch(`/vendors/products/${id}`, { token, method: "DELETE" })
+  if (!result.ok) {
+    return { error: result.message }
+  }
   revalidatePath("/products")
   redirect("/products")
 }

@@ -72,6 +72,13 @@ export default defineMiddlewares({
       middlewares: [requireContactBeforePayment],
     },
     {
+      // "Email me a reset link" while signed in: without a limit one session
+      // could send reset emails without end (the public reset route is limited).
+      method: ['POST'],
+      matcher: '/store/customers/me/password-reset',
+      middlewares: [limitPerIp('password_reset', AUTH_LIMITS.password_reset, 60)],
+    },
+    {
       // Change password while signed in (current + new, at least 8).
       method: ['POST'],
       matcher: '/store/customers/me/password',
