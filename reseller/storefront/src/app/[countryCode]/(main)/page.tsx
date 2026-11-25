@@ -1,14 +1,16 @@
 import { Metadata } from "next"
 
-import { SHOP_NAME } from "@lib/shop"
+import { getShopName } from "@lib/data/seller"
 import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero from "@modules/home/components/hero"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 
-export const metadata: Metadata = {
-  title: SHOP_NAME,
-  description: "Browse the shop and order online.",
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: await getShopName(),
+    description: "Browse the shop and order online.",
+  }
 }
 
 export default async function Home(props: {

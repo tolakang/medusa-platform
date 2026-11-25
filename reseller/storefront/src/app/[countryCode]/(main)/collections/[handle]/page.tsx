@@ -1,4 +1,4 @@
-import { SHOP_NAME } from "@lib/shop"
+import { getShopName } from "@lib/data/seller"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
@@ -27,7 +27,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const metadata = {
-    title: `${collection.title} | ${SHOP_NAME}`,
+    title: `${collection.title} | ${(await getShopName())}`,
     description: `${collection.title} collection`,
   } as Metadata
 
