@@ -1,5 +1,6 @@
 import { Pager, Shell } from "@/components/shell"
-import { day, money, pageFrom } from "@/lib/format"
+import Link from "next/link"
+import { commissionLabel, day, money, orderStatusLabel, pageFrom } from "@/lib/format"
 import { requireSeller, sellerGet } from "@/lib/server/seller"
 
 type Order = {
@@ -32,7 +33,12 @@ export default async function SalesPage({
     <Shell seller={seller} active="/sales">
       <section className="card overflow-x-auto p-4">
         {orders.length === 0 ? (
-          <p className="text-sm text-ui-fg-subtle">No orders in your shop yet.</p>
+          <p className="text-sm text-ui-fg-subtle">
+            No orders in your shop yet.{" "}
+            <Link className="text-ui-fg-interactive hover:underline" href="/products">
+              Choose products for your shop
+            </Link>
+          </p>
         ) : (
           <table className="table">
             <thead>
@@ -51,11 +57,11 @@ export default async function SalesPage({
                   <td>#{order.display_id}</td>
                   <td>{day(order.created_at)}</td>
                   <td>{order.items.map((item) => `${item.quantity} × ${item.title}`).join(", ")}</td>
-                  <td>{order.status}</td>
+                  <td>{orderStatusLabel(order.status)}</td>
                   <td>{money(order.total, order.currency_code)}</td>
                   <td>
                     {order.commission
-                      ? `${money(order.commission.amount, order.currency_code)} (${order.commission.status})`
+                      ? `${money(order.commission.amount, order.currency_code)} (${commissionLabel(order.commission.status)})`
                       : "None"}
                   </td>
                 </tr>

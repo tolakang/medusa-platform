@@ -43,3 +43,29 @@ export function commissionStatus(raw: string | string[] | undefined): Commission
   const value = Array.isArray(raw) ? raw[0] : raw
   return COMMISSION_STATUSES.find((s) => s === value)
 }
+
+const COMMISSION_LABELS: Record<string, string> = {
+  pending: "Waiting",
+  approved: "Due",
+  paid: "Paid",
+  cancelled: "Cancelled",
+}
+
+const ORDER_LABELS: Record<string, string> = {
+  pending: "Placed",
+  completed: "Completed",
+  canceled: "Cancelled",
+  archived: "Archived",
+  requires_action: "Needs action",
+  draft: "Draft",
+}
+
+/** A plain-words label for a Medusa order status (design critique 2026-11-23). */
+export function orderStatusLabel(status: string): string {
+  return ORDER_LABELS[status] ?? status.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
+}
+
+/** A plain-words label for a commission status. */
+export function commissionLabel(status: string): string {
+  return COMMISSION_LABELS[status] ?? orderStatusLabel(status)
+}

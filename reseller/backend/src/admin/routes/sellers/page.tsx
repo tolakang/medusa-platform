@@ -336,9 +336,15 @@ const SellersPage = () => {
                       </div>
                     </Table.Cell>
                     <Table.Cell>
-                      <Button size="small" variant="transparent" className="font-mono" onClick={() => copy(s.invite_code, "Invite code")}>
-                        {s.invite_code}
-                      </Button>
+                      {/* Hidden in the table; Copy hands it over (design critique, 2026-11-23). */}
+                      <div className="flex items-center gap-x-2">
+                        <span className="font-mono">
+                          {s.invite_code.length > 4 ? `••••${s.invite_code.slice(-4)}` : "••••"}
+                        </span>
+                        <Button size="small" variant="transparent" onClick={() => copy(s.invite_code, "Invite code")}>
+                          Copy
+                        </Button>
+                      </div>
                     </Table.Cell>
                     <Table.Cell className="text-right">
                       {s.status !== "active" && (

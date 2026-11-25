@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert"
 import { describe, it } from "node:test"
-import { commissionStatus, day, money, pageFrom, selectionChange } from "../format.ts"
+import { commissionLabel, commissionStatus, day, orderStatusLabel, money, pageFrom, selectionChange } from "../format.ts"
 import { seal, unseal } from "../session-seal.ts"
 
 // TASKS P5-08: portal helpers and the sealed session cookie.
@@ -44,5 +44,14 @@ describe("session cookie (TASKS P5-08)", () => {
     bytes[bytes.length - 1] ^= 1
     assert.equal(unseal("secret-a", bytes.toString("base64url")), null)
     assert.equal(unseal("secret-a", undefined), null)
+  })
+})
+
+describe("status labels", () => {
+  it("turns raw status words into plain labels", () => {
+    assert.equal(orderStatusLabel("pending"), "Placed")
+    assert.equal(orderStatusLabel("requires_action"), "Needs action")
+    assert.equal(orderStatusLabel("some_new_state"), "Some new state")
+    assert.equal(commissionLabel("approved"), "Due")
   })
 })
