@@ -90,12 +90,34 @@ medusaIntegrationTestRunner({
         // The seats are reserved by Medusa's own inventory.
         expect((await vip()).inventory_quantity).toBe(18)
 
-        // One email with every code.
-        const { data: sent } = await query().graph({
-          entity: "notification",
-          fields: ["to", "data"],
-          filters: { template: EVENT_TICKETS_TEMPLATE },
+        const ticketEmails = async () =>
+          (
+            await query().graph({
+              entity: "notification",
+              fields: ["to", "data"],
+              filters: { template: EVENT_TICKETS_TEMPLATE },
+            })
+          ).data
+        // Pay later: no codes by email until the payment is captured (owner, 2026-11-25).
+        await new Promise((r) => setTimeout(r, 1000))
+        expect(await ticketEmails()).toHaveLength(0)
+
+        const {
+          data: [placed],
+        } = await query().graph({
+          entity: "order",
+          fields: ["payment_collections.payments.id"],
+          filters: { id: done!.data.order.id },
         })
+        const paymentId = placed.payment_collections![0]!.payments![0]!.id
+        expect((await call(api.post(`/admin/payments/${paymentId}/capture`, {}, admin))).status).toBe(200)
+
+        // One email with every code, once paid.
+        let sent: any[] = []
+        for (let i = 0; i < 40 && !sent.length; i++) {
+          sent = await ticketEmails()
+          if (!sent.length) await new Promise((r) => setTimeout(r, 250))
+        }
         expect(sent).toHaveLength(1)
         expect(sent[0].to).toBe("sok@example.com")
         // A guest is greeted by the checkout name (P3-24 follow-up).
