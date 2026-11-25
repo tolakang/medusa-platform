@@ -65,7 +65,7 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 2. Deploy `wholesale-backend` (server). Migrations run on start. Check `https://api.example.com/health`.
 3. Create the first admin user from the backend's Dokploy terminal:
    `docker-entrypoint.sh medusa user -e you@example.com -p <password>`
-4. In the admin: create a region. Then run `docker-entrypoint.sh medusa exec ./src/scripts/seed-b2b.js` once in the backend terminal (safe to re-run): it creates the **"Wholesale"** sales channel and its **publishable API key** (printed in the log) and puts the products in it (TASKS P4-03). Price tiers: create customer groups and price lists in the admin, and add each company to its group.
+4. In the admin: create a region (this backend has no Cambodia `seed`). Then run `docker-entrypoint.sh medusa exec ./src/scripts/seed-b2b.js` once in the backend terminal (safe to re-run): it creates the **"Wholesale"** sales channel and its **publishable API key** (printed in the log) and puts the products in it (TASKS P4-03). It also rebuilds the product search index (F-102): re-run it once on a staging seeded before 2026-11-25, and after adding products to the Wholesale channel in the admin, or the shop lists none. Price tiers: create customer groups and price lists in the admin, and add each company to its group.
 5. Deploy `wholesale-worker` (same Build Path, worker overrides).
 6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `wholesale-storefront`.
 7. Set the final domains in the backend CORS variables and redeploy the backend.

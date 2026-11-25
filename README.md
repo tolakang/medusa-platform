@@ -2,7 +2,7 @@
 
 Six categories of [Medusa](https://medusajs.com) commerce apps in one workspace, sharing one core package, each app deployed on its own with Dokploy.
 
-> **Status (2026-11-14):** every category has its code. Ecommerce and POS run on staging; no category is in production yet. **Next: the shared core** (`BUILD_PLAN.md` §5): the SC-1 proof, then the catalog and the core, one step per PR. Then the backlog (§10). Details: [`docs/TASKS.md`](./docs/TASKS.md).
+> **Status (2026-11-25):** the shared core is in: SC-1 and every SC-2 feature merged (SC-2 waits only on the owner's staging checks). Every category has its code. Ecommerce, POS and Booking run on staging; no category is in production yet. **Next:** the owner's staging runs for Wholesale, Reseller and Marketplace (P4-11, P5-11, P6-13), the open design-critique items, then SC-3 and the first production deploy (P1-08). Details: [`docs/TASKS.md`](./docs/TASKS.md).
 
 Each category folder is one kind of business; each business running it is one Dokploy project. Inside a category, every app has its own `Dockerfile` and `.env.example` and deploys on its own.
 
@@ -10,7 +10,7 @@ Each category folder is one kind of business; each business running it is one Do
 |---|---|---|---|
 | [`ecommerce/`](./ecommerce) | Direct-to-consumer online store | `/ecommerce/backend`, `/ecommerce/storefront` | on staging; production P1-08 open |
 | [`pos/`](./pos) | Physical shop checkout | `/pos/backend`, `/pos/storefront`, `/pos/pos-app` | on staging; exit passed |
-| [`booking-services/`](./booking-services) | Appointments, visits, trips, rentals, tickets, tables, event packages | `/booking-services/backend`, `/booking-services/storefront`, `/booking-services/provider-portal` | kinds A and G built, staging passed (P3-18); providers P3-31/P3-32 |
+| [`booking-services/`](./booking-services) | Appointments, visits, trips, rentals, tickets, tables, event packages | `/booking-services/backend`, `/booking-services/storefront`, `/booking-services/provider-portal` | all kinds (A–H), providers and provider portal built (P3-19 to P3-33); on staging (P3-18) |
 | [`wholesale/`](./wholesale) | Companies buy your products in bulk | `/wholesale/backend`, `/wholesale/storefront` | code done; staging P4-11 open |
 | [`reseller/`](./reseller) | Sellers sell your products, you ship | `/reseller/backend`, `/reseller/storefront`, `/reseller/seller-portal` | code done; staging P5-11 open |
 | [`marketplace/`](./marketplace) | Vendors sell their own products | `/marketplace/backend`, `/marketplace/storefront`, `/marketplace/vendor-portal` | code done; staging P6-13 open |
@@ -39,4 +39,4 @@ Older history (the medusa-apps plan revisions, done tasks, closed findings, hand
 4. **Independent deploys.** Every app keeps its own `package.json`, `Dockerfile`, `.env.example` and Dokploy app.
 5. **One business = one category deployment.** Combine categories by adding modules to one backend, never by syncing two backends.
 
-Versions (2026-11-12): Medusa 2.22.6 in every app (npm `latest`, a security release, as the starters), Node `>=22.23.4`, Next.js 16.4.5, pnpm 12.18.0. Details: `BUILD_PLAN.md` (Revision 1, 2026-11-14). Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.
+Versions (2026-11-12): Medusa 2.22.6 in every app (npm `latest`, a security release, as the starters), Node `>=22.23.4`, Next.js 16.4.5, pnpm 12.18.0. Details: `BUILD_PLAN.md` (Revision 6, 2026-11-15). Starters: `medusajs/dtc-starter`, `medusajs/b2b-starter`.

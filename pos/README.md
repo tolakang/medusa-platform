@@ -1,13 +1,13 @@
 # POS — `pos/`
 
-> **Physical shop checkout + online store on shared stock.** Phase 2 code done (P2-01 to P2-13); the staging run and exit checklist (P2-14) wait for the owner (`DOKPLOY_STAGING.md`, start at Step 0). All three apps are built:
-> - `backend/`: a copy of `ecommerce/backend`. The POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*.
+> **Physical shop checkout + online store on shared stock.** Phase 2 done; running on staging, exit checklist P2-14 passed 2026-11-14 (`docs/TASKS.md`). Three apps:
+> - `backend/`: started as a copy of `ecommerce/backend`. The POS module, cashier sign-in, shifts, checkout and the `/pos` and `/admin/pos` routes are in; see *Shop setup and selling*.
 > - `pos-app/`: the counter PWA (TASKS P2-10, `pos-app/README.md`).
 > - `storefront/`: the online shop, a copy of `ecommerce/storefront` (TASKS P2-09, `storefront/README.md`).
 >
 > Scope: [BUILD_PLAN.md §9.2](../BUILD_PLAN.md).
 
-This folder is **one complete category**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
+This folder is **one complete category**: one Dokploy project, each app built from the repo root (Docker Context Path `.`) and deployed on its own.
 
 ```
 pos/
@@ -65,23 +65,23 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 
 ## Deploy order (first time)
 
-Step-by-step for a new staging from zero on `medusa-platform`: **[STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md)** (Parts A–H). Full reference, including the POS setup and the checks for the phase exit: **`DOKPLOY_STAGING.md`** (TASKS P2-14).
+Setup from zero and full reference, including the POS setup and the phase-exit checks: **[DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md)** (starts with a *Fast path*; TASKS P2-14).
 
 1. Create `pos-postgres` and `pos-redis`.
 2. Deploy `pos-backend` (server). Migrations run on start. Check `https://api.example.com/health`.
 3. Create the first admin user from the backend's Dokploy terminal:
    `docker-entrypoint.sh medusa user -e you@example.com -p <password>`
-4. In the admin: create a region, a sales channel and a **publishable API key**.
+4. Seed from the same terminal: `docker-entrypoint.sh medusa exec ./src/scripts/seed.js` (Cambodia region, USD default + KHR, Phnom Penh stock location, delivery; safe to re-run), optionally `seed-initial-data.js` (demo products) and then `seed-demo-products.js`. Then copy the `pk_…` key from admin → Settings → Publishable API Keys (it is linked to the **Default Sales Channel**).
 5. Deploy `pos-worker` (same Build Path, worker overrides).
-6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `pos-storefront`. Use the key of the **online** sales channel. Link that key to exactly one channel, which must hold the products (see *Stock*).
-7. Deploy `pos-pos-app` with runtime `MEDUSA_BACKEND_URL` (the backend's internal hostname) and `COOKIE_SECRET` (`openssl rand -hex 32`). No build arguments are needed.
+6. Put the publishable key, backend URL and the other build args (`DOKPLOY_STAGING.md` Step 5.B) into the storefront's **Build-time Arguments**, then deploy `pos-storefront`. Use the key of the **online** sales channel. Link that key to exactly one channel, which must hold the products (see *Stock*).
+7. Deploy `pos-pos-app` with runtime `MEDUSA_BACKEND_URL`, `COOKIE_SECRET` (`openssl rand -hex 32`) and `SHOPPER_IP_SECRET` (the backend's value). Build arguments are optional: the runtime `MEDUSA_BACKEND_URL` wins.
 8. Set the final domains in the backend CORS variables and redeploy the backend.
 
 After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
 
 ## How the pieces connect
 
-- All clients reach the backend only over HTTP. No shared code, no shared files, no shared build.
+- All clients reach the backend only over HTTP. Clients share no code; backends share only `packages/medusa-core`.
 - Backend CORS must list each client domain:
   - `STORE_CORS` = storefront domain
   - `ADMIN_CORS` = admin domain only
@@ -128,5 +128,5 @@ Stock that only the online shop should sell (a warehouse) goes in a location tha
 
 - Shared backend code comes only from `packages/medusa-core` (plan §4–§5); this category's own code stays here, and its clients never use the core.
 - This project has its **own** Postgres and Redis. Never point two businesses at the same database.
-- A second business of the same type = a second Dokploy project built from the same folder, with its own env.
+- A second business of the same type = a second Dokploy project built from the same repo, with its own env.
 - To add another category's features to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend.

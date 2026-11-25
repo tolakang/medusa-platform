@@ -1,6 +1,6 @@
 # reseller / seller-portal
 
-Seller portal for the reseller category (BUILD_PLAN §9.5, TASKS P5-08): sellers choose which of your products appear in their shop and follow their sales and commissions. Plain Next.js app (client standard, plan §7.2), built like `pos/pos-app` (same pins, Dockerfile pattern, sealed session cookie).
+Seller portal for the reseller category (BUILD_PLAN §9.5, TASKS P5-08): sellers choose which of your products appear in their shop and follow their sales and commissions. Plain Next.js app (client standard, plan §7.2), built like `pos/pos-app` (Dockerfile pattern, sealed session cookie).
 
 - **Sign-in** (`/login`): invite-only, as the backend's seller flow (P5-03). The shop invites the email (admin **Sellers** page, or `POST /admin/sellers`) and gets an **invite code** to give the seller; the first time, the seller sets a password here with that code (register + `POST /sellers/accept`), then signs in. The invited email alone can't take the account. A suspended seller is signed out on the next page.
 - **Overview** (`/`): commission totals (waiting, due, paid), the shop's domain and rate, the latest sales.
@@ -10,7 +10,17 @@ Seller portal for the reseller category (BUILD_PLAN §9.5, TASKS P5-08): sellers
 
 **Per-IP limits:** set `SHOPPER_IP_SECRET` to the backend's value, so the backend counts sign-in attempts per seller's own IP. Without it every seller shares this server's limit, and one person's wrong passwords can lock all sellers out (`CLIENT_IP_HEADER` as in the storefront).
 
-**Security:** the backend token is sealed in an httpOnly cookie (`seller_session`, AES-256-GCM under `COOKIE_SECRET`, 8 hours); pages and server actions call the backend from this server only (`src/lib/server`), so the browser never sees the token and the backend needs no CORS entry for the portal. `X-Frame-Options: DENY`, `robots.txt` disallows indexing.
+**Security:** the backend token is sealed in an httpOnly cookie (`seller_session`, AES-256-GCM under `COOKIE_SECRET`, 8 hours); pages and server actions call the backend from this server only (`src/lib/server`), so the browser never sees the token. `X-Frame-Options: DENY`, `robots.txt` disallows indexing.
+
+## Env
+
+- **Runtime** (`.env.example`): `MEDUSA_BACKEND_URL` (internal Dokploy hostname; it wins over the build args), `COOKIE_SECRET` (this portal's own, required, 16+ characters: `openssl rand -hex 32`), `SHOPPER_IP_SECRET` (the backend's value), `CLIENT_IP_HEADER`, `PORT=3000`.
+- **Build-time** (optional, the Dockerfile's `ARG`s): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL`. The server calls use `MEDUSA_BACKEND_URL || NEXT_PUBLIC_MEDUSA_BACKEND_URL` (`src/lib/server/medusa.ts`), so leave them empty when the runtime value is set.
+- **On the backend and worker:** `SELLER_CORS` = this portal's origin (also added to `AUTH_CORS`), `SELLER_PORTAL_URL` = its public URL for email links (empty = the first `SELLER_CORS` origin).
+
+## Deploy (Dokploy)
+
+Build Path `/`, Docker File `reseller/seller-portal/Dockerfile`, Docker Context Path `.` (repo root), Watch Paths `reseller/seller-portal/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, domain → port 3000. Order and backend settings: `../README.md`.
 
 ## Run locally
 ```bash
@@ -23,6 +33,3 @@ MEDUSA_BACKEND_URL=http://localhost:9000 COOKIE_SECRET=$(openssl rand -hex 16) p
 pnpm build && pnpm typecheck && pnpm test
 docker build -f Dockerfile -t reseller-seller-portal:check ../..   # context: the repo root
 ```
-
-## Deploy
-See `../README.md` (Dokploy). Env: `.env.example`.

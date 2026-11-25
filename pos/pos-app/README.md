@@ -26,7 +26,7 @@ pnpm install --frozen-lockfile
 pnpm dev                     # http://localhost:3000
 ```
 
-Or the whole project with `../docker-compose.local.yml`.
+Or the whole project: `~/.kiri/bin/docker --context kiri compose -f ../docker-compose.local.yml up -d` (same host ports as the other categories: run one local stack at a time).
 
 ## Verify
 
@@ -36,4 +36,4 @@ pnpm build && pnpm typecheck && pnpm test   # unit tests: cart, change, session 
 
 ## Deploy (Dokploy)
 
-Application `pos-pos-app`, Dockerfile build (`pos/pos-app/Dockerfile`), port 3000. Runtime variables: `MEDUSA_BACKEND_URL` (the backend's internal hostname), `SHOPPER_IP_SECRET` (the backend's value, so sign-in limits count per cashier and not per app server) and `COOKIE_SECRET` (required). No build arguments are needed. See `../README.md`.
+Application `pos-pos-app`, Docker File `pos/pos-app/Dockerfile`, Docker Context Path `.` (the repo root), Watch Paths `pos/pos-app/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, port 3000. In the root pnpm workspace with its own `pnpm-lock.yaml`. Runtime variables: `NODE_ENV=production`, `PORT=3000`, `MEDUSA_BACKEND_URL` (the backend's internal hostname or public API URL), `COOKIE_SECRET` (required), `SHOPPER_IP_SECRET` (the backend's value, so sign-in limits count per cashier and not per app server), `CLIENT_IP_HEADER` (only behind another proxy). Build arguments `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL` are optional: server code uses the runtime `MEDUSA_BACKEND_URL` first (`src/lib/server/medusa.ts`). Steps: `../DOKPLOY_STAGING.md` Step 6. See `../README.md`.

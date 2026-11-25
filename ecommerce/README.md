@@ -4,7 +4,7 @@
 >
 > Features: ABA PayWay checkout, Cambodian addresses (province/district lists, postal codes), phone-first contact with optional email and Telegram, order emails (Resend), staff and customer Telegram updates, S3 file storage, admin upload limits, storefront cache refresh, daily database backups.
 
-This folder is **one complete category**. Copy the whole folder's setup into one Dokploy project and every piece deploys on its own.
+This folder is **one complete category**: one Dokploy project, each app built from the repo root (Docker Context Path `.`) and deployed on its own.
 
 ```
 ecommerce/
@@ -64,9 +64,9 @@ Full steps with every Dokploy field: [DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md) 
 2. Deploy `ecommerce-backend` (server) with the core **and Phase 1** variables (runbook §2.5). Migrations run on start. Check `https://api.example.com/health`.
 3. Create the first admin user from the backend's Dokploy terminal:
    `docker-entrypoint.sh medusa user -e you@example.com -p <password>`
-4. Seed the Cambodia shop data: `docker-entrypoint.sh medusa exec ./src/scripts/seed.js` (region, currencies, stock location, delivery option; safe to re-run). It reuses the store, sales channel and **publishable API key** Medusa creates on first boot: copy that key (`pk_…`) from admin → Settings → Publishable API Keys (runbook §2.10).
+4. Seed the Cambodia shop data: `docker-entrypoint.sh medusa exec ./src/scripts/seed.js` (region, USD default + KHR, stock location, delivery option; safe to re-run). It reuses the store, sales channel and **publishable API key** Medusa creates on first boot: copy that key (`pk_…`) from admin → Settings → Publishable API Keys. Optional demo data: `seed-initial-data.js`, then `seed-demo-products.js` (runbook §2.10).
 5. Deploy `ecommerce-worker` (same image, worker overrides, the same Phase 1 variables; runbook §3).
-6. Put the publishable key, backend URL and `NEXT_PUBLIC_DEFAULT_REGION=kh` into the storefront's **Build-time Arguments**, set `REVALIDATE_SECRET`, then deploy `ecommerce-storefront` (runbook §4).
+6. Put the publishable key, backend URL, `NEXT_PUBLIC_DEFAULT_REGION=kh` and the other build args (runbook §4.2) into the storefront's **Build-time Arguments**, set `REVALIDATE_SECRET`, then deploy `ecommerce-storefront` (runbook §4).
 7. Set the final domains in the backend CORS variables and redeploy the backend.
 8. Go-live steps (runbook §8): add **payway** to the Cambodia region, ask ABA to whitelist the hosts and server IP, register the customer bot's Telegram webhook, test one order end to end.
 9. Database backups and one restore test (runbook §7).
@@ -76,9 +76,9 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
 
 ## Staging project: `ecommerce-staging` (decision D6)
 
-Step-by-step setup from zero: **[STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md)** (Parts A–H, on `medusa-platform`). Full reference: **[DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md)** (Dokploy field names, every variable, health checks, rollback test, backups, alerts).
+Setup from zero and full reference: **[DOKPLOY_STAGING.md](./DOKPLOY_STAGING.md)** (starts with a *Fast path*; Dokploy field names, every variable, health checks, rollback test, backups, alerts).
 
-Staging is a **second Dokploy project** built from this same folder — never a
+Staging is a **second Dokploy project** built from this same repo — never a
 second environment inside the production project:
 
 | Production | Staging |
@@ -101,7 +101,7 @@ migrating).
 
 ## How the pieces connect
 
-- All clients reach the backend only over HTTP. No shared code, no shared files, no shared build.
+- All clients reach the backend only over HTTP. Clients share no code; backends share only `packages/medusa-core`.
 - Backend CORS must list each client domain:
   - `STORE_CORS` = storefront domain
   - `ADMIN_CORS` = backend/admin domain
@@ -113,5 +113,5 @@ migrating).
 
 - Shared backend code comes only from `packages/medusa-core` (plan §4–§5); this category's own code stays here, and its clients never use the core.
 - This project has its **own** Postgres and Redis. Never point two businesses at the same database.
-- A second business of the same type = a second Dokploy project built from the same folder, with its own env.
+- A second business of the same type = a second Dokploy project built from the same repo, with its own env.
 - To add another category's features to this business (e.g. POS for a marketplace), add that module to **this** backend; do not deploy a second backend.

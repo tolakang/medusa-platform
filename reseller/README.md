@@ -30,7 +30,7 @@ reseller/
 | `reseller-backend` | Application (Dockerfile) | `/reseller/backend` | 9000 → `api.example.com` | `backend/.env.example`, `MEDUSA_WORKER_MODE=server` |
 | `reseller-worker` | Application (Dockerfile) | `/reseller/backend` | none | same env + worker overrides |
 | `reseller-storefront` | Application (Dockerfile) | `/reseller/storefront` | 8000 → `shop.example.com` | `storefront/.env.example` (build args + runtime) |
-| `reseller-seller-portal` | Application (Dockerfile) | `/reseller/seller-portal` | 3000 → `sellers.example.com` | `seller-portal/.env.example` (build args + runtime) |
+| `reseller-seller-portal` | Application (Dockerfile) | `/reseller/seller-portal` | 3000 → `sellers.example.com` | `seller-portal/.env.example` (runtime; build args optional) |
 
 Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Docker File** `reseller/<app>/Dockerfile` and **Docker Context Path** `.` (the repo root, since SC-1: the apps are in the root pnpm workspace; paths relative to the repo root, F-011), and **watch paths** `reseller/<app>/**` plus the root `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, so a change to one app never redeploys another; a Medusa catalog change redeploys all of them. The "Build Path" column above is the app folder, not the Dokploy Build Path field.
 
@@ -66,11 +66,11 @@ Every application uses **Build Type: Dockerfile** with **Build Path `/`**, **Doc
 2. Deploy `reseller-backend` (server). Migrations run on start. Check `https://api.example.com/health`.
 3. Create the first admin user from the backend's Dokploy terminal:
    `docker-entrypoint.sh medusa user -e you@example.com -p <password>`
-4. In the admin: create a region, a sales channel and a **publishable API key**.
+4. In the same terminal, run the Cambodia seed: `docker-entrypoint.sh medusa exec ./src/scripts/seed.js`. It sets the store to USD (default) + KHR and adds the Cambodia region, the Phnom Penh stock location and delivery, on Medusa's first-boot **Default Sales Channel**. Then in the admin: **Settings → Publishable API Keys** → the one key must list exactly that one channel → copy its `pk_…`. (The optional demo `seed-initial-data.js` keeps the default currency since F-101; on an older staging that ran it, set USD as default and add KHR back in **Settings → Store**.)
 5. Deploy `reseller-worker` (same Build Path, worker overrides).
 6. Put the publishable key and backend URL into the storefront's **Build-time Arguments**, then deploy `reseller-storefront`.
-7. Deploy `reseller-seller-portal`.
-8. Set the final domains in the backend CORS variables and redeploy the backend.
+7. Deploy `reseller-seller-portal` with runtime `COOKIE_SECRET` (its own, `openssl rand -hex 32`), `MEDUSA_BACKEND_URL` and `SHOPPER_IP_SECRET` (the backend's); no build args needed.
+8. Set the final domains in the backend CORS variables (`SELLER_CORS` = the portal's origin, also added to `AUTH_CORS`), set `SELLER_PORTAL_URL` to the portal's URL, and redeploy the backend and the worker (the worker sends the emails).
 
 After the first deploy, every service can be redeployed, rebuilt or rolled back **independently**.
 
@@ -81,7 +81,8 @@ After the first deploy, every service can be redeployed, rebuilt or rolled back 
   - `STORE_CORS` = storefront domain
   - `ADMIN_CORS` = backend/admin domain
   - `AUTH_CORS` = every domain where someone logs in
-  - `SELLER_CORS` = seller portal domain (custom `/sellers/*` routes)
+  - `SELLER_CORS` = seller portal domain (custom `/sellers/*` routes); the portal's origin also goes in `AUTH_CORS`
+- `SELLER_PORTAL_URL` = the portal's public URL, for the links in seller emails; empty = the first `SELLER_CORS` origin.
 - The storefront reaches the backend through the public `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (build-time). Runtime `MEDUSA_BACKEND_URL` can be the backend's **internal** Dokploy hostname once starter change 6 in BUILD_PLAN.md §7.2 is applied (faster, private; copy the exact name Dokploy shows for the service, it may carry a suffix). Build-time URLs must be **public**, because the build runs on the build server.
 - `NEXT_PUBLIC_*` values are baked in at build time. Changing one = rebuild that client.
 

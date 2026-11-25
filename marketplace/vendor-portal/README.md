@@ -12,15 +12,17 @@ Vendor portal for the marketplace category (BUILD_PLAN §9.6, TASKS P6-09): vend
 
 **Per-IP limits:** set `SHOPPER_IP_SECRET` to the backend's value, so the backend counts sign-in and sign-up attempts per vendor's own IP.
 
-**Security:** the backend token is sealed in an httpOnly cookie (`vendor_session`, AES-256-GCM under `COOKIE_SECRET`, 8 hours); pages and server actions call the backend from this app's server only, so the browser never holds the token and the backend needs no CORS entry for this app. A refused token (401) signs the vendor out; a backend outage shows the error page.
+**Security:** the backend token is sealed in an httpOnly cookie (`vendor_session`, AES-256-GCM under `COOKIE_SECRET`, 8 hours); pages and server actions call the backend from this app's server only, so the browser never holds the token. A refused token (401) signs the vendor out; a backend outage shows the error page.
 
 ## Env
 
-`.env.example`: runtime `MEDUSA_BACKEND_URL` (internal Dokploy hostname), `COOKIE_SECRET` (required, 16+ characters), `SHOPPER_IP_SECRET`, `CLIENT_IP_HEADER`, `PORT=3000`.
+- **Runtime** (`.env.example`): `MEDUSA_BACKEND_URL` (internal Dokploy hostname; it wins over the build args), `COOKIE_SECRET` (this portal's own, required, 16+ characters: `openssl rand -hex 32`), `SHOPPER_IP_SECRET` (the backend's value), `CLIENT_IP_HEADER`, `PORT=3000`.
+- **Build-time** (optional, the Dockerfile's `ARG`s): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` and `NEXT_PUBLIC_BASE_URL`. The server calls use `MEDUSA_BACKEND_URL || NEXT_PUBLIC_MEDUSA_BACKEND_URL` (`src/lib/server/medusa.ts`), so leave them empty when the runtime value is set.
+- **On the backend and worker:** `VENDOR_CORS` = this portal's origin (also added to `AUTH_CORS`), `VENDOR_PORTAL_URL` = its public URL for email links (empty = the first `VENDOR_CORS` origin).
 
 ## Deploy (Dokploy)
 
-Build Path `/`, Docker File `marketplace/vendor-portal/Dockerfile`, Docker Context Path `marketplace/vendor-portal`, Watch Paths `marketplace/vendor-portal/**`, domain → port 3000. Order: `../README.md`.
+Build Path `/`, Docker File `marketplace/vendor-portal/Dockerfile`, Docker Context Path `.` (repo root), Watch Paths `marketplace/vendor-portal/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, domain → port 3000. Order and backend settings: `../README.md`.
 
 ## Verify
 

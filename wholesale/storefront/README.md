@@ -2,7 +2,7 @@
 
 Next.js B2B buyer shop for the wholesale category. Standard: `BUILD_PLAN.md` §7.2; scope: §6.4 (TASKS P4-08).
 
-**Starter:** `medusajs/b2b-starter` `apps/storefront` at commit **`f352e3c`** (2026-11-09, Medusa 2.22.6, Next.js 16.3.8). Here: Next.js **16.4.5**, `@medusajs/ui` **4.2.13** (the repo's pin rule), pnpm 12.18.0.
+**Starter:** `medusajs/b2b-starter` `apps/storefront` at commit **`f352e3c`** (2026-11-09, Medusa 2.22.6, Next.js 16.3.8). Here: Next.js **16.4.5**; `@medusajs/*` from the root catalog (2.22.6, `"catalog:"`); pnpm from the root `packageManager`.
 
 ## What buyers get
 
@@ -22,7 +22,7 @@ Next.js B2B buyer shop for the wholesale category. Standard: `BUILD_PLAN.md` §7
 
 Plan §7.2 changes:
 
-1. Standalone pnpm package: own `packageManager`, lockfile and settings-only `pnpm-workspace.yaml` (the starter root's `@types/react` overrides).
+1. Part of the root pnpm workspace (no own lockfile or `packageManager`).
 2. Renamed `@b2b-starter/storefront` → `wholesale-storefront`; `typecheck` and `test` scripts added.
 3. `output: "standalone"` and (8) `outputFileTracingRoot: __dirname` in `next.config.js`.
 4. Image host from `S3_IMAGE_HOSTNAME` / `S3_IMAGE_PATHNAME`.
@@ -61,14 +61,14 @@ Keep the two switches the same: `NEXT_PUBLIC_REQUIRE_LOGIN` here and `WHOLESALE_
 
 ## Env
 
-- **Build-time** (Dokploy Build-time Arguments): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (required, or the build aborts; use the "Wholesale storefront" key from `pnpm seed:b2b`), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_REQUIRE_LOGIN`, `NEXT_PUBLIC_STRIPE_KEY` (unused), `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`.
+- **Build-time** (Dokploy Build-time Arguments): `NEXT_PUBLIC_MEDUSA_BACKEND_URL` (public), `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (required, or the build aborts; use the "Wholesale storefront" key from `pnpm seed:b2b`), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_SHOP_NAME` (header, footer, titles; empty = "Wholesale"), `NEXT_PUBLIC_REQUIRE_LOGIN`, `NEXT_PUBLIC_STRIPE_KEY` (unused), `S3_IMAGE_HOSTNAME`, `S3_IMAGE_PATHNAME`.
 - **Runtime:** `MEDUSA_BACKEND_URL` (internal Dokploy hostname, optional), `PORT=8000`.
 
 The starter's Adyen, PayPal and Medusa Payments code is unused here; their `NEXT_PUBLIC_*` keys are not build args.
 
 ## Deploy (Dokploy)
 
-Build Path `/`, Docker File `wholesale/storefront/Dockerfile`, Docker Context Path `wholesale/storefront`, Watch Paths `wholesale/storefront/**`, domain → port 8000. Order and CORS: `../README.md`.
+Build Path `/`, Docker File `wholesale/storefront/Dockerfile`, Docker Context Path `.` (repo root), Watch Paths `wholesale/storefront/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`, domain → port 8000. Order and CORS: `../README.md`.
 
 ## Verify (DEV_FLOW §5)
 

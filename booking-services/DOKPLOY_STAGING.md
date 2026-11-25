@@ -2,7 +2,17 @@
 
 A click-by-click setup of the Booking services category on a Dokploy **staging** project, written like the POS runbook (`../pos/DOKPLOY_STAGING.md`), which passed on 2026-11-14. You don't need any other runbook. Do the steps **in order**. Each step ends with **Check** (what you should see) and **Reply with** (what to send so I can verify from here). Field names are Dokploy's own, verified on the Ecommerce and POS staging (findings F-011, F-012, F-016, F-017, F-019, F-020, F-021, F-086).
 
-> **Quick start:** to set up a new Booking staging from zero on `medusa-platform`, follow [STAGING_QUICKSTART.md](./STAGING_QUICKSTART.md) (Parts A–H); this runbook is the full reference behind it.
+## Fast path
+
+Already did the Ecommerce or POS staging? The short version, each line a step below:
+1. Two hostnames (A records) and five secrets A–E (Step 0); your shop's name.
+2. Project `booking-staging`, `booking-postgres` (database `booking_services`), `booking-redis` (Step 1).
+3. `booking-backend`: Docker File `booking-services/backend/Dockerfile`, Context Path `.`, Watch Paths `booking-services/backend/**`, `packages/medusa-core/**`, `pnpm-workspace.yaml`, `package.json`, `pnpm-lock.yaml`; env block; port 9000; health check (Step 2).
+4. Admin user, `seed.js`, `seed-booking-demo.js`, store currency USD, copy the `pk_…` (Step 3).
+5. `booking-worker`: the backend's env with the three worker lines (Step 4).
+6. `booking-storefront`: build args with the `pk_…`, runtime env, port 8000 (Step 5).
+7. Optional `booking-provider-portal`, port 3000 (Step 5b).
+8. Book, pay, cancel (Step 6); the kinds (Step 6b); independence (Step 8).
 
 **Never paste secret values** in chat: keys, passwords, connection URLs, tokens.
 
@@ -27,7 +37,8 @@ When you're done you have one Dokploy project, `booking-staging`, with **5 servi
    - `<api host>` = `booking-api.<your-domain>`: backend and admin
    - `<shop host>` = `booking.<your-domain>`: the booking shop
 2. At your DNS provider, create an **A record** for each one, pointing to the Dokploy server's IP: the same IP as the Ecommerce and POS staging.
-3. **No DNS?** Use Dokploy's **Generated** domains instead. They are HTTP only, so write `http://` instead of `https://` everywhere below.
+3. **Replacing an older Booking staging?** You can keep its hostnames: leave them on the old project until Step 5 (use a **Generated** domain on the new backend meanwhile), then remove them from the old apps' **Domains**, **stop** those apps (keep them as the way back until Step 6 passes), add them to the new apps and redeploy.
+4. **No DNS?** Use Dokploy's **Generated** domains instead. They are HTTP only, so write `http://` instead of `https://` everywhere below.
 
 ### B. Secrets
 On your own computer, run this **five times**:
@@ -49,6 +60,9 @@ Save each result in your password manager under these names:
 - Without them, product images stay on the container's disk (lost on redeploy), and email and Telegram only write to the log. Customers then pay with Medusa's built-in **manual payment**, and every booking check still works.
 - **PayWay is worth adding now** if you have the sandbox values from Ecommerce: then Step 6 also tests a real card payment and the refund on cancel. The same merchant ID and keys work here.
 - Use a **separate** bucket (e.g. `booking-staging`) and Telegram group from the other shops.
+
+### D. Shop name
+The name shown in the shop's header, footer and page titles (e.g. "Siem Reap Spa"); empty = "Book Online". It goes into `NEXT_PUBLIC_SHOP_NAME` in Step 5.
 
 **Reply with:** the two hostnames (or "generated domains"), and "extras now" or "extras later".
 
@@ -220,14 +234,16 @@ PAYWAY_RSA_PUBLIC_KEY=<the RSA public key from ABA>
    ```
 3. **Check:** it prints that the user was created.
 
+This email becomes the admin login. Use a different one for a shop account later (Step 6): an admin login blocks a shop account with the same email.
+
 ### B. Staging data
-In the same terminal, run the two seeds, **one after the other**. This shop is booking-only (TASKS P3-19): no demo goods, no Europe region or warehouse, so `seed-initial-data.js` is **not** run.
+In the same terminal, run the two seeds, **one after the other**. This shop is booking-only (TASKS P3-19): no demo goods, no Europe region or warehouse, so `seed-initial-data.js` (demo goods and a Europe region) is **not** run.
 ```bash
 docker-entrypoint.sh medusa exec ./src/scripts/seed.js
 docker-entrypoint.sh medusa exec ./src/scripts/seed-booking-demo.js
 ```
-- The first adds the Cambodia region (USD), the **Phnom Penh** stock location and "Phnom Penh Delivery".
-- The second adds one example per booking kind, each in its category:
+- The first sets the store currencies to **USD** (default) + **KHR** and adds the Cambodia region (USD), the **Phnom Penh** stock location and "Phnom Penh Delivery".
+- The second adds a service for every booking kind (A to G), each in its category, plus extras, passes, a quote-only service and event packages (Step 6b). The three used in Step 6:
   - **Appointments:** the service **Haircut** (30 min $8, 60 min $15) and the stylist **Sophea**, Monday to Saturday, 09:00–12:00 and 13:00–17:00 Phnom Penh time;
   - **Visits at your place** (P3-20): the service **Air conditioner service** (Cleaning 60 min $15, Repair visit 90 min $20) with the technician **Vannak**, Monday to Saturday, 08:00–12:00 and 13:00–17:00; booking it asks for the address and what needs doing;
   - **Table reservations:** the service **Table reservation** (a $5 deposit, 90 minutes) by **party size** 2, 4 or 6, with **Tables for 2** (4 tables), **Tables for 4** (3) and **Table for 6** (1), every day 11:00–14:00 and 17:00–22:00.
@@ -315,8 +331,10 @@ NEXT_PUBLIC_CAPTCHA_PROVIDER=
 NEXT_PUBLIC_CAPTCHA_SITE_KEY=
 S3_IMAGE_HOSTNAME=
 S3_IMAGE_PATHNAME=/**
+NEXT_PUBLIC_MANUAL_PAYMENT_LABEL=
+NEXT_PUBLIC_CONTACT_URL=
 ```
-`NEXT_PUBLIC_SHOP_NAME` is shown in the header, footer and page titles (empty = "Book Online"). If you set up S3, put the **host part** of `S3_FILE_URL` in `S3_IMAGE_HOSTNAME`. A typo in any of these shows up later only as a 500 on every page (F-016), so check them twice.
+`NEXT_PUBLIC_SHOP_NAME` is shown in the header, footer and page titles (empty = "Book Online"). `NEXT_PUBLIC_MANUAL_PAYMENT_LABEL` names the manual payment (empty = "Pay later (cash or bank transfer)") and `NEXT_PUBLIC_CONTACT_URL` adds a contact link to the order help (empty = none); both arrive with PR #95. If you set up S3, put the **host part** of `S3_FILE_URL` in `S3_IMAGE_HOSTNAME`. A typo in any of these shows up later only as a 500 on every page (F-016), so check them twice.
 
 ### C. Environment Variables (runtime)
 ```
@@ -342,11 +360,9 @@ CLIENT_IP_HEADER=
 1. **Deploy** (about 5 minutes).
 2. Open `https://<shop host>/`.
 
-**Check:** it redirects to `/kh` and shows the shop; the store lists **Haircut**.
+**Check:** it redirects to `/kh`: your shop name, "Choose a service, pick a free time and book it online.", then the kinds (**Appointments**, **Visits at your place**, …, **Table reservations**), each service with a **Book** button. The footer shows your shop name; no "Medusa", GitHub or "Powered by". On the server, `docker ps --filter name=booking- --format '{{.Names}} {{.Status}}'` shows backend and storefront `(healthy)`, worker `Up`.
 
 **Reply with:** `<shop host>`, and "Step 5 done" or what you see instead.
-
----
 
 ---
 
@@ -401,10 +417,10 @@ and add `,https://<portal host>` to the end of `AUTH_CORS` on the backend. **Sav
 
 ### A. A customer account
 A booking belongs to the customer who is signed in when they book, so sign up **first**. A guest can book, but can't cancel online.
-1. Open `https://<shop host>/kh` → **Account** → join with an email you can read.
+1. Open `https://<shop host>/kh` → **Account** → join with an email you can read, **not the admin email** ("An account with … already exists"; with Gmail, `you+spa@gmail.com` reaches the same inbox).
 2. Confirm the email:
    - **with Resend:** open the link in the email;
-   - **without Resend:** `booking-worker` → **Logs** → search `auth-verify-email` (if nothing, the `booking-backend` logs) → copy the `url` value, the `https://<shop host>/…/verify-account?…` link, from that line and open it. Use an email other than the admin's: an admin login blocks a shop account with the same email.
+   - **without Resend:** `booking-worker` → **Logs** → search `auth-verify-email` (if nothing, the `booking-backend` logs) → the line reads `Attempting to send a notification to: '<email>' … with template: 'auth-verify-email' and data: '{"url":"https://<shop host>/…/verify-account?…", …}'`; copy the `url` value (from `https://` to the closing `"`) and open it in the same browser.
 3. Sign in.
 
 ### B. A booking in the shop
@@ -420,6 +436,12 @@ A booking belongs to the customer who is signed in when they book, so sign up **
 - Admin → **Bookings** → resource **Sophea** → that day: the booking shows at that time.
 - Back in the shop, the same day no longer offers that time.
 
+### B2. A table (kind G)
+1. Home page → **Table reservations** → **Book** → **Party size** `4 people` → a **Day** at least two days ahead → a **Time** (e.g. 18:30) → **Book 18:30**. The cart shows the table, the day and time, $5.00, and **no shipping line**.
+2. Check out and pay as in B.3–B.4. The page says **"Your booking is confirmed."** Note the order number.
+
+**Check:** Admin → **Bookings** → **Tables for 4** on that day: the booking at its time. In the shop, that day and time still offers **Tables for 4** (3 of the 4 tables are free).
+
 ### C. Walk-in from the admin
 1. Admin → **Bookings** → **Sophea** → **Walk-in booking**: another time that day, **Minutes** `30` → book.
 
@@ -434,7 +456,7 @@ A booking belongs to the customer who is signed in when they book, so sign up **
 - **With PayWay:** the start is more than 24 hours away, so the order shows a **refund** in the admin (and later in the PayWay portal).
 
 **Reply with:**
-- the order number;
+- the two order numbers;
 - "booked, walk-in, cancelled" or what went wrong at which step;
 - with PayWay: whether the admin shows the refund.
 
@@ -471,10 +493,10 @@ With your two hosts, the `pk_…` key and the order number, I check:
 |---|---|
 | `https://<api host>/health` | 200 `OK` |
 | `https://<api host>/app/` | 200 |
-| `/store/products` with your key | exactly **Haircut** (`HAIRCUT-30`, `HAIRCUT-60`) and **Table reservation** (`TABLE-2`, `TABLE-4`, `TABLE-6`), each in its kind's category |
+| `/store/products` with your key | the services of Step 3's check, among them **Haircut** (`HAIRCUT-30`, `HAIRCUT-60`) and **Table reservation** (`TABLE-2`, `TABLE-4`, `TABLE-6`), each in its kind's category |
 | `/store/booking/slots` for `TABLE-4`, any day | 90-minute times at 11:00, 12:30, 17:00, 18:30 and 20:00 Phnom Penh time, 3 tables free each |
 | `/store/booking/slots` for Haircut, the day of Step 6 | free times inside 09:00–12:00 and 13:00–17:00; the walk-in's time is taken, the cancelled time free again |
-| `https://<shop host>/kh`, `/kh/products/haircut` and `/kh/products/table-reservation` | render; the home page lists both kinds with **Book** buttons; no "Medusa Store" or shipping text |
+| `https://<shop host>/kh`, `/kh/products/haircut` and `/kh/products/table-reservation` | render; the home page lists the kinds with **Book** buttons; no "Medusa Store" or shipping text |
 | CORS | API accepts the shop origin, refuses a foreign one |
 
 ---
@@ -533,7 +555,7 @@ You need two values: a **bot token** (the bot's password) and the **chat ID** of
 1. Dokploy → **Settings → Notifications** → **Add Notification** → choose **Telegram**.
 2. **Name**: e.g. `Staff alerts`. **Bot Token**: the token from A. **Chat ID**: the number from C. **Message Thread ID**: leave empty (only for groups with Topics).
 3. Click **Test Notification**. A test message must appear in the group. Then click **Create**.
-After this I tick P3-18 in `docs/TASKS.md` and close Phase 3.
+After this the results go into `docs/TASKS.md` → P3-18 (then the old Booking staging project, if any, can be deleted), and Phase 3 closes.
 
 ---
 
