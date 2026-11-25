@@ -1,4 +1,5 @@
-import { ContainerRegistrationKeys, MedusaError, Modules } from "@medusajs/framework/utils";
+import { ContainerRegistrationKeys, MedusaError } from "@medusajs/framework/utils";
+import { quoteTotal } from "../../../utils/quote-total";
 import { createStep } from "@medusajs/framework/workflows-sdk";
 import {
   assertApprovalsGranted,
@@ -45,10 +46,7 @@ export const validateQuoteBuyerStep = createStep(
     const buyer = await loadBuyer(container, input.customer_id);
     const company = assertApprovedCompanyBuyer(buyer);
 
-    const preview = await container
-      .resolve(Modules.ORDER)
-      .previewOrderChange(quote.draft_order_id);
-    const total = Number(preview.total ?? 0);
+    const total = await quoteTotal(container, quote.draft_order_id);
 
     const settings = await loadApprovalSettings(container, company.id);
     const required = requiredApprovalTypes(settings, total, !!buyer!.employee?.is_admin);

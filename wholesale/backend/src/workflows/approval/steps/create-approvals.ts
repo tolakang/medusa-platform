@@ -10,6 +10,7 @@ import {
   loadApprovalSettings,
   loadBuyer,
 } from "../../../utils/load-b2b-buyer";
+import { openQuoteTotalForCart } from "../../../utils/quote-total";
 import {
   ApprovalStatusType,
   ApprovalType,
@@ -72,9 +73,12 @@ export const createApprovalStep = createStep(
     const buyer = await loadBuyer(container, requester);
     const company = assertApprovedCompanyBuyer(buyer);
     const settings = await loadApprovalSettings(container, company.id);
+    // A quoted cart is approved for the quote's current total (the merchant
+    // may have changed it): the total quote acceptance checks.
+    const quoted = await openQuoteTotalForCart(container, cart.id);
     const types = requiredApprovalTypes(
       settings,
-      Number(cart.total ?? 0),
+      quoted ?? Number(cart.total ?? 0),
       !!buyer?.employee?.is_admin
     );
     if (!types.length) {
