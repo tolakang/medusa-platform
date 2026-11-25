@@ -1,3 +1,4 @@
+import { MANUAL_PAYMENT_LABEL } from "@lib/shop"
 import { CreditCard } from "@medusajs/icons"
 import Bancontact from "@modules/common/icons/bancontact"
 import Ideal from "@modules/common/icons/ideal"
@@ -30,7 +31,7 @@ export const paymentInfoMap: Record<
     icon: <PayPal />,
   },
   pp_system_default: {
-    title: "Manual Payment",
+    title: MANUAL_PAYMENT_LABEL,
     icon: <CreditCard />,
   },
   // ABA PayWay (TASKS P1-03): the customer picks ABA Pay, KHQR or a card on

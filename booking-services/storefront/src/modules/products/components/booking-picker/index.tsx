@@ -436,7 +436,11 @@ export default function BookingPicker({
       </div>
       <div className="flex flex-col gap-y-2">
         <Text className="txt-compact-small-plus" id="booking-times-label">
-          Time
+          Time{" "}
+          {/* Which clock the slots are in, as booking sites show (ui-compare). */}
+          <span className="txt-small text-ui-fg-subtle">
+            ({(slots[0]?.timezone || "Asia/Phnom_Penh").split("/").pop()!.replace(/_/g, " ")} time)
+          </span>
         </Text>
         <div aria-live="polite" className="contents">
           {loading && (

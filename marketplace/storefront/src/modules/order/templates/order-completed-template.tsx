@@ -4,6 +4,7 @@ import { cookies as nextCookies } from "next/headers"
 import CartTotals from "@modules/common/components/cart-totals"
 import Help from "@modules/order/components/help"
 import { retrieveCustomer } from "@lib/data/customer"
+import { CONTACT_URL } from "@lib/shop"
 import Items from "@modules/order/components/items"
 import OnboardingCta from "@modules/order/components/onboarding-cta"
 import OrderDetails from "@modules/order/components/order-details"
@@ -48,8 +49,8 @@ export default async function OrderCompletedTemplate({
           <CartTotals totals={order} />
           <ShippingDetails order={order} />
           <PaymentDetails order={order} />
-          {/* "Your orders" needs an account: a guest would land on sign-in. */}
-          {customer && <Help />}
+          {/* Guests get the box only when the shop has a contact link. */}
+          {(customer || CONTACT_URL) && <Help showOrders={!!customer} />}
         </div>
       </div>
     </div>
