@@ -100,11 +100,19 @@ const Register = ({ setCurrentView, regions }: Props) => {
         !!formData.company_country &&
         !!formData.currency_code)
 
-  const countryNames = regions
-    .flatMap((region) =>
-      region.countries?.map((country) => country?.display_name || country?.name)
+  // The company's country is stored as its ISO 2 code, like the admin and
+  // addresses (it was saved as the name, "Denmark").
+  const countries = Array.from(
+    new Map(
+      regions
+        .flatMap((region) => region.countries ?? [])
+        .filter((country) => !!country?.iso_2)
+        .map((country) => [
+          country!.iso_2 as string,
+          (country!.display_name || country!.name || country!.iso_2) as string,
+        ])
     )
-    .filter((country) => country !== undefined)
+  ).map(([iso_2, name]) => ({ iso_2, name }))
 
   const currencies = regions.map((region) => region.currency_code)
 
@@ -255,9 +263,9 @@ const Register = ({ setCurrentView, regions }: Props) => {
               />
             </Select.Trigger>
             <Select.Content>
-              {countryNames?.map((country) => (
-                <Select.Item key={country} value={country}>
-                  {country}
+              {countries.map((country) => (
+                <Select.Item key={country.iso_2} value={country.iso_2}>
+                  {country.name}
                 </Select.Item>
               ))}
             </Select.Content>

@@ -44,6 +44,21 @@ export function CompanyForm({
     setFormData({ ...formData, currency_code: value });
   };
 
+  // Older storefront sign-ups saved the country's name ("Denmark"): match
+  // it to its ISO 2 code, which Save then stores.
+  const countryIso = (value?: string | null) => {
+    if (!value) {
+      return "";
+    }
+    const wanted = value.toLowerCase();
+    const match = countries?.find((country) =>
+      [country?.iso_2, country?.name, country?.display_name].some(
+        (v) => !!v && String(v).toLowerCase() === wanted
+      )
+    );
+    return match?.iso_2 || value;
+  };
+
   const handleCountryChange = (value: string) => {
     setFormData({ ...formData, country: value });
   };
@@ -58,8 +73,10 @@ export function CompanyForm({
   };
 
   return (
-    <form>
-      <Drawer.Body className="p-4">
+    // The body scrolls and the footer stays in view: at 1024x768 Save was
+    // below the fold (role test 2026-11-25).
+    <form className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <Drawer.Body className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-2">
           <Label size="xsmall">Company Name</Label>
           <Input
@@ -67,7 +84,7 @@ export function CompanyForm({
             name="name"
             value={formData.name}
             onChange={handleChange}
-            placeholder="Medusa"
+            placeholder="Company name"
           />
           <Label size="xsmall">Company Phone</Label>
           <Input
@@ -75,7 +92,7 @@ export function CompanyForm({
             name="phone"
             value={formData.phone}
             onChange={handleChange}
-            placeholder="1234567890"
+            placeholder="Phone number"
           />
           <Label size="xsmall">Company Email</Label>
           <Input
@@ -83,7 +100,7 @@ export function CompanyForm({
             name="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder="medusa@medusa.com"
+            placeholder="orders@company.com"
           />
           <Label size="xsmall">Company Address</Label>
           <Input
@@ -91,7 +108,7 @@ export function CompanyForm({
             name="address"
             value={formData.address || ""}
             onChange={handleChange}
-            placeholder="1234 Main St"
+            placeholder="Street address"
           />
           <Label size="xsmall">Company City</Label>
           <Input
@@ -99,7 +116,7 @@ export function CompanyForm({
             name="city"
             value={formData.city || ""}
             onChange={handleChange}
-            placeholder="New York"
+            placeholder="City"
           />
           <Label size="xsmall">Company State</Label>
           <Input
@@ -107,7 +124,7 @@ export function CompanyForm({
             name="state"
             value={formData.state || ""}
             onChange={handleChange}
-            placeholder="NY"
+            placeholder="State / province"
           />
           <Label size="xsmall">Company Zip</Label>
           <Input
@@ -115,14 +132,14 @@ export function CompanyForm({
             name="zip"
             value={formData.zip || ""}
             onChange={handleChange}
-            placeholder="10001"
+            placeholder="Postal code"
           />
           <div className="flex gap-4 w-full">
             <div className="flex flex-col gap-2 w-1/2">
               <Label size="xsmall">Company Country</Label>
               <Select
                 name="country"
-                value={formData.country || ""}
+                value={countryIso(formData.country)}
                 onValueChange={handleCountryChange}
                 disabled={regionsLoading}
               >
@@ -268,13 +285,18 @@ export function CompanyForm({
           />
         </div>
       </Drawer.Body>
-      <Drawer.Footer>
+      <Drawer.Footer className="shrink-0">
         <Drawer.Close asChild>
           <Button variant="secondary">Cancel</Button>
         </Drawer.Close>
         <Button
           isLoading={loading}
-          onClick={async () => await handleSubmit(formData)}
+          onClick={async () =>
+            await handleSubmit({
+              ...formData,
+              country: countryIso(formData.country) || formData.country,
+            })
+          }
         >
           Save
         </Button>

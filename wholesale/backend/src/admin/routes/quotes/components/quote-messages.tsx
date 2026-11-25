@@ -18,6 +18,19 @@ import { Form } from "@medusajs/dashboard/components";
 import { useCreateQuoteMessage } from "../../../hooks/api/quotes";
 import { QuoteItem } from "./quote-details";
 
+
+// A message author's name: first and last name, else email, else a label.
+const authorName = (
+  person:
+    | { first_name?: string | null; last_name?: string | null; email?: string | null }
+    | null
+    | undefined,
+  fallback: string
+) =>
+  [person?.first_name, person?.last_name].filter(Boolean).join(" ") ||
+  person?.email ||
+  fallback;
+
 export const CreateQuoteMessageForm = z.object({
   text: z.string().min(1),
   item_id: z.string().nullish(),
@@ -95,12 +108,21 @@ export function QuoteMessages({
               "!bg-ui-bg-subtle !inset-x-5 !inset-y-3": !!message.admin_id,
             })}
           >
-            <div className="font-medium font-sans txt-compact-small text-ui-fg-subtle ">
-              {!!message.admin &&
-                `${message.admin.first_name} ${message.admin.last_name}`}
-
-              {!!message.customer &&
-                `${message.customer.first_name} ${message.customer.last_name}`}
+            <div className="flex items-baseline justify-between gap-x-2 font-medium font-sans txt-compact-small text-ui-fg-subtle">
+              <span>
+                {/* An admin user without a name showed "null null". */}
+                {message.admin_id
+                  ? authorName(message.admin, "Store")
+                  : authorName(message.customer, "Customer")}
+              </span>
+              {message.created_at && (
+                <span className="text-ui-fg-muted font-normal">
+                  {new Date(message.created_at).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </span>
+              )}
             </div>
 
             {!!message.item_id && (

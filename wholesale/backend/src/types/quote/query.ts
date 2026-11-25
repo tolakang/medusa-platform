@@ -17,6 +17,7 @@ export type QueryQuote = ModuleQuote & {
 };
 
 export type QueryQuoteMessage = ModuleQuoteMessage & {
+  created_at?: string | Date;
   customer: AdminCustomer;
   admin: AdminUser;
 };
