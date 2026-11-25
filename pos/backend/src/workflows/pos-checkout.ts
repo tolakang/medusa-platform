@@ -24,8 +24,9 @@ import {
   createOrderPaymentCollectionWorkflow,
   createOrderWorkflow,
   createRemoteLinkStep,
-  deleteDraftOrdersWorkflow,
+  createCartWorkflow,
   releaseLockStep,
+  removeRemoteLinkStep,
   useQueryGraphStep,
 } from "@medusajs/medusa/core-flows"
 import { POS_MODULE } from "../modules/pos"
@@ -425,12 +426,20 @@ export type PosCheckoutPreviewInput = Omit<PosCheckoutInput, "payment_method" | 
 
 const toNumber = (v: unknown) => MathBN.convert((v ?? 0) as number).toNumber()
 
+// Deletes the preview's cart. On rollback there is nothing to undo: the
+// cart only priced the sale.
+const deletePosPreviewCartStep = createStep("delete-pos-preview-cart", async (cartId: string, { container }) => {
+  await container.resolve(Modules.CART).deleteCarts([cartId])
+  return new StepResponse(undefined)
+})
+
 // pos-checkout-preview (owner, 2026-11-25): the total the till shows before
-// payment. It prices the sale as pos-checkout does (the same draft order:
-// variant prices, promotions, tax), reads the totals and deletes the draft
-// with deleteDraftOrdersWorkflow (the admin's delete draft order). Nothing is
-// reserved, paid or linked. If a step fails, createOrderWorkflow's own
-// compensation removes the draft.
+// payment. It prices the sale with a throwaway cart (createCartWorkflow: the
+// region's prices for the sales channel, promo_codes through
+// updateCartPromotionsWorkflow, tax lines through updateTaxLinesWorkflow),
+// reads the totals and deletes the cart with its links. Not a draft order:
+// an order takes the next display_id, so every preview would leave a gap in
+// the shop's sale numbers. Nothing is reserved, paid or linked to the shift.
 export const posCheckoutPreviewWorkflow = createWorkflow(
   "pos-checkout-preview",
   function (input: PosCheckoutPreviewInput) {
@@ -444,23 +453,31 @@ export const posCheckoutPreviewWorkflow = createWorkflow(
         stock_location_name: context.stock_location_name,
       }))
     )
-    const draftInput = transform({ input, context }, ({ input, context }) => posDraftOrderInput(input, context))
-    const draft = createOrderWorkflow.runAsStep({ input: draftInput })
-    const orderId = transform({ draft }, ({ draft }) => draft.id)
-    const { data: orders } = useQueryGraphStep({
-      entity: "order",
-      fields: ["id", "currency_code", "subtotal", "discount_total", "tax_total", "total"],
-      filters: { id: orderId },
-    }).config({ name: "get-pos-preview-total" })
-    deleteDraftOrdersWorkflow.runAsStep({
-      input: transform({ orderId }, ({ orderId }) => ({ order_ids: [orderId] })),
+    // No email: createCartWorkflow would create a guest customer for it.
+    const cart = createCartWorkflow.runAsStep({
+      input: transform({ input, context }, ({ input, context }) => ({
+        region_id: context.region_id,
+        sales_channel_id: context.sales_channel_id,
+        currency_code: context.currency_code,
+        customer_id: input.customer_id,
+        items: input.items.map((i) => ({ variant_id: i.variant_id, quantity: i.quantity })),
+        promo_codes: input.promo_codes ?? [],
+      })),
     })
-    const preview = transform({ orders }, ({ orders }) => ({
-      currency_code: orders[0].currency_code as string,
-      subtotal: toNumber(orders[0].subtotal),
-      discount_total: toNumber(orders[0].discount_total),
-      tax_total: toNumber(orders[0].tax_total),
-      total: toNumber(orders[0].total),
+    const cartId = transform({ cart }, ({ cart }) => cart.id)
+    const { data: carts } = useQueryGraphStep({
+      entity: "cart",
+      fields: ["id", "currency_code", "item_subtotal", "discount_total", "tax_total", "total"],
+      filters: { id: cartId },
+    }).config({ name: "get-pos-preview-total" })
+    removeRemoteLinkStep({ [Modules.CART]: { cart_id: cartId } }).config({ name: "remove-pos-preview-cart-links" })
+    deletePosPreviewCartStep(cartId)
+    const preview = transform({ carts }, ({ carts }) => ({
+      currency_code: carts[0].currency_code as string,
+      subtotal: toNumber(carts[0].item_subtotal),
+      discount_total: toNumber(carts[0].discount_total),
+      tax_total: toNumber(carts[0].tax_total),
+      total: toNumber(carts[0].total),
     }))
     return new WorkflowResponse(preview)
   }

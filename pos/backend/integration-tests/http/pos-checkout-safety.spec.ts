@@ -115,6 +115,14 @@ medusaIntegrationTestRunner({
           cashier
         )
         expect(Number(sale.order.total)).toBeCloseTo(promo.preview.total, 2)
+        // Previews take no sale number: the first sale is #1, the next #2.
+        expect(sale.order.display_id).toEqual(1)
+        await api.post("/pos/checkout/preview", { shift_id: shift.id, items }, cashier)
+        const { data: next } = await api.post("/pos/checkout", { shift_id: shift.id, items, payment_method: "card" }, cashier)
+        expect(next.order.display_id).toEqual(2)
+        // And they leave no cart behind.
+        const [, carts] = await container.resolve(Modules.CART).listAndCountCarts({})
+        expect(carts).toEqual(0)
       })
 
       it("records a retried sale once, and the till can look a sale up by its client_ref", async () => {
@@ -170,7 +178,9 @@ medusaIntegrationTestRunner({
         )
         expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1)
         const refused = results.find((r) => r.status === "rejected") as PromiseRejectedResult
-        expect((refused.reason as Error).message).toMatch(/Not enough stock|inventory/)
+        // The lock makes the second sale wait and fail the shop check cleanly,
+        // not deep in the reservation (inventory module) after the order exists.
+        expect((refused.reason as Error).message).toMatch(/^Not enough stock at Phnom Penh: /)
         const level = await levelAt(container, variant.id, location.id)
         expect(level.stocked).toEqual(0)
       })
