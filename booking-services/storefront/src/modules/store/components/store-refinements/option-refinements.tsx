@@ -26,6 +26,11 @@ function groupItems(
   const groups = new Map<string, OptionGroup>()
 
   for (const item of items) {
+    // A value no listed product has (or a group of them) is not a choice.
+    if (item.count < 1 && !item.isRefined) {
+      continue
+    }
+
     const separator = item.label.indexOf(":")
 
     if (separator < 1) {
@@ -99,9 +104,11 @@ const OptionRefinements = () => {
                   <span className="txt-compact-small-plus text-ui-fg-base">
                     {group.title}
                   </span>
-                  <span className="txt-compact-small-plus text-ui-fg-muted">
-                    ({selectedCount})
-                  </span>
+                  {selectedCount > 0 && (
+                    <span className="txt-compact-small-plus text-ui-fg-muted">
+                      ({selectedCount} selected)
+                    </span>
+                  )}
                 </div>
                 <span
                   className={clsx(
