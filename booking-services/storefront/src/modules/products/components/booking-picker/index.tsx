@@ -12,6 +12,8 @@ import {
 import {
   durationMinutes,
   formatSlotTime,
+  balanceWhere,
+  bookingPlace,
   depositPercent,
   isDepartureService,
   isVisitService,
@@ -727,7 +729,7 @@ export default function BookingPicker({
           className="txt-small text-ui-fg-subtle"
           data-testid="booking-deposit"
         >
-          Pay a {depositPercent(product)}% deposit now; the rest at the venue.
+          Pay a {depositPercent(product)}% deposit now; the rest {balanceWhere(bookingPlace(product))}.
         </Text>
       )}
       <Text className="txt-xsmall text-ui-fg-subtle">

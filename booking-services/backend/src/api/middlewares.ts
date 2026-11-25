@@ -34,6 +34,7 @@ import {
   PostAdminEventMove,
   PostAdminBookingChange,
 } from './admin/booking/validators'
+import { hideExtrasFilter } from './store-search-filters'
 import { providerCors, requireProvider } from './provider-auth'
 import {
   PostProviderAccept,
@@ -66,7 +67,8 @@ export default defineMiddlewares({
       middlewares: [
         configureStoreSearch({
           allowed_indexes: {
-            product: true,
+            // Extras are never listed on their own (store-search-filters.ts).
+            product: { filters: hideExtrasFilter },
           },
         }),
       ],

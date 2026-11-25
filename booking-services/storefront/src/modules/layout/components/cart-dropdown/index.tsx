@@ -6,7 +6,8 @@ import {
   PopoverPanel,
   Transition,
 } from "@headlessui/react"
-import { itemBooking } from "@lib/util/booking"
+import { cartCount, itemBooking } from "@lib/util/booking"
+import HoldCountdown from "@modules/common/components/hold-countdown"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -31,12 +32,9 @@ const CartDropdown = ({
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
 
-  // A booking counts once, whatever its seats (TASKS P3-23: a departure's
-  // seats are its line's quantity).
+  // A booking counts once, whatever its seats (P3-23); extras go with it.
   const totalItems =
-    cartState?.items?.reduce((acc, item) => {
-      return acc + (itemBooking(item) ? 1 : item.quantity)
-    }, 0) || 0
+    cartCount(cartState?.items)
 
   const subtotal = cartState?.subtotal ?? 0
   const itemRef = useRef<number>(totalItems || 0)
@@ -156,6 +154,9 @@ const CartDropdown = ({
                                 >
                                   Quantity: {item.quantity}
                                 </span>
+                                {itemBooking(item) && (
+                                  <HoldCountdown bookingId={item.metadata?.booking_id as string | undefined} />
+                                )}
                               </div>
                               <div className="flex justify-end">
                                 <LineItemPrice

@@ -10,6 +10,7 @@ import { getProductPrice } from "@lib/util/get-product-price"
 import OptionSelect from "./option-select"
 import { HttpTypes } from "@medusajs/types"
 import { isSimpleProduct } from "@lib/util/product"
+import { isPassProduct } from "@lib/util/booking"
 
 type MobileActionsProps = {
   product: HttpTypes.StoreProduct
@@ -127,6 +128,8 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   ? "Choose an option"
                   : !inStock
                   ? "Out of stock"
+                  : isPassProduct(product)
+                  ? "Buy pass"
                   : "Add to cart"}
               </Button>
             </div>

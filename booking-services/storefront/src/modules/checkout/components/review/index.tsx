@@ -5,7 +5,7 @@ import { Heading, Text, clx } from "@modules/common/components/ui"
 import PaymentButton from "../payment-button"
 import { useSearchParams } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-import { isServiceOnlyCart } from "@lib/util/booking"
+import { isServiceOnlyCart, noPaymentDue } from "@lib/util/booking"
 import { hasRequiredContact } from "@lib/util/contact"
 import { SHOP_NAME } from "@lib/shop"
 
@@ -14,16 +14,15 @@ const Review = ({ cart }: { cart: HttpTypes.StoreCart }) => {
 
   const isOpen = searchParams.get("step") === "review"
 
-  const paidByGiftcard = !!(
-    (cart as unknown as Record<string, unknown>)?.gift_cards && ((cart as unknown as Record<string, unknown>)?.gift_cards as unknown[])?.length > 0 && cart?.total === 0
-  )
+  // $0 (pass credits, gift card): no payment method to choose.
+  const nothingToPay = noPaymentDue(cart)
 
   // Booked services only: contact instead of address and delivery (P3-13).
   const previousStepsCompleted = isServiceOnlyCart(cart)
-    ? hasRequiredContact(cart) && (cart.payment_collection || paidByGiftcard)
+    ? hasRequiredContact(cart) && (cart.payment_collection || nothingToPay)
     : cart.shipping_address &&
       (cart.shipping_methods?.length ?? 0) > 0 &&
-      (cart.payment_collection || paidByGiftcard)
+      (cart.payment_collection || nothingToPay)
 
   return (
     <div className="bg-white">

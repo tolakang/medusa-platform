@@ -129,6 +129,82 @@ export function depositSplit(
   return { now, later: Math.round((total - now) * 100) / 100, plan }
 }
 
+// Where the booking happens, by kind (plan §9.3; product metadata.booking_kind):
+// A appointments and G tables are at the shop, F events at the venue,
+// B visits and C trips (moving, transfers) come to the customer, D departures
+// leave from the departure point and E rentals are collected.
+export type BookingPlace = "shop" | "customer" | "venue" | "departure" | "rental"
+type KindItem = { product?: { metadata?: Meta } | null; variant?: { product?: { metadata?: Meta } | null } | null }
+
+export function bookingPlace(product: { metadata?: Meta } | null | undefined): BookingPlace {
+  switch (product?.metadata?.booking_kind) {
+    case "B":
+    case "C":
+      return "customer"
+    case "D":
+      return "departure"
+    case "E":
+      return "rental"
+    case "F":
+      return "venue"
+    default:
+      return "shop"
+  }
+}
+
+/** The one place every booking in these items shares, or null when they differ. */
+export function itemsPlace(items: KindItem[] | null | undefined): BookingPlace | null {
+  const places = new Set(
+    (items ?? [])
+      .filter((i) => !isExtraProduct(i.product ?? i.variant?.product))
+      .map((i) => bookingPlace(i.product ?? i.variant?.product))
+  )
+  return places.size === 1 ? Array.from(places)[0] : null
+}
+
+/** The checkout note under the contact form: no delivery, and what happens instead. */
+export function noDeliveryNote(place: BookingPlace | null): string {
+  const how: Record<BookingPlace, string> = {
+    shop: "you come to us at the booked time",
+    customer: "we come to you at the booked time",
+    venue: "come to the venue at the booked time",
+    departure: "be at the departure point a few minutes before it leaves",
+    rental: "collect and return your rental at the booked times",
+  }
+  const text = place ? how[place] : "each booking takes place at its booked time and place"
+  return `No delivery: ${text}. We email your confirmation and a reminder the day before.`
+}
+
+/** Where a deposit's balance is paid (TASKS P3-26). */
+export function balanceWhere(place: BookingPlace | null): string {
+  return place === "shop" || place === "venue" ? "at the venue" : "on the day"
+}
+
+// Nothing to pay (a booking on pass credits, a gift card covering it all):
+// Medusa completes a cart whose total is 0 without any payment session
+// (core-flows validateCartPaymentsStep `canSkipPayment`), so checkout skips
+// choosing a payment method.
+export function noPaymentDue(cart: { items?: unknown[] | null; total?: number | null } | null | undefined): boolean {
+  return (cart?.items?.length ?? 0) > 0 && cart?.total != null && Number(cart.total) === 0
+}
+
+// How many things the cart badge counts (TASKS P3-13 follow-up): a booking
+// once (whatever its seats), an extra not at all (it goes with its booking),
+// anything else by its quantity.
+export function cartCount(items: { quantity: number; metadata?: Meta }[] | null | undefined): number {
+  return (items ?? []).reduce((n, item) => n + (extraFor(item) ? 0 : itemBooking(item) ? 1 : item.quantity), 0)
+}
+
+/** A hold's time left as "m:ss", or null once it has run out. */
+export function holdLeft(expiresAt: string, now = Date.now()): string | null {
+  const ms = Date.parse(expiresAt) - now
+  if (!(ms > 0)) {
+    return null
+  }
+  const s = Math.ceil(ms / 1000)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
+}
+
 export function isServiceProduct(product: HttpTypes.StoreProduct): boolean {
   return (product.variants ?? []).some((v) => durationMinutes(v) !== null)
 }
@@ -277,6 +353,26 @@ export function bookingStatusLabel(statuses: string[], orderStatus?: string | nu
 // Quote first (TASKS P3-27): priced on request, booked from an accepted quote.
 export function isQuoteOnly(product: HttpTypes.StoreProduct): boolean {
   return (product.metadata as Record<string, unknown> | null)?.quote_only === true
+}
+
+// A pass (TASKS P3-29): a product with metadata.pass_credits, bought with
+// "Add to cart" and spent later when booking.
+export function isPassProduct(product: { metadata?: Meta } | null | undefined): boolean {
+  return Number(product?.metadata?.pass_credits) > 0
+}
+
+// Whether the product page shows a booking picker rather than the plain
+// "Add to cart" (product-actions-wrapper). Decided from the product the page
+// already has, so the loading state never shows the plain one first.
+export function usesBookingPicker(product: HttpTypes.StoreProduct): boolean {
+  return (
+    isExtraProduct(product) ||
+    isPackageProduct(product) ||
+    isQuoteOnly(product) ||
+    isEventProduct(product) ||
+    rentalUnit(product) !== null ||
+    isServiceProduct(product)
+  )
 }
 
 // Event package (TASKS P3-30, kind H): pieces booked together on one date.

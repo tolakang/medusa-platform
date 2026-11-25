@@ -131,6 +131,8 @@ medusaIntegrationTestRunner({
             products: [
               { title: "Zebra published", status: ProductStatus.PUBLISHED },
               { title: "Zebra draft", status: ProductStatus.DRAFT },
+              // An extra is sold only with a booking, never listed alone.
+              { title: "Zebra extra", status: ProductStatus.PUBLISHED, metadata: { booking_extra: true } },
             ].map((product) => ({
               ...product,
               sales_channels: [{ id: channel.id }],
@@ -142,6 +144,10 @@ medusaIntegrationTestRunner({
         })
         const zebras = await searchUntil("zebra", (h) => h.length >= 1)
         expect(titles(zebras)).toEqual(["Zebra published"])
+        // The extra is in the index (indexed with the same workflow) but the
+        // store search filters it out.
+        await new Promise((resolve) => setTimeout(resolve, 3000))
+        expect(titles(await search("zebra"))).toEqual(["Zebra published"])
       })
 
       it("rejects a search without a publishable key", async () => {

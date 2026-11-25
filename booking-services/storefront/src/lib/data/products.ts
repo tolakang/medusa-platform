@@ -3,6 +3,7 @@
 import { sdk } from "@lib/config"
 import { OptionValueIds } from "@lib/util/product-option-filters"
 import { sortProducts } from "@lib/util/sort-products"
+import { isExtraProduct } from "@lib/util/booking"
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
@@ -132,11 +133,14 @@ export const listProductsWithSort = async ({
     countryCode,
   })
 
-  const sortedProducts = sortProducts(products, sortBy)
+  // Extras are added with a booking, never listed alone (P3-25), so they are
+  // left out before counting and paging.
+  const listed = products.filter((p) => !isExtraProduct(p))
+  const sortedProducts = sortProducts(listed, sortBy)
 
   const pageParam = (page - 1) * limit
 
-  const filteredCount = products.length
+  const filteredCount = listed.length
 
   const nextPage = filteredCount > pageParam + limit ? pageParam + limit : null
 

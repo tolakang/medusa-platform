@@ -193,6 +193,12 @@ medusaIntegrationTestRunner({
               )
             )
           ).toEqual({ status: 400, message: "This time is no longer available." })
+
+          // The cart's holds with their run-out time, for the cart countdown.
+          const holds = (await api.get(`/store/booking/cart?cart_id=${cart.id}`, store)).data.holds
+          expect(holds).toEqual([{ booking_id: data.booking.id, hold_expires_at: new Date(data.booking.hold_expires_at).toISOString() }])
+          expect((await api.get(`/store/booking/cart?cart_id=cart_unknown`, store)).data.holds).toEqual([])
+          expect(await failure(api.get("/store/booking/cart", store))).toMatchObject({ status: 400 })
         })
       })
 
