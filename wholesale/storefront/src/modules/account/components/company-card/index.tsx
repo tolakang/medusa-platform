@@ -59,7 +59,7 @@ const CompanyCard = ({
       )}
       {company.status === "suspended" && (
         <div role="status" className="mb-4 rounded-lg bg-ui-tag-red-bg p-4 text-ui-tag-red-text">
-          Your company account is paused, so orders can't be placed. Contact the shop to find out why.
+          Your company account is paused, so orders can&apos;t be placed. Contact the shop to find out why.
         </div>
       )}
       <Container className="p-0 overflow-hidden">

@@ -86,7 +86,7 @@ const QuickOrderForm = () => {
 
       {!!invalid.length && (
         <div role="alert" className="text-sm text-red-700" data-testid="quick-order-invalid">
-          <Text>These lines can't be read. Use a SKU and a whole number:</Text>
+          <Text>These lines can&apos;t be read. Use a SKU and a whole number:</Text>
           <ul className="list-disc pl-5 font-mono">
             {invalid.map((line) => (
               <li key={line}>{line}</li>
