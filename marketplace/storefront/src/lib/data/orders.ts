@@ -119,3 +119,33 @@ export const declineTransferRequest = async (id: string, token: string) => {
     .then(({ order }) => ({ success: true, error: null, order }))
     .catch((err) => ({ success: false, error: err.message, order: null }))
 }
+
+export type VendorShipment = {
+  vendor: { name: string; handle: string } | null
+  fulfillments: {
+    id: string
+    created_at: string
+    shipped_at: string | null
+    delivered_at: string | null
+    labels: { tracking_number: string; tracking_url: string | null }[]
+  }[]
+}
+
+// Each vendor's shipments and tracking for the signed-in customer's own order
+// (GET /store/customers/me/orders/:id/shipments). [] for a guest, someone
+// else's order, or any error.
+export const retrieveOrderShipments = async (
+  id: string
+): Promise<VendorShipment[]> => {
+  const headers = await getAuthHeaders()
+  if (!("authorization" in headers)) {
+    return []
+  }
+  return sdk.client
+    .fetch<{ shipments: VendorShipment[] }>(
+      `/store/customers/me/orders/${encodeURIComponent(id)}/shipments`,
+      { method: "GET", headers, cache: "no-store" }
+    )
+    .then(({ shipments }) => shipments)
+    .catch(() => [])
+}

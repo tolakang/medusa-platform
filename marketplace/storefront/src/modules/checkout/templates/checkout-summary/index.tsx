@@ -5,8 +5,15 @@ import DiscountCode from "@modules/checkout/components/discount-code"
 import CartTotals from "@modules/common/components/cart-totals"
 import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
+import type { VendorRef } from "@lib/util/group-by-vendor"
 
-const CheckoutSummary = ({ cart }: { cart: HttpTypes.StoreCart }) => {
+const CheckoutSummary = ({
+  cart,
+  vendors,
+}: {
+  cart: HttpTypes.StoreCart
+  vendors?: Record<string, VendorRef>
+}) => {
   return (
     <div className="sticky top-0 flex flex-col-reverse small:flex-col gap-y-8 py-8 small:py-0 ">
       <div className="w-full bg-white flex flex-col">
@@ -19,7 +26,7 @@ const CheckoutSummary = ({ cart }: { cart: HttpTypes.StoreCart }) => {
         </Heading>
         <Divider className="my-6" />
         <CartTotals totals={cart} />
-        <ItemsPreviewTemplate cart={cart} />
+        <ItemsPreviewTemplate cart={cart} vendors={vendors} />
         <div className="my-6">
           <DiscountCode cart={cart} />
         </div>

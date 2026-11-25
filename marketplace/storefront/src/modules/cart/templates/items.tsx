@@ -4,12 +4,16 @@ import { Heading, Table } from "@modules/common/components/ui"
 
 import Item from "@modules/cart/components/item"
 import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
+import VendorGroupRow from "@modules/common/components/vendor-group-row"
+import { groupByVendor, type VendorRef } from "@lib/util/group-by-vendor"
+import { Fragment } from "react"
 
 type ItemsTemplateProps = {
   cart?: HttpTypes.StoreCart
+  vendors?: Record<string, VendorRef>
 }
 
-const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
+const ItemsTemplate = ({ cart, vendors = {} }: ItemsTemplateProps) => {
   const items = cart?.items
   return (
     <div>
@@ -34,19 +38,25 @@ const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
         </Table.Header>
         <Table.Body>
           {items
-            ? items
-                .sort((a, b) => {
-                  return (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
-                })
-                .map((item) => {
-                  return (
+            ? groupByVendor(
+                [...items].sort((a, b) =>
+                  (a.created_at ?? "") > (b.created_at ?? "") ? -1 : 1
+                ),
+                vendors
+              ).map((group) => (
+                <Fragment key={group.vendor?.handle ?? "other"}>
+                  {Object.keys(vendors).length > 0 && (
+                    <VendorGroupRow vendor={group.vendor} colSpan={5} />
+                  )}
+                  {group.items.map((item) => (
                     <Item
                       key={item.id}
                       item={item}
                       currencyCode={cart?.currency_code}
                     />
-                  )
-                })
+                  ))}
+                </Fragment>
+              ))
             : repeat(5).map((i) => {
                 return <SkeletonLineItem key={i} />
               })}

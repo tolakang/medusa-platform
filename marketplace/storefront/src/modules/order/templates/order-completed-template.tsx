@@ -12,6 +12,10 @@ import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import TelegramUpdates from "@modules/order/components/telegram-updates"
 import { HttpTypes } from "@medusajs/types"
+import { retrieveOrderShipments } from "@lib/data/orders"
+import { getProductVendors } from "@lib/data/vendors"
+import { productIdsOf } from "@lib/util/group-by-vendor"
+import VendorShipments from "@modules/order/components/vendor-shipments"
 
 type OrderCompletedTemplateProps = {
   order: HttpTypes.StoreOrder
@@ -22,6 +26,14 @@ export default async function OrderCompletedTemplate({
 }: OrderCompletedTemplateProps) {
   const customer = await retrieveCustomer().catch(() => null)
   const cookies = await nextCookies()
+
+  // Tracking only for the signed-in owner (the backend route checks too);
+  // a guest with the order-access cookie sees the items, not the shipments.
+  const isOwner = !!customer && order.customer_id === customer.id
+  const [vendors, shipments] = await Promise.all([
+    getProductVendors(productIdsOf(order?.items)),
+    isOwner ? retrieveOrderShipments(order.id) : Promise.resolve([]),
+  ])
 
   const isOnboarding = cookies.get("_medusa_onboarding")?.value === "true"
 
@@ -45,9 +57,10 @@ export default async function OrderCompletedTemplate({
           <Heading level="h2" className="flex flex-row text-3xl-regular">
             Summary
           </Heading>
-          <Items order={order} />
+          <Items order={order} vendors={vendors} />
           <CartTotals totals={order} />
           <ShippingDetails order={order} />
+          <VendorShipments shipments={shipments} />
           <PaymentDetails order={order} />
           {/* Guests get the box only when the shop has a contact link. */}
           {(customer || CONTACT_URL) && <Help showOrders={!!customer} />}

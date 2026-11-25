@@ -1,5 +1,7 @@
 import { retrieveCustomer } from "@lib/data/customer"
-import { retrieveOrder } from "@lib/data/orders"
+import { retrieveOrder, retrieveOrderShipments } from "@lib/data/orders"
+import { getProductVendors } from "@lib/data/vendors"
+import { productIdsOf } from "@lib/util/group-by-vendor"
 import OrderDetailsTemplate from "@modules/order/templates/order-details-template"
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
@@ -33,5 +35,16 @@ export default async function OrderDetailPage(props: Props) {
     notFound()
   }
 
-  return <OrderDetailsTemplate order={order} />
+  const [vendors, shipments] = await Promise.all([
+    getProductVendors(productIdsOf(order?.items)),
+    retrieveOrderShipments(order.id),
+  ])
+
+  return (
+    <OrderDetailsTemplate
+      order={order}
+      vendors={vendors}
+      shipments={shipments}
+    />
+  )
 }
