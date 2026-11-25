@@ -174,7 +174,7 @@ medusaIntegrationTestRunner({
           (await api.get("/admin/sellers", admin)).data.sellers.find(
             (s: { handle: string }) => s.handle === "target"
           ).invite_code
-        ).toEqual(invited.data.invite_code)
+        ).toBeNull() // accepted: the code is spent
       })
 
       it("short passwords, guests, admins and customers are refused", async () => {

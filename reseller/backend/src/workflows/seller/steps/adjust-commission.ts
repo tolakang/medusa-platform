@@ -1,12 +1,27 @@
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import { SELLER_MODULE } from "../../../modules/seller"
-import { adjustCommission } from "../../../modules/seller/commission"
+import {
+  adjustCommission,
+  clawbackAmount,
+  keptBase,
+  type CommissionEvent,
+} from "../../../modules/seller/commission"
 import SellerModuleService from "../../../modules/seller/service"
 import type { InferTypeOf } from "@medusajs/framework/types"
 import { SellerCommission } from "../../../modules/seller/models/seller-commission"
 
-type Previous = { id: string; status: string; amount: number } | null
+type Previous =
+  | {
+      id: string
+      status: string
+      amount: number
+      refunded_total: number | null
+      adjusted_base: number | null
+      adjustment_id?: string
+    }
+  | { adjustment_id: string; id?: undefined }
+  | null
 type AdjustResult = {
   commission: InferTypeOf<typeof SellerCommission> | null
   change: string
@@ -58,39 +73,82 @@ export const adjustSellerCommissionStep = createStep(
       order_grand_total = captured > 0 ? captured : order ? Number(order.total) : undefined
     }
 
-    const plan = adjustCommission(
-      {
-        status: commission.status,
-        order_total: Number(commission.order_total),
-        rate: Number(commission.rate),
-        amount: Number(commission.amount),
-        currency_code: commission.currency_code,
-      },
+    const event: CommissionEvent =
       input.kind === "canceled"
         ? { kind: "canceled" }
         : { kind: "refunded", refunded_total, order_grand_total }
-    )
-    if (plan.action === "none") {
-      if (plan.reason === "already paid out") {
-        container
-          .resolve(ContainerRegistrationKeys.LOGGER)
-          .warn(
-            `Seller commission ${commission.id} for order ${input.order_id} is already paid; ` +
-              `the ${input.kind} order is left for the payout to settle.`
-          )
+    const values = {
+      status: commission.status,
+      order_total: Number(commission.order_total),
+      rate: Number(commission.rate),
+      amount: Number(commission.amount),
+      currency_code: commission.currency_code,
+    }
+    const plan = adjustCommission(values, event)
+
+    if (plan.action === "none" && plan.reason === "already paid out") {
+      // Clawback (owner, 2026-11-25): a negative adjustment carried into the
+      // seller's next payout, for the part paid that the shop didn't keep.
+      const earlier = await sellers.listSellerAdjustments({ commission_id: commission.id })
+      const already = earlier.reduce((sum, a) => sum + Number(a.amount), 0)
+      const amount = clawbackAmount(values, event, already)
+      if (!amount) {
+        return new StepResponse({ commission, change: "unchanged" }, null)
       }
+      const adjustment = await sellers.createSellerAdjustments({
+        seller_id: commission.seller_id,
+        order_id: commission.order_id,
+        commission_id: commission.id,
+        amount,
+        currency_code: commission.currency_code,
+        reason: input.kind === "canceled" ? "Order cancelled after payout" : "Refund after payout",
+      })
+      const [updated] =
+        event.kind === "refunded"
+          ? await sellers.updateSellerCommissions([
+              {
+                id: commission.id,
+                refunded_total,
+                adjusted_base: keptBase(values.order_total, event, commission.currency_code),
+              },
+            ])
+          : [commission]
+      return new StepResponse(
+        { commission: updated, change: "clawback" },
+        {
+          id: commission.id,
+          status: commission.status,
+          amount: values.amount,
+          refunded_total: commission.refunded_total == null ? null : Number(commission.refunded_total),
+          adjusted_base: commission.adjusted_base == null ? null : Number(commission.adjusted_base),
+          adjustment_id: adjustment.id,
+        }
+      )
+    }
+    if (plan.action === "none") {
       return new StepResponse({ commission, change: plan.reason }, null)
     }
 
     const previous: Previous = {
       id: commission.id,
       status: commission.status,
-      amount: Number(commission.amount),
+      amount: values.amount,
+      refunded_total: commission.refunded_total == null ? null : Number(commission.refunded_total),
+      adjusted_base: commission.adjusted_base == null ? null : Number(commission.adjusted_base),
     }
+    // What the seller sees after a refund: the amount refunded and the base
+    // the commission is now on.
+    const refundInfo =
+      event.kind === "refunded"
+        ? {
+            refunded_total,
+            adjusted_base: keptBase(values.order_total, event, commission.currency_code),
+          }
+        : {}
     const [updated] = await sellers.updateSellerCommissions([
       plan.action === "cancel"
-        ? { id: commission.id, status: "cancelled" as const }
-        : { id: commission.id, amount: plan.amount },
+        ? { id: commission.id, status: "cancelled" as const, ...refundInfo }
+        : { id: commission.id, amount: plan.amount, ...refundInfo },
     ])
     return new StepResponse({ commission: updated, change: plan.action }, previous)
   },
@@ -98,11 +156,20 @@ export const adjustSellerCommissionStep = createStep(
     if (!previous) {
       return
     }
-    await container.resolve<SellerModuleService>(SELLER_MODULE).updateSellerCommissions([
+    const sellers = container.resolve<SellerModuleService>(SELLER_MODULE)
+    if (previous.adjustment_id) {
+      await sellers.deleteSellerAdjustments(previous.adjustment_id)
+    }
+    if (previous.id === undefined) {
+      return
+    }
+    await sellers.updateSellerCommissions([
       {
         id: previous.id,
         status: previous.status as "pending" | "approved" | "paid" | "cancelled",
         amount: previous.amount,
+        refunded_total: previous.refunded_total,
+        adjusted_base: previous.adjusted_base,
       },
     ])
   }

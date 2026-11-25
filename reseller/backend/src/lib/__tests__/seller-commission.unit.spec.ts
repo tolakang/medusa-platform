@@ -1,5 +1,7 @@
 import {
   adjustCommission,
+  clawbackAmount,
+  keptBase,
   commissionAmount,
   commissionBase,
   commissionRateFor,
@@ -123,5 +125,35 @@ describe("rounding to the currency", () => {
         { kind: "refunded", refunded_total: 333 }
       )
     ).toEqual({ action: "amount", amount: 1208 })
+  })
+})
+
+describe("clawback of a paid commission", () => {
+  const paid = { order_total: 100, rate: 10, amount: 10, currency_code: "usd" }
+
+  it("takes the whole commission back when the order is cancelled", () => {
+    expect(clawbackAmount(paid, { kind: "canceled" })).toEqual(-10)
+  })
+
+  it("takes back the refunded share, and only what is new", () => {
+    // Half the order refunded: 5 of the 10 paid is taken back.
+    const half = { kind: "refunded" as const, refunded_total: 50, order_grand_total: 100 }
+    expect(clawbackAmount(paid, half)).toEqual(-5)
+    expect(clawbackAmount(paid, half, -5)).toEqual(0)
+    // Then the rest: the other 5.
+    const all = { kind: "refunded" as const, refunded_total: 100, order_grand_total: 100 }
+    expect(clawbackAmount(paid, all, -5)).toEqual(-5)
+  })
+
+  it("never gives money back", () => {
+    expect(clawbackAmount(paid, { kind: "refunded", refunded_total: 0 })).toEqual(0)
+  })
+})
+
+describe("base kept after a refund", () => {
+  it("is the base's share of what the customer still paid", () => {
+    expect(keptBase(100, { refunded_total: 55, order_grand_total: 110 })).toEqual(50)
+    expect(keptBase(100, { refunded_total: 110, order_grand_total: 110 })).toEqual(0)
+    expect(keptBase(100, { refunded_total: 0 })).toEqual(100)
   })
 })

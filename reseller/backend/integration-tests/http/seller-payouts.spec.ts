@@ -3,6 +3,7 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { SELLER_MODULE } from "../../src/modules/seller"
 import SellerModuleService from "../../src/modules/seller/service"
 import { sellerPayoutBatchWorkflow } from "../../src/workflows/seller/payout"
+import { adjustSellerCommissionWorkflow } from "../../src/workflows/seller/adjust-commission"
 import sellerPayoutBatch from "../../src/jobs/seller-payout-batch"
 
 jest.setTimeout(120 * 1000)
@@ -94,7 +95,7 @@ medusaIntegrationTestRunner({
         const report = (await api.get("/admin/seller-payouts", admin)).data
         expect(report.due).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ seller_id: sok.id, currency_code: "usd", amount: 10, seller: { handle: "sok", name: "sok" } }),
+            expect.objectContaining({ seller_id: sok.id, currency_code: "usd", amount: 10, seller: { handle: "sok", name: "sok", payout_hold: false } }),
             expect.objectContaining({ seller_id: sok.id, currency_code: "khr", amount: 3000 }),
             expect.objectContaining({ seller_id: dara.id, amount: 4 }),
           ])
@@ -118,6 +119,94 @@ medusaIntegrationTestRunner({
         expect(await statusOf(notYet.id)).toEqual("pending")
         expect(await statusOf(daraDue.id)).toEqual("approved")
         expect((await api.post(`/admin/sellers/${sok.id}/payouts`, {}, admin)).data.paid).toEqual(0)
+      })
+
+      // Owner, 2026-11-25: a refund or cancellation after the commission was
+      // paid out is clawed back from the seller's next payout.
+      it("claws back a paid commission into the next payout, with a reference and history", async () => {
+        const sok = await seller("sok")
+        const paidOut = await commission(sok.id, 4, { status: "paid" })
+        const adjust = () =>
+          adjustSellerCommissionWorkflow(getContainer()).run({
+            input: { order_id: paidOut.order_id, kind: "canceled" },
+          })
+        expect((await adjust()).result.change).toEqual("clawback")
+        // Once only: the second event finds nothing new to take back.
+        expect((await adjust()).result.change).toEqual("unchanged")
+        const [clawback] = await sellers().listSellerAdjustments({ seller_id: sok.id })
+        expect(clawback).toEqual(
+          expect.objectContaining({ amount: -4, status: "open", order_id: paidOut.order_id, currency_code: "usd" })
+        )
+        expect(await statusOf(paidOut.id)).toEqual("paid")
+
+        // Nothing approved yet: the clawback waits, and paying records nothing.
+        let report = (await api.get("/admin/seller-payouts", admin)).data
+        expect(report.adjustments).toEqual([expect.objectContaining({ seller_id: sok.id, amount: -4 })])
+        expect(new Date(report.next_payout_date).getTime()).toBeGreaterThan(Date.now() - 86400000)
+
+        // More approved than clawed back: paid net, with the reference.
+        const due = await commission(sok.id, 10, { status: "approved" })
+        report = (await api.get("/admin/seller-payouts", admin)).data
+        expect(report.due).toEqual([
+          expect.objectContaining({ seller_id: sok.id, amount: 10, adjustment: -4, net: 6 }),
+        ])
+        const paid = await api.post(
+          `/admin/sellers/${sok.id}/payouts`,
+          { reference: "ABA-TX-778899" },
+          admin
+        )
+        expect(paid.data.paid).toEqual(1)
+        expect(paid.data.payouts).toEqual([
+          expect.objectContaining({ amount: 6, commission_total: 10, adjustment_total: -4, reference: "ABA-TX-778899" }),
+        ])
+        expect(await statusOf(due.id)).toEqual("paid")
+        const [settled] = await sellers().listSellerAdjustments({ id: clawback.id })
+        expect(settled.status).toEqual("settled")
+        expect(settled.payout_id).toEqual(paid.data.payouts[0].id)
+
+        report = (await api.get("/admin/seller-payouts", admin)).data
+        expect(report.adjustments).toEqual([])
+        expect(report.history).toEqual([
+          expect.objectContaining({ seller_id: sok.id, amount: 6, reference: "ABA-TX-778899" }),
+        ])
+        const history = (await api.get(`/admin/sellers/${sok.id}/payouts`, admin)).data
+        expect(history.payouts).toHaveLength(1)
+        expect(history.adjustments).toEqual([expect.objectContaining({ status: "settled" })])
+      })
+
+      it("refuses a payout the clawbacks exceed, and leaves everything as it was", async () => {
+        const sok = await seller("sok")
+        const paidOut = await commission(sok.id, 20, { status: "paid" })
+        await adjustSellerCommissionWorkflow(getContainer()).run({
+          input: { order_id: paidOut.order_id, kind: "canceled" },
+        })
+        const due = await commission(sok.id, 5, { status: "approved" })
+        const res = await api
+          .post(`/admin/sellers/${sok.id}/payouts`, {}, admin)
+          .then((r) => r, (e) => e.response)
+        expect(res.status).toEqual(400)
+        expect(await statusOf(due.id)).toEqual("approved")
+        expect(await sellers().listSellerPayouts({ seller_id: sok.id })).toEqual([])
+        const [open] = await sellers().listSellerAdjustments({ seller_id: sok.id })
+        expect(open.status).toEqual("open")
+      })
+
+      it("the batch skips held sellers; approve now approves one seller at once", async () => {
+        const sok = await seller("sok")
+        const dara = await seller("dara")
+        const sokPending = await commission(sok.id, 10)
+        const daraPending = await commission(dara.id, 4)
+        await api.post(`/admin/sellers/${sok.id}`, { payout_hold: true }, admin)
+        await pause()
+
+        const { result } = await sellerPayoutBatchWorkflow(getContainer()).run({ input: { cutoff: new Date() } })
+        expect(result.approved).toEqual(1)
+        expect(await statusOf(sokPending.id)).toEqual("pending")
+        expect(await statusOf(daraPending.id)).toEqual("approved")
+
+        const now = await api.post(`/admin/sellers/${sok.id}/payouts/approve`, {}, admin)
+        expect(now.data.approved).toEqual(1)
+        expect(await statusOf(sokPending.id)).toEqual("approved")
       })
 
       it("refuses an unknown seller, a bad body and non-admins", async () => {

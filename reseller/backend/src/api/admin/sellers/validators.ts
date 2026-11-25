@@ -36,6 +36,8 @@ export const PostAdminSellerUpdate = z
     domain: Domain.nullable().optional(),
     status: Status.optional(),
     commission_rate: CommissionRate.nullable().optional(),
+    // Hold this seller's payouts: the payout day approves nothing of theirs.
+    payout_hold: z.boolean().optional(),
   })
   .strict()
 
@@ -43,7 +45,11 @@ export type PostAdminSellerUpdateType = z.infer<typeof PostAdminSellerUpdate>
 
 // POST /admin/sellers/:id/payouts (TASKS P5-05): optionally one currency.
 export const PostAdminSellerPayout = z
-  .object({ currency_code: z.string().trim().toLowerCase().length(3).optional() })
+  .object({
+    currency_code: z.string().trim().toLowerCase().length(3).optional(),
+    // The bank or ABA transaction id of the transfer.
+    reference: z.string().trim().max(120).nullable().optional(),
+  })
   .strict()
 
 export type PostAdminSellerPayoutType = z.infer<typeof PostAdminSellerPayout>

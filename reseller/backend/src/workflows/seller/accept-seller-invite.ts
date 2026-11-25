@@ -49,6 +49,29 @@ const findInvitedSellerStep = createStep(
   }
 )
 
+// The seller set a password and accepted: no longer "Invited", and the admin
+// list stops showing their invite code.
+const markSellerAcceptedStep = createStep(
+  "mark-seller-accepted",
+  async (input: { seller_id: string }, { container }) => {
+    const sellers = container.resolve<SellerModuleService>(SELLER_MODULE)
+    const before = await sellers.retrieveSeller(input.seller_id)
+    if (before.accepted_at) {
+      return new StepResponse(null, null)
+    }
+    await sellers.updateSellers({ id: input.seller_id, accepted_at: new Date() })
+    return new StepResponse(null, input.seller_id)
+  },
+  async (id: string | null | undefined, { container }) => {
+    if (!id) {
+      return
+    }
+    await container
+      .resolve<SellerModuleService>(SELLER_MODULE)
+      .updateSellers({ id, accepted_at: null })
+  }
+)
+
 // Links the auth identity to the seller (app_metadata.seller_id). The core
 // step refuses an identity that already has a seller and undoes itself if a
 // later step fails.
@@ -61,6 +84,7 @@ export const acceptSellerInviteWorkflow = createWorkflow(
       actorType: "seller",
       value: seller.id,
     })
+    markSellerAcceptedStep({ seller_id: seller.id })
     return new WorkflowResponse(seller)
   }
 )

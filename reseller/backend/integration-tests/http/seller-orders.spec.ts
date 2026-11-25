@@ -123,6 +123,8 @@ medusaIntegrationTestRunner({
           status: "pending",
           currency_code: "usd",
           total: order.total,
+          paid_total: expect.any(Number),
+          refunded_total: 0,
           items: [{ title: expect.any(String), quantity: 1 }],
           commission: { amount: commissionAmount(commissionBase(totals), 10), status: "pending" },
         })
