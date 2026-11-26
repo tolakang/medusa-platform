@@ -69,6 +69,17 @@ for D in $DEPLOYABLES; do
   step "$D" "typecheck"
   (cd "$D" && pnpm typecheck)
 
+  # Storefronts: ESLint errors fail the gate, warnings are reported only
+  # (eslint exits non-zero on errors alone without --max-warnings).
+  case "$D" in
+    */storefront)
+      if grep -q '"lint":' "$D/package.json"; then
+        step "$D" "lint (errors fail, warnings don't)"
+        (cd "$D" && pnpm lint)
+      fi
+      ;;
+  esac
+
   case "$D" in
     */backend)
       step "$D" "tests: unit, modules, http (real Postgres)"
