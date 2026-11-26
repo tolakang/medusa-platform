@@ -8,7 +8,10 @@ import { confirmEmail } from "../login/actions"
 // Confirms the code once (the code works once; React may run effects twice
 // in development).
 export default function VerifyAccount() {
-  const code = useSearchParams().get("token")
+  const params = useSearchParams()
+  const code = params.get("token")
+  // Staff invited by the shop are approved already (backend adds invited=1).
+  const invited = params.get("invited") === "1"
   const [state, setState] = useState<"checking" | "done" | "failed">("checking")
   const sent = useRef(false)
 
@@ -31,7 +34,9 @@ export default function VerifyAccount() {
     <>
       <p className="mt-4">
         {state === "done"
-          ? "Your email is confirmed. Sign in to carry on; the shop reviews every new partner."
+          ? invited
+            ? "Your email is confirmed. Sign in to carry on."
+            : "Your email is confirmed. Sign in to carry on; the shop reviews every new partner."
           : "This link is invalid or has expired. Sign in to get a new one."}
       </p>
       <Link href="/login" className="btn-primary mt-6 inline-block">
