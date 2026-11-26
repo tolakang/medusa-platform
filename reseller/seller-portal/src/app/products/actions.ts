@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { selectionChange } from "@/lib/format"
+import { actionError, selectionChange } from "@/lib/format"
 import { backendFetch } from "@/lib/server/medusa"
 import { getToken } from "@/lib/server/session"
 
@@ -26,7 +26,7 @@ export async function saveProducts(_: SaveState, form: FormData): Promise<SaveSt
     body: { add, remove },
   })
   if (!result.ok) {
-    return { error: result.message }
+    return { error: actionError(result) }
   }
   revalidatePath("/products")
   revalidatePath("/")
