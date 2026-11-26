@@ -380,3 +380,19 @@ export function isPackageProduct(product: HttpTypes.StoreProduct): boolean {
   const items = (product.metadata as Record<string, unknown> | null)?.package_items
   return Array.isArray(items) && items.length > 0
 }
+
+// The order has event tickets (kind F, TASKS P3-24): only then does the
+// pay-later note mention ticket codes (a haircut has none).
+export function hasEventTickets(
+  order: { items?: { product?: { metadata?: Meta } | null }[] | null } | null | undefined
+): boolean {
+  return (order?.items ?? []).some((i) => isEventProduct(i.product))
+}
+
+// "Pay later (cash or bank transfer)" -> "Reserved: pay later by cash or bank
+// transfer": the payment method's label, without saying "pay" twice.
+export function reservedText(label: string): string {
+  let phrase = label.trim().replace(/\s*\(([^)]+)\)\s*$/, " by $1")
+  phrase = phrase.charAt(0).toLowerCase() + phrase.slice(1)
+  return `Reserved: ${/^pay\b/.test(phrase) ? phrase : `pay with ${phrase}`}`
+}
