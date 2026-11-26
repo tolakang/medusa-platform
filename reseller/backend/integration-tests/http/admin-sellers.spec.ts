@@ -256,6 +256,9 @@ medusaIntegrationTestRunner({
         const cleared = await call(api.post("/sellers/me", { telegram: "" }, bearer(token)))
         expect(cleared.data.seller.telegram).toBeNull()
         expect(cleared.data.seller.phone).toEqual("+855 12 345 678")
+        // Stored in one format, whatever was typed (as booking's walk-ins).
+        const typed = await call(api.post("/sellers/me", { phone: "012345678" }, bearer(token)))
+        expect(typed.data.seller.phone).toEqual("+855 12 345 678")
         // The owner sees them too.
         expect(
           (await api.get(`/admin/sellers/${invited.data.seller.id}`, admin)).data.seller.payout_bank_name
