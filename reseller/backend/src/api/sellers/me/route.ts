@@ -6,6 +6,7 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { z } from "@medusajs/framework/zod"
 import { SELLER_MODULE } from "../../../modules/seller"
 import SellerModuleService from "../../../modules/seller/service"
+import { isValidPhone, PHONE_MESSAGE } from "@medusa-platform/medusa-core/lib/phone"
 
 // GET /sellers/me (plan §9.5; TASKS P5-03): the signed-in seller and their
 // sales channel. P5-06 adds products and commissions.
@@ -58,7 +59,8 @@ const Optional = (max: number) =>
 export const PostSellerMe = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
-    phone: Optional(40),
+    // Digits only, as checkout phones (medusa-core lib/phone; browser test 2026-11-26).
+    phone: Optional(40).refine((value) => isValidPhone(value), PHONE_MESSAGE),
     telegram: Optional(64),
     payout_bank_name: Optional(80),
     payout_account_name: Optional(120),

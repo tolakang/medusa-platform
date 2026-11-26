@@ -247,6 +247,11 @@ medusaIntegrationTestRunner({
             payout_account_number: "000 123 456",
           })
         )
+        // A phone must be a phone number (medusa-core lib/phone).
+        const letters = await call(api.post("/sellers/me", { phone: "abc" }, bearer(token)))
+        expect(letters.status).toEqual(400)
+        expect(JSON.stringify(letters.data)).toContain("digits only")
+        expect((await call(api.post("/sellers/me", { phone: "12" }, bearer(token)))).status).toEqual(400)
         // Empty text clears a field.
         const cleared = await call(api.post("/sellers/me", { telegram: "" }, bearer(token)))
         expect(cleared.data.seller.telegram).toBeNull()
