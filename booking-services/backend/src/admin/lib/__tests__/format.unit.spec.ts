@@ -20,7 +20,7 @@ describe("admin format helpers", () => {
 describe("cancel line and errors", () => {
   it("shows the refunded amount with its currency", () => {
     expect(cancelText({ refund: "refunded", refunded_amount: 8 }, "usd")).toBe("Cancelled. $8.00 refunded.")
-    expect(cancelText({ refund: "not_captured", refunded_amount: 0 }, "usd")).toBe("Cancelled. Refund: not captured.")
+    expect(cancelText({ refund: "not_captured", refunded_amount: 0 }, "usd")).toBe("Cancelled. Nothing was paid, so nothing to refund.")
   })
   it("drops Medusa's Invalid request prefix", () => {
     expect(errorText(new Error("Invalid request: walk_in_phone: Enter a phone"))).toBe("walk_in_phone: Enter a phone")
