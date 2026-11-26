@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react"
 import { Notice } from "@/components/notice"
+import { isValidPhone, PHONE_MESSAGE } from "@/lib/format"
 import { bookWalkIn, cancelBooking, moveBooking, type FormState } from "./actions"
 
 export function WalkInForm({ resourceId, date }: { resourceId: string; date: string }) {
@@ -31,8 +32,8 @@ export function WalkInForm({ resourceId, date }: { resourceId: string; date: str
             type="tel"
             inputMode="tel"
             placeholder="012 345 678"
-            pattern={String.raw`\+?[\(\) \-]*(?:[0-9][\(\) \-]*){8,15}`}
-            title="Digits only, for example 012 345 678 or +855 12 345 678."
+            title={PHONE_MESSAGE}
+            onInput={(e) => e.currentTarget.setCustomValidity(isValidPhone(e.currentTarget.value.trim()) ? "" : PHONE_MESSAGE)}
           />
         </label>
         <label className="flex flex-1 flex-col gap-1">

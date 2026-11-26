@@ -21,6 +21,7 @@ export type CalendarBooking = {
   // Seats on a departure (kind D, P3-23).
   seats?: number
   customer?: { email: string | null; first_name: string | null; last_name: string | null } | null
+  customer_name?: string | null
   order?: { id: string; display_id: number | null } | null
 }
 
@@ -74,12 +75,22 @@ export function timeRange(b: { starts_at: string; ends_at: string }, timeZone: s
   return `${toLocalTime(new Date(b.starts_at), timeZone).time}–${toLocalTime(new Date(b.ends_at), timeZone).time}`
 }
 
-export function customerLabel(b: CalendarBooking): string {
+type CalendarBookingLike = Partial<CalendarBooking>
+
+export function customerLabel(b: CalendarBookingLike): string {
   const c = b.customer
-  const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ")
-  if (name || c?.email) return (name || c?.email) as string
-  const walkIn = [b.walk_in_name, b.walk_in_phone].filter(Boolean).join(" · ")
-  return walkIn ? `Walk-in: ${walkIn}` : "Walk-in"
+  // The customer's name, else the order's address name (the backend's
+  // customer_name), else a walk-in's name; the email only when none is known.
+  const name = b.customer_name || [c?.first_name, c?.last_name].filter(Boolean).join(" ")
+  if (name) return name
+  if (b.walk_in_name) return `Walk-in: ${b.walk_in_name}`
+  return c?.email || (b.walk_in_phone ? `Walk-in: ${b.walk_in_phone}` : "Walk-in")
+}
+
+// The email or phone, shown under the name (empty when the label shows it).
+export function customerContact(b: CalendarBookingLike): string {
+  const label = customerLabel(b)
+  return [b.customer?.email, b.walk_in_phone].filter((v): v is string => !!v && !label.includes(v)).join(" · ")
 }
 
 export const STATUS_COLOR: Record<string, "green" | "orange" | "grey" | "red" | "blue"> = {

@@ -41,10 +41,10 @@ async function signIn(email: string, password: string): Promise<SignIn> {
 
 // Sends the "confirm your email" link (the backend allows one per address
 // every 2 minutes).
-async function askToVerify(email: string, token: string): Promise<AuthState> {
+async function askToVerify(email: string, token: string, invited = false): Promise<AuthState> {
   try {
     await sdk.auth.verification.request(
-      { entity_id: email, entity_type: "email", metadata: { actor: "provider" } },
+      { entity_id: email, entity_type: "email", metadata: invited ? { actor: "provider", invited: true } : { actor: "provider" } },
       { authorization: `Bearer ${token}` }
     )
     return { info: `We emailed a link to ${email}. Open it to confirm your email, then sign in.` }
@@ -114,13 +114,13 @@ const newPassword = (form: FormData): string | { error: string } => {
 }
 
 // After the provider exists: sign in, or ask to confirm the email first.
-async function finish(email: string, password: string, fallbackToken: string): Promise<AuthState> {
+async function finish(email: string, password: string, fallbackToken: string, invited = false): Promise<AuthState> {
   const signedIn = await signIn(email, password)
   if (signedIn && "token" in signedIn) {
     await setToken(signedIn.token)
     redirect("/")
   }
-  return askToVerify(email, signedIn && "verify" in signedIn ? signedIn.verify : fallbackToken)
+  return askToVerify(email, signedIn && "verify" in signedIn ? signedIn.verify : fallbackToken, invited)
 }
 
 export async function signUp(_: AuthState, form: FormData): Promise<AuthState> {
@@ -170,7 +170,7 @@ export async function acceptInvite(_: AuthState, form: FormData): Promise<AuthSt
   if (!accepted.ok) {
     return { error: accepted.message }
   }
-  return finish(email, password, registered.token)
+  return finish(email, password, registered.token, true)
 }
 
 // The backend always answers the same, whether the email is known or not.

@@ -241,6 +241,8 @@ medusaIntegrationTestRunner({
           itemTotal,
           "Sophea",
         ])
+        // A guest order: the name comes from the order's address.
+        expect(emails[0].data.customer_name).toEqual("Sok Dara")
       })
 
       it("a customer's own cancel sends no cancellation email (unchanged)", async () => {

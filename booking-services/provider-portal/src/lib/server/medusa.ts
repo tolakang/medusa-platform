@@ -68,7 +68,7 @@ export async function backendFetch<T>(
     return { ok: true, status: 200, data }
   } catch (e) {
     if (e instanceof FetchError) {
-      return { ok: false, status: e.status ?? 502, message: e.message || "The shop server refused the request." }
+      return { ok: false, status: e.status ?? 502, message: (e.message ?? "").replace(/^Invalid request:\s*/i, "") || "The shop server refused the request." }
     }
     return { ok: false, status: 502, message: "The shop server can't be reached. Check the connection." }
   }

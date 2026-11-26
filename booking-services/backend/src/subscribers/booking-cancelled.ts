@@ -1,5 +1,6 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { personName } from "../lib/person"
 import { BOOKING_CANCELLED_TEMPLATE, type BookingCancelledEmailData } from "../lib/booking-cancel-email"
 import { BOOKING_CANCELLED_EVENT, type BookingCancelledData } from "../workflows/cancel-booking"
 
@@ -23,6 +24,10 @@ export default async function bookingCancelledHandler({ event: { data }, contain
       "order.id",
       "order.email",
       "order.currency_code",
+      "order.billing_address.first_name",
+      "order.billing_address.last_name",
+      "order.shipping_address.first_name",
+      "order.shipping_address.last_name",
       "order.items.product_title",
       "order.items.metadata",
     ],
@@ -38,7 +43,7 @@ export default async function bookingCancelledHandler({ event: { data }, contain
   if (!email) return
   const item = (b.order.items ?? []).find((i) => (i?.metadata as Record<string, unknown> | null)?.booking_id === b.id)
   const payload: BookingCancelledEmailData = {
-    customer_name: [customer?.first_name, customer?.last_name].filter(Boolean).join(" ") || null,
+    customer_name: personName(customer, b.order.billing_address, b.order.shipping_address),
     service: item?.product_title ?? null,
     calendar: b.resource.name,
     timezone: b.resource.timezone,

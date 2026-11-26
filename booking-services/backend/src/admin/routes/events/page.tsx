@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { STATUS_COLOR } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
-import { errorText, statusLabel } from "../../lib/format"
+import { cancelText, errorText, statusLabel } from "../../lib/format"
 import { usePageTitle } from "../../lib/page-title"
 
 // Events (TASKS P3-30): event packages with all their pieces on one card,
@@ -19,7 +19,7 @@ type Event = {
   title: string
   event_date: string | null
   status: string
-  order: { id: string; display_id: number; email: string } | null
+  order: { id: string; display_id: number; email: string; currency_code: string | null } | null
   address: string | null
   notes: string | null
   pieces: Piece[]
@@ -87,8 +87,7 @@ const EventsPage = () => {
       {data?.events.length === 0 && <Text className="px-6 py-4 text-ui-fg-subtle">No event packages coming up.</Text>}
       {cancel.data && (
         <Text className="px-6 py-4 text-ui-fg-subtle">
-          Cancelled. Refund: {cancel.data.refund.replace(/_/g, " ")}
-          {cancel.data.refunded_amount ? ` (${cancel.data.refunded_amount})` : ""}.
+          {cancelText(cancel.data, data?.events.find((e) => e.id === cancel.variables)?.order?.currency_code)}
         </Text>
       )}
       {cancel.error && <Text className="px-6 py-4 text-ui-fg-error">{errorText(cancel.error)}</Text>}

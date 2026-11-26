@@ -31,6 +31,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       "order.id",
       "order.display_id",
       "order.email",
+      "order.currency_code",
       "order.items.product_title",
       "order.items.variant_title",
       "order.items.metadata",
@@ -60,7 +61,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       title: head?.product_title ?? "Event package",
       event_date: ((head?.metadata ?? {}) as Record<string, unknown>)[PACKAGE_DATE_KEY] ?? null,
       status: statuses.size === 1 ? sorted[0].status : "mixed",
-      order: order ? { id: order.id, display_id: order.display_id, email: order.email } : null,
+      order: order ? { id: order.id, display_id: order.display_id, email: order.email, currency_code: order.currency_code } : null,
       address: sorted.find((p) => p.address)?.address ?? null,
       notes: sorted.find((p) => p.notes)?.notes ?? null,
       pieces: sorted.map((p) => {

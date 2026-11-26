@@ -157,7 +157,8 @@ medusaIntegrationTestRunner({
           cart_id: null,
           notes: "Walked in",
           walk_in_name: "Chan",
-          walk_in_phone: "012 345 678",
+          // Stored in one format, whatever was typed.
+          walk_in_phone: "+855 12 345 678",
         })
         expect(await failure(walkIn(utc("09:30"), utc("10:30")))).toEqual({
           status: 400,
@@ -186,7 +187,7 @@ medusaIntegrationTestRunner({
           [utc("09:00"), "confirmed"],
           [utc("13:00"), "cancelled"],
         ])
-        expect(cal.bookings[0]).toMatchObject({ notes: "Walked in", walk_in_name: "Chan", walk_in_phone: "012 345 678", customer: null, resource: { name: "Sophea", timezone: "UTC" } })
+        expect(cal.bookings[0]).toMatchObject({ notes: "Walked in", walk_in_name: "Chan", walk_in_phone: "+855 12 345 678", customer: null, customer_name: null, resource: { name: "Sophea", timezone: "UTC" } })
         expect(await failure(api.get(`/admin/booking/bookings?from=yesterday&to=today`, admin))).toMatchObject({ status: 400 })
       })
 
@@ -198,7 +199,7 @@ medusaIntegrationTestRunner({
           admin
         )
         const { data: cancelled } = await api.post(`/admin/booking/bookings/${data.booking.id}/cancel`, {}, admin)
-        expect(cancelled).toEqual({ booking: { id: data.booking.id, status: "cancelled" }, refund: "no_order", refunded_amount: 0 })
+        expect(cancelled).toEqual({ booking: { id: data.booking.id, status: "cancelled" }, refund: "no_order", refunded_amount: 0, currency_code: null })
       })
     })
   },

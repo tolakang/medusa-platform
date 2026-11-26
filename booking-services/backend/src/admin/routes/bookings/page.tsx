@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import {
+  customerContact,
   customerLabel,
   groupByLocalDay,
   shiftDate,
@@ -18,7 +19,7 @@ import {
   type CalendarView,
 } from "../../lib/booking-calendar"
 import { sdk } from "../../lib/sdk"
-import { errorText, statusLabel } from "../../lib/format"
+import { cancelText, errorText, statusLabel } from "../../lib/format"
 import { usePageTitle } from "../../lib/page-title"
 
 
@@ -298,7 +299,7 @@ const BookingsPage = () => {
   })
   const cancel = useMutation({
     mutationFn: (id: string) =>
-      sdk.client.fetch<{ refund: string; refunded_amount: number }>(`/admin/booking/bookings/${id}/cancel`, {
+      sdk.client.fetch<{ refund: string; refunded_amount: number; currency_code: string | null }>(`/admin/booking/bookings/${id}/cancel`, {
         method: "POST",
       }),
     onSuccess: refresh,
@@ -398,6 +399,7 @@ const BookingsPage = () => {
                     <Badge size="2xsmall" color={STATUS_COLOR[b.status] ?? "grey"}>{statusLabel(b.status)}</Badge>
                   </div>
                   <Text size="small">{customerLabel(b)}</Text>
+                  {customerContact(b) && <Text size="xsmall" className="text-ui-fg-subtle">{customerContact(b)}</Text>}
                   {b.order?.display_id != null && (
                     <Text size="xsmall" className="text-ui-fg-subtle">Order #{b.order.display_id}</Text>
                   )}
@@ -466,8 +468,7 @@ const BookingsPage = () => {
         {cancel.error && <Text className="text-ui-fg-error mt-2">{errorText(cancel.error)}</Text>}
         {cancel.data && (
           <Text className="text-ui-fg-subtle mt-2">
-            Cancelled. Refund: {cancel.data.refund.replace(/_/g, " ")}
-            {cancel.data.refunded_amount ? ` (${cancel.data.refunded_amount})` : ""}.
+            {cancelText(cancel.data, cancel.data.currency_code)}
           </Text>
         )}
       </Container>

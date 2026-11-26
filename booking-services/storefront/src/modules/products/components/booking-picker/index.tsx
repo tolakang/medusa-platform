@@ -478,7 +478,7 @@ export default function BookingPicker({
             <Text className="txt-small text-ui-fg-subtle">Loading times…</Text>
           )}
           {!loading && slots.length > 0 && (
-            <span className="sr-only">{slots.length} free times.</span>
+            <span className="sr-only">{slots.length} free {slots.length === 1 ? "time" : "times"}.</span>
           )}
         </div>
         {showMissing && !chosen && !loading && slots.length > 0 && (

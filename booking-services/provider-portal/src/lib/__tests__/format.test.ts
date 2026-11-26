@@ -1,10 +1,14 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { customerLabel, hoursText, isValidPhone, money, parseHours, parseLengths, priceValue } from "../format.ts"
+import { customerContact, customerLabel, hoursText, isValidPhone, money, parseHours, parseLengths, priceValue } from "../format.ts"
 import { seal, unseal } from "../session-seal.ts"
 
 test("walk-in name and phone", () => {
-  assert.equal(customerLabel({ customer: null, walk_in_name: "Chan", walk_in_phone: "012 345 678" }), "Walk-in: Chan · 012 345 678")
+  assert.equal(customerLabel({ customer: null, walk_in_name: "Chan", walk_in_phone: "012 345 678" }), "Walk-in: Chan")
+  assert.equal(customerContact({ customer: null, walk_in_name: "Chan", walk_in_phone: "012 345 678" }), "012 345 678")
+  const guest = { customer_name: "Dara Guest", customer: { email: "d@b.test", first_name: null, last_name: null } }
+  assert.equal(customerLabel(guest), "Dara Guest")
+  assert.equal(customerContact(guest), "d@b.test")
   assert.equal(customerLabel({ customer: null }), "Walk-in")
   assert.equal(isValidPhone("+855 12 345 678"), true)
   assert.equal(isValidPhone(""), true)
