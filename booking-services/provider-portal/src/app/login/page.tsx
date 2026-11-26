@@ -139,7 +139,7 @@ export default function LoginPage() {
                 required
                 maxLength={40}
                 autoComplete="off"
-                placeholder="e.g. K7QW-P3MZ"
+                placeholder="e.g. 6XUKD-AKHE7"
               />
             </label>
           )}

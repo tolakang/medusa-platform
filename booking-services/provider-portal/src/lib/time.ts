@@ -79,3 +79,6 @@ export function dayLabel(date: string): string {
   const [y, m, d] = date.split("-").map(Number)
   return `${DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${d} ${MONTHS[m - 1]} ${y}`
 }
+
+// "Asia/Phnom_Penh" → "Phnom Penh time", as the admin's Bookings page says it.
+export const zoneLabel = (zone: string) => `${(zone.split("/").pop() ?? zone).replace(/_/g, " ")} time`
