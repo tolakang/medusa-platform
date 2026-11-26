@@ -1,5 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils";
 import { ORDER_ACCESS_HEADER, signOrderAccess } from "@medusa-platform/medusa-core/api/order-access";
+import { Modules } from "@medusajs/framework/utils";
 import { call, setupB2b } from "../utils/b2b";
 
 // GET /store/orders/:id shows name, address and phone: only the buyer, an admin
@@ -60,6 +61,37 @@ medusaIntegrationTestRunner({
         expect(
           (await get({ headers: { ...buyerWithProof.headers, [ORDER_ACCESS_HEADER]: proof(order.id) } })).status
         ).toEqual(200);
+      });
+
+      it("a guest order placed with the signed-in buyer's email opens with its proof", async () => {
+        const company = await b2b.company();
+        const buyer = await b2b.employee(company.id);
+        const other = await b2b.employee(company.id);
+        const container = getContainer();
+        const guestCustomer = await container
+          .resolve(Modules.CUSTOMER)
+          .createCustomers({ email: buyer.customer.email, has_account: false });
+        const orders = await container.resolve(Modules.ORDER).createOrders(
+          [undefined, guestCustomer.id].map((customer_id) => ({
+            currency_code: "usd",
+            customer_id,
+            email: buyer.customer.email,
+            items: [{ title: "Box", quantity: 1, unit_price: 15 }],
+          }))
+        );
+        for (const order of orders) {
+          const path = `/store/orders/${order.id}`;
+          const as = (token: string, p?: string) =>
+            call(
+              api.get(path, {
+                headers: { ...b2b.store(token).headers, ...(p ? { [ORDER_ACCESS_HEADER]: p } : {}) },
+              })
+            );
+          expect((await as(buyer.token, proof(order.id))).status).toEqual(200);
+          expect((await as(buyer.token)).status).toEqual(404);
+          expect((await as(buyer.token, proof(order.id, undefined, "wrong"))).status).toEqual(404);
+          expect((await as(other.token, proof(order.id))).status).toEqual(404);
+        }
       });
     });
   },

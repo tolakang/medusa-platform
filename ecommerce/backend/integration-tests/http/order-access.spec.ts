@@ -111,6 +111,36 @@ medusaIntegrationTestRunner({
         expect((await get(order.id, { ...other.headers, ...p })).status).toEqual(404)
         expect((await get(order.id, { ...owner.headers, ...p })).status).toEqual(200)
       })
+
+      it("answers a signed-in customer for their own guest order with a valid proof", async () => {
+        // Ordered as a guest with the account's email, then signed in. Guest is
+        // no customer_id, or Medusa's guest customer (has_account false).
+        const { pk, owner, other } = await setup()
+        const container = getContainer()
+        const guestCustomer = await container
+          .resolve(Modules.CUSTOMER)
+          .createCustomers({ email: "Owner@Example.com", has_account: false })
+        const orders = await container.resolve(Modules.ORDER).createOrders(
+          [undefined, guestCustomer.id].map((customer_id) => ({
+            currency_code: "usd",
+            customer_id,
+            email: "owner@example.com",
+            items: [{ title: "Medusa Shorts", quantity: 1, unit_price: 15 }],
+          }))
+        )
+        for (const order of orders) {
+          const p = { [ORDER_ACCESS_HEADER]: proof(order.id) }
+          expect((await get(order.id, { ...owner.headers, ...p })).status).toEqual(200)
+          expect((await get(order.id, owner.headers)).status).toEqual(404)
+          expect(
+            (await get(order.id, { ...owner.headers, [ORDER_ACCESS_HEADER]: proof(order.id, undefined, "x") }))
+              .status
+          ).toEqual(404)
+          // Another customer holding the proof: still 404 (email differs).
+          expect((await get(order.id, { ...other.headers, ...p })).status).toEqual(404)
+          expect((await get(order.id, { ...pk, ...p })).status).toEqual(200)
+        }
+      })
     })
   },
 })

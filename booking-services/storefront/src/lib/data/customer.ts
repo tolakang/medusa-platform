@@ -281,7 +281,6 @@ async function completeLogin(
     await removePendingCustomer()
   }
 
-  await clearOrderAccess()
 
   await setAuthToken(token)
 
@@ -327,7 +326,6 @@ export async function completeProfile(
       method: "POST",
       headers: { authorization },
     })
-    await clearOrderAccess()
     await setAuthToken(token)
   } catch (error) {
     return { state: "error", error: friendlyAuthError(error), values }

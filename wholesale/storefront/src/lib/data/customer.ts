@@ -91,7 +91,6 @@ export async function signup(_currentState: unknown, formData: FormData) {
       password,
     })
 
-    await clearOrderAccess()
 
     await setAuthToken(loginToken as string)
 
@@ -150,7 +149,6 @@ export async function login(_currentState: unknown, formData: FormData) {
       .login("customer", "emailpass", { email, password })
       .then(async (token) => {
         track("customer_logged_in")
-        await clearOrderAccess()
         setAuthToken(token as string)
 
         const [customerCacheTag, productsCacheTag, cartsCacheTag] =
