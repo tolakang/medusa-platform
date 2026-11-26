@@ -22,6 +22,7 @@ import {
   removePendingAuth,
   setPendingAuth,
 } from "./cookies"
+import { clearOrderAccess } from "./order-access"
 
 // What the sign-in / sign-up forms show after a submit (owner, 2026-10-06):
 // the typed values come back so the form keeps them (React resets form
@@ -280,6 +281,8 @@ async function completeLogin(
     await removePendingCustomer()
   }
 
+  await clearOrderAccess()
+
   await setAuthToken(token)
 
   const customerCacheTag = await getCacheTag("customers")
@@ -324,6 +327,7 @@ export async function completeProfile(
       method: "POST",
       headers: { authorization },
     })
+    await clearOrderAccess()
     await setAuthToken(token)
   } catch (error) {
     return { state: "error", error: friendlyAuthError(error), values }
@@ -486,6 +490,8 @@ export async function signout(countryCode: string) {
   await sdk.auth.logout()
 
   await removeAuthToken()
+
+  await clearOrderAccess()
 
   const customerCacheTag = await getCacheTag("customers")
   revalidateTag(customerCacheTag, { expire: 0 })

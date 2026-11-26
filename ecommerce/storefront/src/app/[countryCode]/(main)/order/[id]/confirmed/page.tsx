@@ -25,11 +25,12 @@ export default async function OrderConfirmedPage(props: Props) {
   }
 
   // Name, address and phone only for the browser that placed the order or
-  // the signed-in customer who owns it (order-access.ts).
+  // the signed-in customer who owns it (order-access.ts). A signed-in customer
+  // never gets another buyer's order through this browser's cookie.
   const customer = await retrieveCustomer().catch(() => null)
   const isOwner = !!customer && order.customer_id === customer.id
 
-  if (isOwner || (await hasOrderAccess(order.id))) {
+  if (isOwner || (!customer && (await hasOrderAccess(order.id)))) {
     return <OrderCompletedTemplate order={order} />
   }
 

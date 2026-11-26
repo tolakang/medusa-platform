@@ -38,7 +38,7 @@ const ShippingAddress = ({
         ? cart.region.countries[0].iso_2 ?? ""
         : ""),
     "shipping_address.province": cart?.shipping_address?.province || "",
-    "shipping_address.phone": cart?.shipping_address?.phone || "",
+    "shipping_address.phone": cart?.shipping_address?.phone || customer?.phone || "",
     email: cart?.email || "",
     [TELEGRAM_CONTACT_KEY]:
       (cart?.metadata?.[TELEGRAM_CONTACT_KEY] as string | undefined) || "",
@@ -74,7 +74,8 @@ const ShippingAddress = ({
         "shipping_address.country_code":
           address?.country_code || prevState["shipping_address.country_code"],
         "shipping_address.province": address?.province || "",
-        "shipping_address.phone": address?.phone || "",
+        "shipping_address.phone":
+          address?.phone || prevState["shipping_address.phone"] || customer?.phone || "",
       }))
     }
 

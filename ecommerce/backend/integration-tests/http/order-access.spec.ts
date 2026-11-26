@@ -103,6 +103,14 @@ medusaIntegrationTestRunner({
         expect(res.status).toEqual(200)
         expect(res.data.order.shipping_address.phone).toEqual("012 345 678")
       })
+
+      it("answers 404 to another signed-in customer even with a valid proof", async () => {
+        // Buyer A placed the order, signed out; B signs in on the same browser.
+        const { order, owner, other } = await setup()
+        const p = { [ORDER_ACCESS_HEADER]: proof(order.id) }
+        expect((await get(order.id, { ...other.headers, ...p })).status).toEqual(404)
+        expect((await get(order.id, { ...owner.headers, ...p })).status).toEqual(200)
+      })
     })
   },
 })

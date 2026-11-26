@@ -11,11 +11,13 @@ import { safeEqual } from "../lib/safe-equal"
 //
 // Allowed when
 //  (a) the signed-in customer owns the order (req.auth_context.actor_id), or
-//  (b) the request carries `x-order-access: <exp>.<sig>`, the proof the
+//  (b) no customer is signed in and the request carries `x-order-access: <exp>.<sig>`, the proof the
 //      storefront keeps in its signed cookie for the browser that placed the
 //      order: sig = HMAC-SHA256(ORDER_ACCESS_SECRET, "<order_id>.<exp>"), hex,
 //      exp in Unix seconds and still in the future
 //      (`*/storefront/src/lib/data/order-access.ts`).
+// A signed-in customer is judged by (a) alone (plus the app's extra rule): a
+// proof another buyer left in the same browser does not open their order.
 // Everyone else gets 404, as if the order did not exist. Without
 // ORDER_ACCESS_SECRET only (a) works.
 
@@ -65,14 +67,15 @@ export const requireOrderAccessWith = (extra?: ExtraOrderAccess) =>
     next(new MedusaError(MedusaError.Types.NOT_FOUND, `Order with id: ${orderId} was not found`))
 
   try {
-    if (hasValidOrderProof(req.headers[ORDER_ACCESS_HEADER], orderId)) {
-      return next()
-    }
-    const actorId = (req as MedusaRequest & { auth_context?: { actor_id?: string; actor_type?: string } })
+    const auth = (req as MedusaRequest & { auth_context?: { actor_id?: string; actor_type?: string } })
       .auth_context
-    if (!actorId?.actor_id || actorId.actor_type !== "customer") {
-      return notFound()
+    const customerId = auth?.actor_type === "customer" ? auth.actor_id : undefined
+    // No one signed in: only the placing browser's proof.
+    if (!customerId) {
+      return hasValidOrderProof(req.headers[ORDER_ACCESS_HEADER], orderId) ? next() : notFound()
     }
+    // Signed in: ownership (or the app's extra rule) decides, and a proof
+    // left in this browser by another buyer grants nothing.
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
     const {
       data: [order],
@@ -81,8 +84,8 @@ export const requireOrderAccessWith = (extra?: ExtraOrderAccess) =>
       return notFound()
     }
     if (
-      order.customer_id !== actorId.actor_id &&
-      !(extra && (await extra(req.scope, order, actorId.actor_id)))
+      order.customer_id !== customerId &&
+      !(extra && (await extra(req.scope, order, customerId)))
     ) {
       return notFound()
     }
