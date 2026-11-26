@@ -72,15 +72,20 @@ const EXTRA_OPTIONS = [
   { title: 'Sleeve', values: ['Short', 'Long'] },
 ]
 
-/** Real Medusa demo images, so the grid isn't full of placeholders. */
-const IMAGES = [
-  'https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png',
-  'https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png',
-  'https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png',
-  'https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png',
-  'https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png',
-  'https://medusa-public-images.s3.eu-west-1.amazonaws.com/coffee-mug.png',
-]
+/**
+ * Real Medusa demo images, by product type, so each card shows what it sells.
+ * Types with no matching demo image (cap, socks, tote, beanie) get none: the
+ * storefront's placeholder is better than a picture of something else.
+ */
+const IMG = 'https://medusa-public-images.s3.eu-west-1.amazonaws.com'
+const IMAGES_BY_TYPE: Record<string, string[]> = {
+  Tee: [`${IMG}/tee-black-front.png`, `${IMG}/tee-white-front.png`],
+  Hoodie: [`${IMG}/sweatshirt-vintage-front.png`],
+  Sweatshirt: [`${IMG}/sweatshirt-vintage-front.png`],
+  Shorts: [`${IMG}/shorts-vintage-front.png`],
+  Joggers: [`${IMG}/sweatpants-gray-front.png`],
+  Overshirt: [`${IMG}/tee-white-front.png`],
+}
 
 type SharedOption = { id: string; title: string; values: string[] }
 
@@ -286,7 +291,12 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
     const collection = pick(allCollections)
     const chosenTags = pickSome(allTags, 3)
     const chosenCategories = pickSome(categories, 2)
-    const thumbnail = pick(IMAGES)
+    // Still one PRNG draw per product, so prices and picks stay as before.
+    const typeImages = IMAGES_BY_TYPE[type] ?? []
+    const draw = random()
+    const thumbnail = typeImages.length
+      ? typeImages[Math.floor(draw * typeImages.length)]
+      : undefined
     const basePrice = 10 + Math.floor(random() * 90)
 
     products.push({
@@ -296,7 +306,7 @@ export default async function seedDemoProducts({ container }: ExecArgs) {
       description: `A ${title.toLowerCase()} for everyday wear. Soft, easy to care for and made to last.`,
       status: ProductStatus.PUBLISHED,
       thumbnail,
-      images: [{ url: thumbnail }],
+      images: thumbnail ? [{ url: thumbnail }] : [],
       weight: 300 + Math.floor(random() * 500),
       shipping_profile_id: shippingProfile.id,
       collection_id: collection?.id,
