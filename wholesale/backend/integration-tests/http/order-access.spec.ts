@@ -49,6 +49,17 @@ medusaIntegrationTestRunner({
         expect((await get(withProof(proof(order.id, undefined, "wrong")))).status).toEqual(404);
         const ok = await get(withProof(proof(order.id)));
         expect(ok.status).toEqual(200);
+
+        // A signed-in customer is judged by ownership alone: a valid proof another
+        // buyer left in the same browser does not open the order.
+        const colleagueWithProof = b2b.store(colleague.token);
+        expect(
+          (await get({ headers: { ...colleagueWithProof.headers, [ORDER_ACCESS_HEADER]: proof(order.id) } })).status
+        ).toEqual(404);
+        const buyerWithProof = b2b.store(buyer.token);
+        expect(
+          (await get({ headers: { ...buyerWithProof.headers, [ORDER_ACCESS_HEADER]: proof(order.id) } })).status
+        ).toEqual(200);
       });
     });
   },
