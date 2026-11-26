@@ -16,8 +16,13 @@ import { safeEqual } from "../lib/safe-equal"
 //      order: sig = HMAC-SHA256(ORDER_ACCESS_SECRET, "<order_id>.<exp>"), hex,
 //      exp in Unix seconds and still in the future
 //      (`*/storefront/src/lib/data/order-access.ts`).
-// A signed-in customer is judged by (a) alone (plus the app's extra rule): a
-// proof another buyer left in the same browser does not open their order.
+// A signed-in customer is judged by (a) (plus the app's extra rule), or by
+//  (c) a guest order placed with the customer's own email, plus a valid proof:
+//      a guest who orders and then signs in keeps the confirmation page. Guest
+//      means no customer_id, or a customer without an account (Medusa's guest
+//      customer, has_account false). A proof another buyer left in the same
+//      browser opens nothing: their email differs. Holding both the cookie and
+//      the email is needed; the cookie exists only in the placing browser.
 // Everyone else gets 404, as if the order did not exist. Without
 // ORDER_ACCESS_SECRET only (a) works.
 
@@ -56,6 +61,31 @@ export type ExtraOrderAccess = (
   customerId: string
 ) => Promise<boolean>
 
+const sameEmail = (a?: string | null, b?: string | null) =>
+  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
+
+async function isOwnGuestOrder(
+  query: { graph: (...args: any[]) => Promise<{ data: any[] }> },
+  order: { customer_id?: string | null; email?: string | null },
+  customerId: string
+): Promise<boolean> {
+  const ids = [customerId, order.customer_id].filter((id): id is string => !!id)
+  const { data: customers } = await query.graph({
+    entity: "customer",
+    fields: ["id", "email", "has_account"],
+    filters: { id: ids },
+  })
+  const me = customers.find((c: { id: string }) => c.id === customerId)
+  if (!me || !sameEmail(me.email, order.email)) {
+    return false
+  }
+  if (!order.customer_id) {
+    return true
+  }
+  const placedBy = customers.find((c: { id: string }) => c.id === order.customer_id)
+  return !!placedBy && placedBy.has_account === false
+}
+
 export const requireOrderAccessWith = (extra?: ExtraOrderAccess) =>
   async function requireOrderAccess(
   req: MedusaRequest,
@@ -79,17 +109,23 @@ export const requireOrderAccessWith = (extra?: ExtraOrderAccess) =>
     const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
     const {
       data: [order],
-    } = await query.graph({ entity: "order", fields: ["id", "customer_id"], filters: { id: orderId } })
+    } = await query.graph({ entity: "order", fields: ["id", "customer_id", "email"], filters: { id: orderId } })
     if (!order) {
       return notFound()
     }
-    if (
-      order.customer_id !== customerId &&
-      !(extra && (await extra(req.scope, order, customerId)))
-    ) {
-      return notFound()
+    if (order.customer_id === customerId) {
+      return next()
     }
-    next()
+    if (extra && (await extra(req.scope, order, customerId))) {
+      return next()
+    }
+    if (
+      hasValidOrderProof(req.headers[ORDER_ACCESS_HEADER], orderId) &&
+      (await isOwnGuestOrder(query, order, customerId))
+    ) {
+      return next()
+    }
+    return notFound()
   } catch (e) {
     next(e)
   }

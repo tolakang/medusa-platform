@@ -83,9 +83,10 @@ export const orderAccessHeaders = async (
 }
 
 /**
- * Forget every order this browser placed. Called on sign-out and whenever a
- * customer signs in or registers, so the next person on this browser cannot
- * open the previous buyer's orders.
+ * Forget every order this browser placed. Called on sign-out, so the next
+ * person on this browser cannot open the previous buyer's orders. Kept on
+ * sign-in: a signed-in customer gets only guest orders placed with their own
+ * email through it (backend and confirmation page check that).
  */
 export const clearOrderAccess = async () => {
   ;(await nextCookies()).delete(COOKIE)
