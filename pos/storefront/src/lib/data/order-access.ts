@@ -81,3 +81,12 @@ export const orderAccessHeaders = async (
   const entry = await validEntry(orderId)
   return entry ? { "x-order-access": `${entry.exp}.${entry.sig}` } : {}
 }
+
+/**
+ * Forget every order this browser placed. Called on sign-out and whenever a
+ * customer signs in or registers, so the next person on this browser cannot
+ * open the previous buyer's orders.
+ */
+export const clearOrderAccess = async () => {
+  ;(await nextCookies()).delete(COOKIE)
+}

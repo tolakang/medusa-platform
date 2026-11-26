@@ -18,6 +18,7 @@ import {
   removeCartId,
   setAuthToken,
 } from "./cookies"
+import { clearOrderAccess } from "./order-access"
 
 export const retrieveCustomer = async (): Promise<B2BCustomer | null> => {
   const authHeaders = await getAuthHeaders()
@@ -90,6 +91,8 @@ export async function signup(_currentState: unknown, formData: FormData) {
       password,
     })
 
+    await clearOrderAccess()
+
     await setAuthToken(loginToken as string)
 
     // A colleague's join code (REVIEW_FIXES B14): join that company instead
@@ -147,6 +150,7 @@ export async function login(_currentState: unknown, formData: FormData) {
       .login("customer", "emailpass", { email, password })
       .then(async (token) => {
         track("customer_logged_in")
+        await clearOrderAccess()
         setAuthToken(token as string)
 
         const [customerCacheTag, productsCacheTag, cartsCacheTag] =
@@ -187,6 +191,7 @@ export async function login(_currentState: unknown, formData: FormData) {
 export async function signout(countryCode: string, customerId: string) {
   await sdk.auth.logout()
   removeAuthToken()
+  await clearOrderAccess()
   track("customer_logged_out")
 
   // remove next line if want the cart to persist after logout
