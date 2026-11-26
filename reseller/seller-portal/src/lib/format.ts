@@ -102,3 +102,25 @@ export const shopUrl = (domain: string | null | undefined) => (domain ? `https:/
 export function commissionLabel(status: string): string {
   return COMMISSION_LABELS[status] ?? orderStatusLabel(status)
 }
+
+// The backend's phone rule (medusa-core lib/phone, as booking's provider
+// portal): an optional leading +, then digits, spaces, hyphens or
+// parentheses, 8 to 15 digits. Empty means no phone. Clients don't depend
+// on medusa-core (plan §4), so the rule is kept in step here.
+export const PHONE_MESSAGE =
+  "Enter a phone number with digits only, for example 012 345 678 or +855 12 345 678."
+
+export function isValidPhone(value: string): boolean {
+  if (!value) return true
+  if (!/^\+?[0-9 ()-]+$/.test(value)) return false
+  const digits = value.replace(/\D/g, "").length
+  return digits >= 8 && digits <= 15
+}
+
+// A server action's answer to a failed backend call: a backend that can't be
+// reached keeps the form and its typed values (browser test 2026-11-26).
+export const OFFLINE_MESSAGE = "The shop server can't be reached. Try again."
+
+export function actionError(result: { status: number; message: string }): string {
+  return result.status === 502 ? OFFLINE_MESSAGE : result.message
+}

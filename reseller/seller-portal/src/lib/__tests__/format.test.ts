@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert"
 import { describe, it } from "node:test"
-import { commissionLabel, commissionStatus, day, orderStatusLabel, money, pageFrom, selectionChange } from "../format.ts"
+import { actionError, commissionLabel, isValidPhone, OFFLINE_MESSAGE, PHONE_MESSAGE, commissionStatus, day, orderStatusLabel, money, pageFrom, selectionChange } from "../format.ts"
 import { seal, unseal } from "../session-seal.ts"
 
 // TASKS P5-08: portal helpers and the sealed session cookie.
@@ -53,5 +53,23 @@ describe("status labels", () => {
     assert.equal(orderStatusLabel("requires_action"), "Needs action")
     assert.equal(orderStatusLabel("some_new_state"), "Some new state")
     assert.equal(commissionLabel("approved"), "Due")
+  })
+})
+
+describe("isValidPhone (settings)", () => {
+  it("accepts empty and real numbers, refuses letters and short numbers", () => {
+    assert.equal(isValidPhone(""), true)
+    assert.equal(isValidPhone("012 345 678"), true)
+    assert.equal(isValidPhone("+855 12 345 678"), true)
+    assert.equal(isValidPhone("abc"), false)
+    assert.equal(isValidPhone("12"), false)
+    assert.match(PHONE_MESSAGE, /digits only/)
+  })
+})
+
+describe("actionError (server actions)", () => {
+  it("an unreachable backend asks to try again; other errors pass through", () => {
+    assert.equal(actionError({ status: 502, message: "x" }), OFFLINE_MESSAGE)
+    assert.equal(actionError({ status: 400, message: "Bad name" }), "Bad name")
   })
 })
