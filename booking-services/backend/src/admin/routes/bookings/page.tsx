@@ -292,6 +292,7 @@ const BookingsPage = () => {
           walk_in_phone: walkIn.phone.trim() || null,
         },
       }),
+    onMutate: () => cancel.reset(),
     onSuccess: () => {
       setWalkIn((w) => ({ ...w, notes: "", name: "", phone: "" }))
       refresh()
@@ -411,6 +412,14 @@ const BookingsPage = () => {
                     </Text>
                   )}
                   {b.notes && <Text size="xsmall" className="text-ui-fg-subtle">{b.notes}</Text>}
+                  {/* The cancel result sits on the card it is about, not at the
+                      bottom of the page where it outlived later actions. */}
+                  {cancel.variables === b.id && cancel.error && (
+                    <Text size="xsmall" className="text-ui-fg-error">{errorText(cancel.error)}</Text>
+                  )}
+                  {cancel.variables === b.id && cancel.data && (
+                    <Text size="xsmall" className="text-ui-fg-subtle">{cancelText(cancel.data, cancel.data.currency_code)}</Text>
+                  )}
                   {(b.status === "confirmed" || b.status === "pending") && confirming !== b.id && (
                     <Button
                       size="small"
@@ -423,7 +432,10 @@ const BookingsPage = () => {
                     </Button>
                   )}
                   {(b.status === "confirmed" || b.status === "pending") && confirming !== b.id && moving !== b.id && (
-                    <Button size="small" variant="transparent" className="mt-1 ml-3 px-0" onClick={() => setMoving(b.id)}>
+                    <Button size="small" variant="transparent" className="mt-1 ml-3 px-0" onClick={() => {
+                      cancel.reset()
+                      setMoving(b.id)
+                    }}>
                       Move
                     </Button>
                   )}
@@ -465,12 +477,6 @@ const BookingsPage = () => {
             </div>
           ))}
         </div>
-        {cancel.error && <Text className="text-ui-fg-error mt-2">{errorText(cancel.error)}</Text>}
-        {cancel.data && (
-          <Text className="text-ui-fg-subtle mt-2">
-            {cancelText(cancel.data, cancel.data.currency_code)}
-          </Text>
-        )}
       </Container>
 
       <Container className="flex flex-col gap-y-3">
