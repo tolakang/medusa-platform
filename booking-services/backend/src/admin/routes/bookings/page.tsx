@@ -23,6 +23,8 @@ import { cancelText, errorText, statusLabel } from "../../lib/format"
 import { usePageTitle } from "../../lib/page-title"
 
 
+
+const LAST_RESOURCE_KEY = "booking-admin:last-resource"
 // "Asia/Phnom_Penh" → "Phnom Penh time": the zone in plain words.
 const zoneLabel = (zone: string) => `${(zone.split("/").pop() ?? zone).replace(/_/g, " ")} time`
 
@@ -230,7 +232,24 @@ const BookingsPage = () => {
   // The calendar and day live in the URL (?resource=&date=&view=), so a
   // reload or a shared link opens the same board.
   const [params, setParams] = useSearchParams()
-  const [resourceId, setResourceId] = useState(() => params.get("resource") ?? "")
+  // Without ?resource=, open the calendar picked last time (this browser only).
+  const [resourceId, setResourceId] = useState(() => {
+    const fromUrl = params.get("resource")
+    if (fromUrl) return fromUrl
+    try {
+      return window.localStorage.getItem(LAST_RESOURCE_KEY) ?? ""
+    } catch {
+      return ""
+    }
+  })
+  useEffect(() => {
+    if (!resourceId) return
+    try {
+      window.localStorage.setItem(LAST_RESOURCE_KEY, resourceId)
+    } catch {
+      // Storage blocked (private window): the URL still keeps it.
+    }
+  }, [resourceId])
   const [view, setView] = useState<CalendarView>(() => (params.get("view") === "week" ? "week" : "day"))
   const [date, setDate] = useState(() => (/^\d{4}-\d{2}-\d{2}$/.test(params.get("date") ?? "") ? params.get("date")! : ""))
   useEffect(() => {
@@ -280,6 +299,13 @@ const BookingsPage = () => {
   const grouped = resource ? groupByLocalDay(data?.bookings ?? [], days, resource.timezone) : {}
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["bookings"] })
+  // A walk-in whose start has already passed is allowed (the customer may be
+  // in the chair already) but shown, so staff don't book the past by mistake.
+  const walkInStart =
+    resource && date && /^\d{2}:\d{2}$/.test(walkIn.time)
+      ? walkInTimes(date, walkIn.time, Number(walkIn.minutes) || 60, resource.timezone).starts_at
+      : null
+  const walkInInPast = !!walkInStart && new Date(walkInStart).getTime() < Date.now()
   const createWalkIn = useMutation({
     mutationFn: () =>
       sdk.client.fetch("/admin/booking/bookings", {
@@ -522,10 +548,13 @@ const BookingsPage = () => {
             disabled={!resource || !date || !walkIn.time || !(Number(walkIn.minutes) > 0)}
             onClick={() => createWalkIn.mutate()}
           >
-            Book walk-in
+            {walkInInPast ? "Book anyway" : "Book walk-in"}
           </Button>
         </div>
         {createWalkIn.error && <Text className="text-ui-fg-error">{errorText(createWalkIn.error)}</Text>}
+        {walkInInPast && (
+          <Text className="text-ui-fg-error">This start time has already passed. Check the time, or book anyway.</Text>
+        )}
         {createWalkIn.isSuccess && <Text className="text-ui-fg-subtle">Walk-in booked.</Text>}
       </Container>
     </div>

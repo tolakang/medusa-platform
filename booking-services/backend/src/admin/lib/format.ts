@@ -18,11 +18,16 @@ export function formatMoney(amount: number | string | null | undefined, currency
 }
 
 // The line after a staff cancel: "Cancelled. $8.00 refunded." when money went
-// back, else the refund outcome in words.
+// back, else the refund outcome in plain words ("not captured" read as jargon).
+const REFUND_WORDS: Record<string, string> = {
+  not_captured: "Nothing was paid, so nothing to refund.",
+  outside_policy: "No refund (too close to the start).",
+  refunded: "Refunded.",
+}
 export function cancelText(data: { refund: string; refunded_amount?: number | null }, currency?: string | null): string {
   if (data.refunded_amount && currency) return `Cancelled. ${formatMoney(data.refunded_amount, currency)} refunded.`
   if (data.refunded_amount) return `Cancelled. ${data.refunded_amount} refunded.`
-  return `Cancelled. Refund: ${data.refund.replace(/_/g, " ")}.`
+  return `Cancelled. ${REFUND_WORDS[data.refund] ?? `Refund: ${data.refund.replace(/_/g, " ")}.`}`
 }
 
 // "24 Nov 2026" and "24 Nov 2026, 14:30", the same on every browser locale.
