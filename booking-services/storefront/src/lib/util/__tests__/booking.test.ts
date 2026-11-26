@@ -29,6 +29,8 @@ import {
   cartCount,
   holdLeft,
   noPaymentDue,
+  hasEventTickets,
+  reservedText,
 } from "../booking.ts"
 
 describe("cart badge, hold countdown, $0 carts", () => {
@@ -202,5 +204,18 @@ describe("awaitingPayment", () => {
     assert.equal(awaitingPayment({ ...manual("2026-11-25"), payment_status: "captured" }), false)
     assert.equal(awaitingPayment({ payment_collections: [{ payments: [{ provider_id: "pp_payway_payway" }] }] }), false)
     assert.equal(awaitingPayment({ payment_collections: [] }), false)
+  })
+})
+
+describe("order confirmation note", () => {
+  it("mentions ticket codes only for event orders", () => {
+    assert.equal(hasEventTickets({ items: [{ product: { metadata: { booking_kind: "F" } } }] }), true)
+    assert.equal(hasEventTickets({ items: [{ product: { metadata: {} } }, { product: null }] }), false)
+    assert.equal(hasEventTickets(null), false)
+  })
+
+  it("names the payment method without doubling pay", () => {
+    assert.equal(reservedText("Pay later (cash or bank transfer)"), "Reserved: pay later by cash or bank transfer")
+    assert.equal(reservedText("Cash at the shop"), "Reserved: pay with cash at the shop")
   })
 })

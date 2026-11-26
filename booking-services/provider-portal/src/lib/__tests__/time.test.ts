@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
-import { addDays, dayLabel, dayWindow, isDate, timeRange, todayIn, toLocalTime, walkInTimes, zonedTimeToUtc } from "../time.ts"
+import { addDays, dayLabel, dayWindow, isDate, timeRange, todayIn, toLocalTime, walkInTimes, zonedTimeToUtc, zoneLabel } from "../time.ts"
 
 const PP = "Asia/Phnom_Penh" // UTC+7, no daylight saving
 
@@ -33,4 +33,9 @@ test("dates", () => {
   assert.equal(isDate("19/11/2026"), false)
   assert.equal(isDate(undefined), false)
   assert.equal(dayLabel("2026-11-19"), "Thu 19 Nov 2026")
+})
+
+test("zone in plain words, as the admin", () => {
+  assert.equal(zoneLabel("Asia/Phnom_Penh"), "Phnom Penh time")
+  assert.equal(zoneLabel("UTC"), "UTC time")
 })

@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Shell } from "@/components/shell"
 import { customerContact, customerLabel, STATUS_LABEL } from "@/lib/format"
 import { providerGet, requireProvider } from "@/lib/server/provider"
-import { addDays, dayLabel, dayWindow, isDate, timeRange, todayIn } from "@/lib/time"
+import { addDays, dayLabel, dayWindow, isDate, timeRange, todayIn, zoneLabel } from "@/lib/time"
 import { CancelButton, MoveButton, WalkInForm } from "./calendar-forms"
 
 type Booking = {
@@ -67,7 +67,7 @@ export default async function CalendarPage({
           <div>
             <h2 className="font-semibold">{dayLabel(date)}</h2>
             <p className="text-sm text-ui-fg-subtle">
-              {calendar.name} · times in {calendar.timezone}
+              {calendar.name} · {zoneLabel(calendar.timezone)}
             </p>
           </div>
           <div className="flex gap-2">

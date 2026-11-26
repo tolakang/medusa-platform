@@ -13,7 +13,7 @@ import ShippingDetails from "@modules/order/components/shipping-details"
 import PaymentDetails from "@modules/order/components/payment-details"
 import TelegramUpdates from "@modules/order/components/telegram-updates"
 import { HttpTypes } from "@medusajs/types"
-import { awaitingPayment, isServiceOnlyCart } from "@lib/util/booking"
+import { awaitingPayment, hasEventTickets, isServiceOnlyCart, reservedText } from "@lib/util/booking"
 import { MANUAL_PAYMENT_LABEL } from "@lib/shop"
 
 type OrderCompletedTemplateProps = {
@@ -53,8 +53,8 @@ export default async function OrderCompletedTemplate({
           </Heading>
           {isServiceOnlyCart(order) && pending && (
             <p className="txt-medium text-ui-fg-subtle" data-testid="order-awaiting-payment">
-              Reserved, pay with {MANUAL_PAYMENT_LABEL.toLowerCase()}. It is
-              confirmed once paid; ticket codes show here after payment.
+              {reservedText(MANUAL_PAYMENT_LABEL)}. It is confirmed once paid
+              {hasEventTickets(order) ? "; ticket codes show here after payment." : "."}
             </p>
           )}
           <OrderDetails order={order} />
