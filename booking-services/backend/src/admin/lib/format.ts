@@ -1,7 +1,10 @@
 // Shared formatting for the booking admin pages (design-system review,
 // 2026-11-24): one way to show an error, money, a date and a status.
 
-export const errorText = (e: unknown) => (e as { message?: string })?.message || "Something went wrong. Try again."
+// Medusa's validation errors start with "Invalid request: "; staff only need
+// the reason.
+export const errorText = (e: unknown) =>
+  ((e as { message?: string })?.message ?? "").replace(/^Invalid request:\s*/i, "") || "Something went wrong. Try again."
 
 export function formatMoney(amount: number | string | null | undefined, currency: string | null | undefined): string {
   if (amount === null || amount === undefined || amount === "" || !currency) return "–"
@@ -12,6 +15,14 @@ export function formatMoney(amount: number | string | null | undefined, currency
   } catch {
     return `${n.toFixed(2)} ${currency.toUpperCase()}`
   }
+}
+
+// The line after a staff cancel: "Cancelled. $8.00 refunded." when money went
+// back, else the refund outcome in words.
+export function cancelText(data: { refund: string; refunded_amount?: number | null }, currency?: string | null): string {
+  if (data.refunded_amount && currency) return `Cancelled. ${formatMoney(data.refunded_amount, currency)} refunded.`
+  if (data.refunded_amount) return `Cancelled. ${data.refunded_amount} refunded.`
+  return `Cancelled. Refund: ${data.refund.replace(/_/g, " ")}.`
 }
 
 // "24 Nov 2026" and "24 Nov 2026, 14:30", the same on every browser locale.

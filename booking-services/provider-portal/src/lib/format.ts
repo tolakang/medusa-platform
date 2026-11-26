@@ -103,18 +103,31 @@ export const STATUS_LABEL: Record<string, string> = {
   no_show: "No-show",
 }
 
-export function customerLabel(b: {
+type CalendarBookingLike = {
   customer?: { email: string | null; first_name: string | null; last_name: string | null } | null
+  customer_name?: string | null
   walk_in_name?: string | null
   walk_in_phone?: string | null
-}): string {
-  const c = b.customer
-  const known = [c?.first_name, c?.last_name].filter(Boolean).join(" ") || c?.email
-  if (known) return known
-  // A walk-in's own name and phone, when staff wrote them down.
-  const walkIn = [b.walk_in_name, b.walk_in_phone].filter(Boolean).join(" · ")
-  return walkIn ? `Walk-in: ${walkIn}` : "Walk-in"
 }
+
+export function customerLabel(b: CalendarBookingLike): string {
+  const c = b.customer
+  // The customer's name, else the order's address name (the backend's
+  // customer_name), else a walk-in's name; the email only when none is known.
+  const name = b.customer_name || [c?.first_name, c?.last_name].filter(Boolean).join(" ")
+  if (name) return name
+  if (b.walk_in_name) return `Walk-in: ${b.walk_in_name}`
+  return c?.email || (b.walk_in_phone ? `Walk-in: ${b.walk_in_phone}` : "Walk-in")
+}
+
+// The email or phone, shown under the name (empty when the label shows it).
+export function customerContact(b: CalendarBookingLike): string {
+  const label = customerLabel(b)
+  return [b.customer?.email, b.walk_in_phone].filter((v): v is string => !!v && !label.includes(v)).join(" · ")
+}
+
+// The backend's message for a phone it refuses (medusa-core lib/phone).
+export const PHONE_MESSAGE = "Enter a phone number with digits only, for example 012 345 678 or +855 12 345 678."
 
 // The backend's phone rule (medusa-core lib/phone): an optional leading +,
 // then digits, spaces, hyphens or parentheses, 8 to 15 digits.

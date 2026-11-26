@@ -1,4 +1,5 @@
 import {
+  customerContact,
   customerLabel,
   groupByLocalDay,
   shiftDate,
@@ -56,7 +57,13 @@ describe("booking calendar", () => {
     expect(customerLabel({ ...base, customer: { first_name: "Sok", last_name: "Dara", email: "s@x.com" } })).toEqual("Sok Dara")
     expect(customerLabel({ ...base, customer: { first_name: null, last_name: null, email: "s@x.com" } })).toEqual("s@x.com")
     expect(customerLabel(base)).toEqual("Walk-in")
-    expect(customerLabel({ ...base, walk_in_name: "Chan", walk_in_phone: "012 345 678" })).toEqual("Walk-in: Chan · 012 345 678")
+    expect(customerLabel({ ...base, walk_in_name: "Chan", walk_in_phone: "+855 12 345 678" })).toEqual("Walk-in: Chan")
+    expect(customerContact({ ...base, walk_in_name: "Chan", walk_in_phone: "+855 12 345 678" })).toEqual("+855 12 345 678")
+    // A guest order: the address name first, the email under it.
+    const guest = { ...base, customer_name: "Dara Guest", customer: { first_name: null, last_name: null, email: "d@x.com" } }
+    expect(customerLabel(guest)).toEqual("Dara Guest")
+    expect(customerContact(guest)).toEqual("d@x.com")
+    expect(customerContact({ ...base, customer: { first_name: null, last_name: null, email: "s@x.com" } })).toEqual("")
   })
 
   it("turns the walk-in form's local time into UTC instants", () => {

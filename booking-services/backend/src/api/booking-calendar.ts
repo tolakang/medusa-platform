@@ -1,5 +1,6 @@
 import type { MedusaContainer } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
+import { personName } from "../lib/person"
 
 // The calendar's bookings overlapping a time window, with the customer and
 // order (TASKS P3-11), shared by the admin (any resource) and a provider
@@ -23,6 +24,10 @@ export const BOOKING_FIELDS = [
   "resource.timezone",
   "order.id",
   "order.display_id",
+  "order.billing_address.first_name",
+  "order.billing_address.last_name",
+  "order.shipping_address.first_name",
+  "order.shipping_address.last_name",
 ]
 
 export async function listCalendarBookings(
@@ -59,8 +64,14 @@ export async function listCalendarBookings(
       customers.set(c.id, c)
     }
   }
-  return bookings.map((b) => ({
-    ...b,
-    customer: b.customer_id ? customers.get(b.customer_id) ?? null : null,
-  }))
+  return bookings.map(({ order, ...b }) => {
+    const customer = b.customer_id ? customers.get(b.customer_id) ?? null : null
+    return {
+      ...b,
+      order: order ? { id: order.id, display_id: order.display_id } : null,
+      customer,
+      // The name to show first: the customer's, else the order's address name.
+      customer_name: personName(customer, order?.billing_address, order?.shipping_address),
+    }
+  })
 }

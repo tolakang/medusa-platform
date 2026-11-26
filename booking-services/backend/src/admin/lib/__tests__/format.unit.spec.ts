@@ -1,4 +1,4 @@
-import { errorText, formatMoney, statusLabel } from "../format"
+import { cancelText, errorText, formatMoney, statusLabel } from "../format"
 
 describe("admin format helpers", () => {
   it("formats money with the currency, and a dash when unknown", () => {
@@ -14,5 +14,15 @@ describe("admin format helpers", () => {
   it("always gives an error sentence", () => {
     expect(errorText(new Error("Slot taken"))).toBe("Slot taken")
     expect(errorText(undefined)).toBe("Something went wrong. Try again.")
+  })
+})
+
+describe("cancel line and errors", () => {
+  it("shows the refunded amount with its currency", () => {
+    expect(cancelText({ refund: "refunded", refunded_amount: 8 }, "usd")).toBe("Cancelled. $8.00 refunded.")
+    expect(cancelText({ refund: "not_captured", refunded_amount: 0 }, "usd")).toBe("Cancelled. Refund: not captured.")
+  })
+  it("drops Medusa's Invalid request prefix", () => {
+    expect(errorText(new Error("Invalid request: walk_in_phone: Enter a phone"))).toBe("walk_in_phone: Enter a phone")
   })
 })

@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Shell } from "@/components/shell"
-import { customerLabel, STATUS_LABEL } from "@/lib/format"
+import { customerContact, customerLabel, STATUS_LABEL } from "@/lib/format"
 import { providerGet, requireProvider } from "@/lib/server/provider"
 import { addDays, dayLabel, dayWindow, isDate, timeRange, todayIn } from "@/lib/time"
 import { CancelButton, MoveButton, WalkInForm } from "./calendar-forms"
@@ -98,6 +98,7 @@ export default async function CalendarPage({
                     </p>
                     <p className="text-sm text-ui-fg-subtle">
                       {STATUS_LABEL[b.status] ?? b.status}
+                      {customerContact(b) ? ` · ${customerContact(b)}` : ""}
                       {b.order?.display_id ? ` · Order #${b.order.display_id}` : ""}
                       {b.notes ? ` · ${b.notes}` : ""}
                     </p>
